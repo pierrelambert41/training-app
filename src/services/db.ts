@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { EXERCISES_SEED_SQL } from '../db/migrations/seed-exercises';
 
 const DB_NAME = 'training.db';
 
@@ -153,6 +154,10 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_workout_days_block ON workout_days(block_id);
       CREATE INDEX IF NOT EXISTS idx_planned_exercises_workout_day ON planned_exercises(workout_day_id);
     `,
+  },
+  {
+    version: 2,
+    sql: EXERCISES_SEED_SQL,
   },
 ];
 
