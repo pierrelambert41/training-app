@@ -1,7 +1,8 @@
 import '../global.css';
 import { colorScheme } from 'nativewind';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth-store';
 import { checkSupabaseHealth, supabase } from '@/services/supabase';
 import { DBProvider } from '@/components/db-provider';
@@ -69,11 +70,15 @@ function SessionHydrator({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
-    <DBProvider>
-      <SessionHydrator>
-        <AuthGuard />
-      </SessionHydrator>
-    </DBProvider>
+    <QueryClientProvider client={queryClient}>
+      <DBProvider>
+        <SessionHydrator>
+          <AuthGuard />
+        </SessionHydrator>
+      </DBProvider>
+    </QueryClientProvider>
   );
 }
