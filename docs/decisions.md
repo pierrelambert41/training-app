@@ -145,6 +145,38 @@ Le composant de texte du design system s'appelle `AppText` et encapsule `Text` d
 
 ---
 
+## ADR-009 : Favoris sans user_id en Phase 2
+
+**Statut** : Accepté
+**Date** : 2026-04-23
+
+### Contexte
+La spec TA-15 précise que le statut favori est "spécifique à l'utilisateur". La Phase 2 est single-user local (pas de multi-compte avant Phase 6 — sync Supabase). La table `exercise_favorites` ne contient pas de `user_id`.
+
+### Décision
+Pas de `user_id` sur `exercise_favorites` en Phase 2. La migration sera ajoutée en Phase 6 au moment du sync, quand l'identité utilisateur sera disponible côté serveur.
+
+### Conséquence
+En Phase 6, une migration breaking devra ajouter `user_id NOT NULL` avec une valeur par défaut pour les lignes existantes (l'utilisateur local sera connu à ce stade).
+
+---
+
+## ADR-010 : Favoris via TanStack Query + SQLite, pas Zustand
+
+**Statut** : Accepté
+**Date** : 2026-04-23
+
+### Contexte
+CLAUDE.md liste Zustand pour le state global. Les favoris sont une donnée persistée en SQLite, pas un état UI éphémère.
+
+### Décision
+SQLite est la source de vérité pour les favoris. TanStack Query gère le cache et l'invalidation (`invalidateQueries`). Zustand n'est pas utilisé pour les favoris — il est réservé à l'état UI non-persisté (ex: état du logger de séance en cours).
+
+### Conséquence
+Ce pattern s'applique à toute donnée lue depuis SQLite : TanStack Query suffit, pas besoin de doubler avec Zustand.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
