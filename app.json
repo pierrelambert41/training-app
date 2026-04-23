@@ -20,7 +20,12 @@
       "package": "com.trainingapp.mobile"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "typedRoutes": true
+        }
+      ],
       "expo-sqlite"
     ]
   }

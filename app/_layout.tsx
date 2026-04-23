@@ -1,18 +1,29 @@
 import '../global.css';
 import { colorScheme } from 'nativewind';
-import { Stack } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/stores/auth-store';
 
-// Module-scope : s'exécute au chargement du module, avant le premier render (évite le flash light)
 colorScheme.set('dark');
 
+function AuthGuard() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace('/(app)');
+    }
+  }, [isAuthenticated, segments, router]);
+
+  return <Slot />;
+}
+
 export default function RootLayout() {
-  return (
-    <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: '#000000' },
-        headerTintColor: '#ffffff',
-        contentStyle: { backgroundColor: '#000000' },
-      }}
-    />
-  );
+  return <AuthGuard />;
 }
