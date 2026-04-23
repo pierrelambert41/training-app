@@ -187,8 +187,8 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     try {
       await db.execAsync('BEGIN TRANSACTION');
       await db.execAsync(migration.sql);
-      await db.execAsync(`PRAGMA user_version = ${migration.version}`);
       await db.execAsync('COMMIT');
+      await db.execAsync(`PRAGMA user_version = ${migration.version}`);
     } catch (e) {
       await db.execAsync('ROLLBACK');
       throw e;

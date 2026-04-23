@@ -9,13 +9,12 @@ export function useFavorite(exerciseId: string) {
   const { data: isFavorite = false } = useQuery({
     queryKey: ['favorite', exerciseId],
     queryFn: () => getExerciseFavorite(db, exerciseId),
-    staleTime: Infinity,
   });
 
   const { mutate: toggle, isPending } = useMutation({
     mutationFn: () => toggleExerciseFavorite(db, exerciseId),
-    onSuccess: (nextValue) => {
-      queryClient.setQueryData(['favorite', exerciseId], nextValue);
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['favorite', exerciseId] });
     },
   });
 

@@ -182,7 +182,7 @@ describe('ExerciseDetailScreen', () => {
     });
   });
 
-  it('appelle toggle au tap sur le bouton favori', async () => {
+  it('appelle toggle au tap sur le bouton favori et déclenche l\'INSERT SQL', async () => {
     const db = makeMockDb(makeExerciseRow(), false);
     renderWithProviders(db);
 
@@ -191,7 +191,31 @@ describe('ExerciseDetailScreen', () => {
     });
 
     fireEvent.press(screen.getByTestId('exercise-detail-favorite-button'));
-    expect(db.getFirstAsync).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(db.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO exercise_favorites'),
+        expect.arrayContaining(['ex-1'])
+      );
+    });
+  });
+
+  it('appelle toggle au tap sur le bouton favori et déclenche le DELETE SQL', async () => {
+    const db = makeMockDb(makeExerciseRow(), true);
+    renderWithProviders(db);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-detail-favorite-button')).toBeTruthy();
+    });
+
+    fireEvent.press(screen.getByTestId('exercise-detail-favorite-button'));
+
+    await waitFor(() => {
+      expect(db.runAsync).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM exercise_favorites'),
+        expect.arrayContaining(['ex-1'])
+      );
+    });
   });
 
   it('affiche les alternatives si présentes et navigue au tap', async () => {

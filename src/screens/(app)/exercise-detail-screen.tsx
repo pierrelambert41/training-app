@@ -1,5 +1,5 @@
 import { ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useExerciseDetail } from '@/hooks/use-exercise-detail';
 import { useFavorite } from '@/hooks/use-favorite';
 import { AppText, Card } from '@/components/ui';
@@ -123,7 +123,8 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
   const { isFavorite, toggle, isPending } = useFavorite(exerciseId);
 
   const handleAlternativePress = (exercise: Exercise) => {
-    router.push({ pathname: '/(app)/exercise/[id]', params: { id: exercise.id } } as never);
+    const href: Href = { pathname: '/(app)/exercise/[id]', params: { id: exercise.id } };
+    router.push(href);
   };
 
   if (isLoading) {
