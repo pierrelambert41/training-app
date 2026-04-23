@@ -3,6 +3,7 @@ import { colorScheme } from 'nativewind';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
+import { checkSupabaseHealth } from '@/services/supabase';
 
 colorScheme.set('dark');
 
@@ -25,5 +26,9 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
+  useEffect(() => {
+    checkSupabaseHealth();
+  }, []);
+
   return <AuthGuard />;
 }
