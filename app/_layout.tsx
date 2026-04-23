@@ -4,6 +4,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/auth-store';
 import { checkSupabaseHealth, supabase } from '@/services/supabase';
+import { DBProvider } from '@/components/db-provider';
 
 colorScheme.set('dark');
 
@@ -69,8 +70,10 @@ function SessionHydrator({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <SessionHydrator>
-      <AuthGuard />
-    </SessionHydrator>
+    <DBProvider>
+      <SessionHydrator>
+        <AuthGuard />
+      </SessionHydrator>
+    </DBProvider>
   );
 }
