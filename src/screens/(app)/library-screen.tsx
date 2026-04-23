@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { View, FlatList, ActivityIndicator } from 'react-native';
+import { View, FlatList, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useExercises } from '@/hooks/use-exercises';
@@ -20,6 +20,10 @@ export default function LibraryScreen() {
     },
     [router]
   );
+
+  const handleCreatePress = useCallback(() => {
+    router.push('/create-exercise');
+  }, [router]);
 
   return (
     <View className="flex-1 bg-background" testID="library-screen">
@@ -64,6 +68,16 @@ export default function LibraryScreen() {
           />
         </View>
       )}
+
+      <TouchableOpacity
+        onPress={handleCreatePress}
+        activeOpacity={0.8}
+        testID="library-create-button"
+        className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
+        style={{ elevation: 4 }}
+      >
+        <Text className="text-white text-display leading-none" style={{ marginTop: -2 }}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }

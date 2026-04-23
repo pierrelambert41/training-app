@@ -146,4 +146,18 @@ describe('LibraryScreen', () => {
     fireEvent.changeText(input, 'squat');
     expect(input.props.value).toBe('squat');
   });
+
+  it("affiche le bouton de creation d'exercice", async () => {
+    const db = makeMockDb([]);
+    renderWithProviders(db);
+    expect(screen.getByTestId('library-create-button')).toBeTruthy();
+  });
+
+  it('navigue vers la création au tap sur le bouton FAB', async () => {
+    const db = makeMockDb([]);
+    renderWithProviders(db);
+
+    fireEvent.press(screen.getByTestId('library-create-button'));
+    expect(mockPush).toHaveBeenCalledWith('/create-exercise');
+  });
 });

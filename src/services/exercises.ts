@@ -1,5 +1,48 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { Exercise } from '@/types';
+import type { Exercise, ExerciseCategory, LogType, MovementPattern } from '@/types';
+
+export type CustomExerciseInput = {
+  id: string;
+  name: string;
+  movementPattern: MovementPattern;
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  equipment: string[];
+  notes: string | null;
+  createdBy: string;
+};
+
+export async function insertCustomExercise(
+  db: SQLiteDatabase,
+  input: CustomExerciseInput
+): Promise<void> {
+  const now = new Date().toISOString();
+  const category: ExerciseCategory = 'isolation';
+  const logType: LogType = 'weight_reps';
+
+  await db.runAsync(
+    `INSERT INTO exercises (
+      id, name, name_fr, category, movement_pattern,
+      primary_muscles, secondary_muscles, equipment,
+      log_type, is_unilateral, systemic_fatigue, movement_stability,
+      morpho_tags, recommended_progression_type, alternatives,
+      coaching_notes, tags, is_custom, created_by, created_at
+    ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 0, 'moderate', 'stable', '[]', NULL, '[]', ?, '[]', 1, ?, ?)`,
+    [
+      input.id,
+      input.name,
+      category,
+      input.movementPattern,
+      JSON.stringify(input.primaryMuscles),
+      JSON.stringify(input.secondaryMuscles),
+      JSON.stringify(input.equipment),
+      logType,
+      input.notes,
+      input.createdBy,
+      now,
+    ]
+  );
+}
 
 type ExerciseRow = {
   id: string;
