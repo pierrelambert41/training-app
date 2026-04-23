@@ -1,9 +1,11 @@
 import { View, ScrollView } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuth } from '@/hooks/use-auth';
 import { AppText, Button, EmptyState } from '@/components/ui';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { logout, isLoading } = useAuth();
 
@@ -32,6 +34,17 @@ export default function HomeScreen() {
       <View className="gap-2">
         <AppText variant="caption" muted>PROGRESSION</AppText>
         <EmptyState title="Pas encore de données" description="Ton programme apparaîtra ici une fois généré." />
+      </View>
+
+      <View className="gap-2">
+        <AppText variant="caption" muted>ACCÈS RAPIDE</AppText>
+        <Button
+          label="Bibliothèque d'exercices"
+          // TODO: supprimer quand expo-router régénère les types pour la route dynamique /exercise/[id]
+          onPress={() => router.push('/(app)/library' as Parameters<typeof router.push>[0])}
+          variant="secondary"
+          testID="library-nav-button"
+        />
       </View>
 
       <View className="mt-4">
