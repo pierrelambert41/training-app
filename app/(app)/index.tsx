@@ -1,5 +1,6 @@
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AppText } from '@/components/ui/text';
 import { ThemedCard } from '@/components/ui/themed-card';
 import { useAuthStore } from '@/stores/auth-store';
 
@@ -12,9 +13,9 @@ export default function HomeScreen() {
       className="flex-1 bg-background"
       contentContainerClassName="p-4 gap-4"
     >
-      <Text className="text-heading text-content-primary mt-4">Training App</Text>
+      <AppText variant="heading" className="mt-4">Training App</AppText>
       {user && (
-        <Text className="text-label text-content-secondary">{user.email}</Text>
+        <AppText variant="body" muted>{user.email}</AppText>
       )}
 
       <ThemedCard title="Charge cible" value="95" unit="kg" status="default" />
@@ -31,6 +32,13 @@ export default function HomeScreen() {
         className="items-center py-3"
       >
         <Text className="text-label text-content-secondary">Voir le profil</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => router.push('/(app)/design-system')}
+        className="items-center py-3"
+      >
+        <Text className="text-label text-accent">Design System</Text>
       </Pressable>
     </ScrollView>
   );

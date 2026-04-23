@@ -127,6 +127,24 @@ Coder des règles pour chaque exercice ne scale pas. Les logiques de progression
 
 ---
 
+## ADR-008 : AppText plutôt que Text de React Native
+
+**Statut** : Accepté
+**Date** : 2026-04-23
+
+### Contexte
+Le composant `Text` de React Native crée une collision de nom avec les imports RN dans les fichiers qui utilisent aussi le design system. Le design system a besoin de variantes typographiques prédéfinies (heading, body, caption) appliquant les tokens NativeWind.
+
+### Décision
+Le composant de texte du design system s'appelle `AppText` et encapsule `Text` de RN. Il expose une prop `variant` et une prop `muted`.
+
+### Conséquences
+- Aucune collision de nom lors des imports mixtes RN + DS
+- Les tokens typographiques sont centralisés dans `AppText`
+- Les cas où une classe Tailwind ad-hoc est nécessaire (liens, boutons inline) peuvent encore utiliser `Text` de RN directement
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
