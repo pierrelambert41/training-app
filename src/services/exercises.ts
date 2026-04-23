@@ -49,6 +49,30 @@ function rowToExercise(row: ExerciseRow): Exercise {
   };
 }
 
+export async function getExerciseById(
+  db: SQLiteDatabase,
+  id: string
+): Promise<Exercise | null> {
+  const row = await db.getFirstAsync<ExerciseRow>(
+    'SELECT * FROM exercises WHERE id = ?',
+    [id]
+  );
+  return row ? rowToExercise(row) : null;
+}
+
+export async function getExercisesByIds(
+  db: SQLiteDatabase,
+  ids: string[]
+): Promise<Exercise[]> {
+  if (ids.length === 0) return [];
+  const placeholders = ids.map(() => '?').join(', ');
+  const rows = await db.getAllAsync<ExerciseRow>(
+    `SELECT * FROM exercises WHERE id IN (${placeholders})`,
+    ids
+  );
+  return rows.map(rowToExercise);
+}
+
 export async function searchExercises(
   db: SQLiteDatabase,
   query: string

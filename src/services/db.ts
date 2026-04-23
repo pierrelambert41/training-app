@@ -159,6 +159,17 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
     version: 2,
     sql: EXERCISES_SEED_SQL,
   },
+  {
+    version: 3,
+    sql: `
+      CREATE TABLE IF NOT EXISTS exercise_favorites (
+        exercise_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (exercise_id),
+        FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+      );
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
