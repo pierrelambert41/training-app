@@ -8,6 +8,8 @@ export default function AppLayout() {
         headerTintColor: '#ffffff',
         contentStyle: { backgroundColor: '#000000' },
       }}
-    />
+    >
+      <Stack.Screen name="create-exercise" options={{ title: 'Nouvel exercice', presentation: 'modal' }} />
+    </Stack>
   );
 }
