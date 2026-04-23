@@ -8004,38 +8004,6 @@
     "created_at": "2026-04-23T22:03:47.839Z"
   },
   {
-    "name": "Banded Clamshell",
-    "name_fr": "Ouverture coquille élastique bande",
-    "category": "isolation",
-    "movement_pattern": "isolation_lower",
-    "primary_muscles": [
-      "glute_medius",
-      "abductors"
-    ],
-    "secondary_muscles": [],
-    "equipment": [
-      "resistance_band"
-    ],
-    "log_type": "bodyweight_reps",
-    "is_unilateral": true,
-    "systemic_fatigue": "low",
-    "movement_stability": "stable",
-    "morpho_tags": [
-      "low_fatigue"
-    ],
-    "recommended_progression_type": "bodyweight_progression",
-    "tags": [
-      "glutes",
-      "bodyweight"
-    ],
-    "coaching_notes": null,
-    "id": "f72039c4-32e8-4ce6-bd98-7599c3df9649",
-    "alternatives": [],
-    "is_custom": false,
-    "created_by": null,
-    "created_at": "2026-04-23T22:03:47.839Z"
-  },
-  {
     "name": "Fire Hydrant",
     "name_fr": "Hydrant de feu",
     "category": "bodyweight",
