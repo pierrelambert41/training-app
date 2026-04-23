@@ -11,6 +11,7 @@ type Props = {
   size?: Size;
   loading?: boolean;
   disabled?: boolean;
+  testID?: string;
 };
 
 const variantClasses: Record<Variant, { container: string; text: string }> = {
@@ -46,6 +47,7 @@ export function Button({
   size = 'md',
   loading = false,
   disabled = false,
+  testID,
 }: Props) {
   const isDisabled = disabled || loading;
   const { container: variantContainer, text: variantText } = variantClasses[variant];
@@ -55,6 +57,7 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
+      testID={testID}
       className={`items-center justify-center ${variantContainer} ${sizeContainer} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (

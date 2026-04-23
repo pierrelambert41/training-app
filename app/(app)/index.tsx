@@ -1,45 +1,48 @@
-import { View, ScrollView, Pressable, Text } from 'react-native';
-import { useRouter } from 'expo-router';
-import { AppText } from '@/components/ui/text';
-import { ThemedCard } from '@/components/ui/themed-card';
+import { View, ScrollView } from 'react-native';
 import { useAuthStore } from '@/stores/auth-store';
+import { useAuth } from '@/hooks/use-auth';
+import { AppText, Button, EmptyState } from '@/components/ui';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const { logout, isLoading } = useAuth();
+
+  async function handleLogout() {
+    await logout();
+  }
 
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="p-4 gap-4"
+      contentContainerClassName="p-4 gap-6"
+      testID="home-screen"
     >
-      <AppText variant="heading" className="mt-4">Training App</AppText>
-      {user && (
-        <AppText variant="body" muted>{user.email}</AppText>
-      )}
-
-      <ThemedCard title="Charge cible" value="95" unit="kg" status="default" />
-      <ThemedCard title="Bench Press — progrès" value="+2.5" unit="kg" status="success" />
-      <ThemedCard title="Fatigue globale" value="Modérée" status="warning" />
-      <ThemedCard title="Dernier set" value="Échec rep 4" status="danger" />
-
-      <View className="bg-accent rounded-button items-center justify-center h-tap mt-4">
-        <Text className="text-body text-white font-semibold">LOG SET</Text>
+      <View className="mt-4 gap-1">
+        <AppText variant="heading">Bonjour</AppText>
+        {user?.email ? (
+          <AppText variant="body" muted>{user.email}</AppText>
+        ) : null}
       </View>
 
-      <Pressable
-        onPress={() => router.push('/(app)/profile')}
-        className="items-center py-3"
-      >
-        <Text className="text-label text-content-secondary">Voir le profil</Text>
-      </Pressable>
+      <View className="gap-2">
+        <AppText variant="caption" muted>SÉANCE DU JOUR</AppText>
+        <EmptyState title="Aucune séance planifiée" description="Ton programme apparaîtra ici une fois généré." />
+      </View>
 
-      <Pressable
-        onPress={() => router.push('/(app)/design-system')}
-        className="items-center py-3"
-      >
-        <Text className="text-label text-accent">Design System</Text>
-      </Pressable>
+      <View className="gap-2">
+        <AppText variant="caption" muted>PROGRESSION</AppText>
+        <EmptyState title="Pas encore de données" description="Ton programme apparaîtra ici une fois généré." />
+      </View>
+
+      <View className="mt-4">
+        <Button
+          label="Se déconnecter"
+          onPress={handleLogout}
+          variant="ghost"
+          loading={isLoading}
+          testID="logout-button"
+        />
+      </View>
     </ScrollView>
   );
 }

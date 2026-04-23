@@ -49,3 +49,4 @@ Toute la documentation projet est dans `docs/` :
 - Nommage : camelCase pour variables/fonctions, PascalCase pour composants/types
 - Fichiers : kebab-case
 - Tests : colocalisés avec le code (`*.test.ts`)
+- Tests d'écrans routés : **ne jamais mettre de `*.test.*` dans `app/`** — Expo Router file-based routing les enregistre comme routes, causant un crash runtime. Placer ces tests dans `src/screens/<groupe>/` en miroir de la structure `app/` (ex: `app/(app)/index.tsx` → `src/screens/(app)/home-screen.test.tsx`).
