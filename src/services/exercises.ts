@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Exercise, ExerciseCategory, LogType, MovementPattern } from '@/types';
+import { enqueueSyncRecord } from './sync-queue';
 
 export type CustomExerciseInput = {
   id: string;
@@ -42,6 +43,29 @@ export async function insertCustomExercise(
       now,
     ]
   );
+
+  await enqueueSyncRecord(db, 'exercises', input.id, 'insert', {
+    id: input.id,
+    name: input.name,
+    name_fr: null,
+    category,
+    movement_pattern: input.movementPattern,
+    primary_muscles: input.primaryMuscles,
+    secondary_muscles: input.secondaryMuscles,
+    equipment: input.equipment,
+    log_type: logType,
+    is_unilateral: false,
+    systemic_fatigue: 'moderate',
+    movement_stability: 'stable',
+    morpho_tags: [],
+    recommended_progression_type: null,
+    alternatives: [],
+    coaching_notes: input.notes,
+    tags: [],
+    is_custom: true,
+    created_by: input.createdBy,
+    created_at: now,
+  });
 }
 
 type ExerciseRow = {
