@@ -219,6 +219,30 @@ Chaque repository publie un payload **snake_case conforme au schéma Supabase** 
 
 ---
 
+## ADR-013 : Moteur de génération purement déterministe, résultat in-memory
+
+**Statut** : Accepté
+**Date** : 2026-04-24
+
+### Contexte
+TA-21 introduit la fonction `generateProgram(input)`. Deux questions ont dû être arbitrées :
+1. L'IA intervient-elle dans la génération ?
+2. Le résultat est-il persisté immédiatement ou reste-t-il un draft que l'utilisateur valide ?
+
+### Décision
+1. **Zéro appel IA** dans le moteur de génération (conforme ADR-004, ADR-007 fallback). Toute la logique vit dans `src/services/program-generation.ts` sous forme de fonctions pures. Tri stable par id pour garantir la reproductibilité d'une même entrée.
+2. **Résultat in-memory** (`GenerationResult` dans `GenerationState.result`), non persisté. La conversion `GenerationResult` → `insertProgram/insertBlock/insertWorkoutDay/insertPlannedExercise` arrive au moment où l'utilisateur confirme ("Save"). Les IDs UUID sont générés dès la génération et réutilisés tels quels au save, garantissant que le draft et la version persistée partagent les mêmes clés.
+3. Catalogue filtré par équipement avec un mapping explicite `full_gym > home > minimal`. Les blessures sont traduites en `forbiddenMuscles` / `forbiddenMorphoTags` (pattern simple par regex FR). Les exercices avec `axial_fatigue_high` sont exclus dès qu'une douleur lombaire ou épaule est signalée — conservateur.
+4. **Calibration** : `null` si pas d'historique récent (< 8 semaines sur l'exercice). Pas de valeur hardcodée. Epley avec recency weighting linéaire, puis -5% prudence, arrondi 0.5 kg.
+
+### Conséquences
+- Le moteur est entièrement testable sans infra (pas de SQLite, pas de Supabase).
+- Le résultat peut être re-généré tant que l'utilisateur n'a pas validé : réouvrir le questionnaire et cliquer Générer produit un nouveau draft.
+- Les warnings remontés dans `GenerationResult.warnings` sont exploitables par l'UI (catalogue trop restreint, slot manquant, sport non reconnu) sans bloquer la génération.
+- Le pattern "draft en mémoire + save transactionnel" s'applique aussi à la future régénération de bloc (docs §9).
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
