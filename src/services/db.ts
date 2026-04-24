@@ -170,6 +170,15 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       );
     `,
   },
+  {
+    version: 4,
+    sql: `
+      CREATE INDEX IF NOT EXISTS idx_programs_user_is_active ON programs(user_id, is_active);
+      CREATE INDEX IF NOT EXISTS idx_blocks_program_status ON blocks(program_id, status);
+      CREATE INDEX IF NOT EXISTS idx_workout_days_block_day_order ON workout_days(block_id, day_order);
+      CREATE INDEX IF NOT EXISTS idx_planned_exercises_workout_day_order ON planned_exercises(workout_day_id, exercise_order);
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
