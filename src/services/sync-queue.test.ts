@@ -51,6 +51,16 @@ describe('enqueueSyncRecord', () => {
     expect(typeof params[3]).toBe('string');
     expect(JSON.parse(params[3] as string)).toEqual(payloadObj);
   });
+
+  it('propagates the exception when db.runAsync rejects', async () => {
+    const db = makeMockDb({
+      runAsync: jest.fn(() => Promise.reject(new Error('DB error'))),
+    } as Partial<SQLiteDatabase>);
+
+    await expect(
+      enqueueSyncRecord(db, 'exercises', 'abc-123', 'insert', { id: 'abc-123' })
+    ).rejects.toThrow('DB error');
+  });
 });
 
 describe('getPendingSyncRecords', () => {
@@ -95,5 +105,26 @@ describe('getPendingSyncRecords', () => {
     const db = makeMockDb({ getAllAsync: jest.fn(async () => []) } as Partial<SQLiteDatabase>);
     const records = await getPendingSyncRecords(db);
     expect(records).toEqual([]);
+  });
+
+  it('maps synced: 1 to synced: true', async () => {
+    const db = makeMockDb({
+      getAllAsync: jest.fn(async () => [
+        {
+          id: 2,
+          table_name: 'exercises',
+          record_id: 'def-456',
+          action: 'insert',
+          payload: '{"id":"def-456"}',
+          created_at: '2026-04-24T11:00:00.000Z',
+          synced: 1,
+        },
+      ]),
+    } as Partial<SQLiteDatabase>);
+
+    const records = await getPendingSyncRecords(db);
+
+    expect(records).toHaveLength(1);
+    expect(records[0].synced).toBe(true);
   });
 });

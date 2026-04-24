@@ -27,6 +27,8 @@ export async function enqueueSyncRecord(
   );
 }
 
+// Note: SyncQueueRecord.payload is a raw JSON string as stored in SQLite.
+// The sync engine is responsible for parsing it (JSON.parse) before use.
 export async function getPendingSyncRecords(
   db: SQLiteDatabase
 ): Promise<SyncQueueRecord[]> {
