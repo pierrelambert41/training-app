@@ -1,11 +1,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  AccessoryLinearConfig,
-  BodyweightProgressionConfig,
-  DistanceDurationConfig,
-  DoubleProgressionConfig,
-  DurationProgressionConfig,
+  BlockGoal,
   Exercise,
   GenerationDayDraft,
   GenerationHistoryEntry,
@@ -19,13 +15,11 @@ import type {
   NewProgramInput,
   NewWorkoutDayInput,
   PlannedExerciseRole,
-  ProgressionConfig,
-  ProgressionType,
   SplitType,
-  StrengthFixedConfig,
   TrainingLevel,
   VolumeToleranceLevel,
 } from '@/types';
+import { assignProgressionConfig } from './progression-config';
 
 const BLOCK_DURATION_WEEKS = 6;
 const HISTORY_RECENCY_WEEKS = 8;
@@ -645,69 +639,8 @@ function computeSetsAndReps(
   return { sets, repMin, repMax, targetRir, restSeconds };
 }
 
-function buildProgressionConfig(
-  progressionType: ProgressionType,
-  repMin: number,
-  repMax: number,
-  isLowerBody: boolean
-): ProgressionConfig {
-  switch (progressionType) {
-    case 'strength_fixed':
-      return {
-        increment_upper_kg: 1.25,
-        increment_lower_kg: 2.5,
-        rir_threshold_increase: 2,
-        failures_before_reset: 2,
-        reset_delta_kg: -2.5,
-      } satisfies StrengthFixedConfig;
-    case 'double_progression':
-      return {
-        increment_kg: isLowerBody ? 2.5 : 1.25,
-        min_reps: repMin,
-        max_reps: repMax,
-        all_sets_at_max_to_increase: true,
-        regressions_before_alert: 2,
-      } satisfies DoubleProgressionConfig;
-    case 'accessory_linear':
-      return {
-        increment_kg: 1.25,
-        min_reps: repMin,
-        max_reps: repMax,
-        all_sets_at_max_to_increase: true,
-      } satisfies AccessoryLinearConfig;
-    case 'bodyweight_progression':
-      return {
-        increment_kg: 2.5,
-        min_reps: repMin,
-        max_reps: repMax,
-      } satisfies BodyweightProgressionConfig;
-    case 'duration_progression':
-      return {
-        increment_seconds: 5,
-        target_seconds: 30,
-      } satisfies DurationProgressionConfig;
-    case 'distance_duration':
-      return {
-        target_distance_meters: 50,
-        target_duration_seconds: 60,
-      } satisfies DistanceDurationConfig;
-  }
-}
-
-function resolveProgressionType(ex: Exercise, role: PlannedExerciseRole, goal: Goal): ProgressionType {
-  if (ex.recommendedProgressionType) return ex.recommendedProgressionType;
-  // Fallback raisonnable :
-  if (role === 'accessory') return 'accessory_linear';
-  if (role === 'main' && goal === 'strength') return 'strength_fixed';
-  return 'double_progression';
-}
-
-function isLowerBodyExercise(ex: Exercise): boolean {
-  const lowerPatterns: MovementPattern[] = [
-    'squat', 'hinge', 'unilateral_quad', 'unilateral_hinge', 'isolation_lower',
-  ];
-  return lowerPatterns.includes(ex.movementPattern);
-}
+// Note : la résolution du progressionType + progressionConfig est
+// centralisée dans `services/progression-config.ts` (cf. TA-22, ADR-014).
 
 // ---------------------------------------------------------------------------
 // Calibration des charges (docs §5.6)
@@ -881,11 +814,13 @@ export async function generateProgram(
     isActive: true,
   };
 
+  const blockGoal: BlockGoal = goal === 'mixed' ? 'hypertrophy' : goal;
+
   const block: NewBlockInput = {
     id: blockId,
     programId,
     title: 'Bloc initial',
-    goal: goal === 'mixed' ? 'hypertrophy' : goal,
+    goal: blockGoal,
     durationWeeks: BLOCK_DURATION_WEEKS,
     weekNumber: 1,
     status: 'active',
@@ -911,13 +846,14 @@ export async function generateProgram(
       );
       estimatedMin += sets * (pick.role === 'main' ? 6 : pick.role === 'secondary' ? 4 : 3);
 
-      const progressionType = resolveProgressionType(ex, pick.role, goal);
-      const progressionConfig = buildProgressionConfig(
-        progressionType,
-        repMin,
-        repMax,
-        isLowerBodyExercise(ex)
-      );
+      // TA-22 : résolution du progressionType + progressionConfig.
+      const { progressionType, progressionConfig } = assignProgressionConfig({
+        exercise: ex,
+        blockGoal,
+        userLevel: level,
+        role: pick.role,
+        repRange: { min: repMin, max: repMax },
+      });
 
       const targetMidReps = Math.round((repMin + repMax) / 2);
       const suggestedLoad =
