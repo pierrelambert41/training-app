@@ -6,3 +6,6 @@ export { ThemedCard } from './themed-card';
 export { EmptyState } from './empty-state';
 export { ExerciseRow } from './exercise-row';
 export { MultiSelect } from './multi-select';
+export { CardChoice } from './card-choice';
+export { SegmentedControl } from './segmented-control';
+export { StepLayout } from './step-layout';

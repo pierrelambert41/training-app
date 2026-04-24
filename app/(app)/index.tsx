@@ -39,6 +39,12 @@ export default function HomeScreen() {
       <View className="gap-2">
         <AppText variant="caption" muted>ACCÈS RAPIDE</AppText>
         <Button
+          label="Créer un programme"
+          onPress={() => router.push('/(app)/programs/generate' as Parameters<typeof router.push>[0])}
+          variant="secondary"
+          testID="generate-program-button"
+        />
+        <Button
           label="Bibliothèque d'exercices"
           // TODO: supprimer quand expo-router régénère les types pour la route dynamique /exercise/[id]
           onPress={() => router.push('/(app)/library' as Parameters<typeof router.push>[0])}
