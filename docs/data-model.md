@@ -102,7 +102,7 @@ duration_weeks  INTEGER NOT NULL
 week_number     INTEGER DEFAULT 1  -- semaine courante dans le bloc
 start_date      DATE
 end_date        DATE
-status          TEXT DEFAULT 'planned' -- 'planned' | 'active' | 'completed'
+status          TEXT DEFAULT 'planned' -- 'planned' | 'active' | 'deloaded' | 'completed'
 deload_strategy TEXT NOT NULL DEFAULT 'fatigue_triggered' -- 'scheduled' | 'fatigue_triggered' | 'none'
 created_at      TIMESTAMPTZ DEFAULT now()
 updated_at      TIMESTAMPTZ DEFAULT now()

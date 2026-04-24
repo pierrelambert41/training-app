@@ -226,7 +226,7 @@ export type Database = {
           week_number: number
           start_date: string | null
           end_date: string | null
-          status: 'planned' | 'active' | 'completed'
+          status: 'planned' | 'active' | 'deloaded' | 'completed'
           deload_strategy: 'scheduled' | 'fatigue_triggered' | 'none'
           created_at: string
           updated_at: string
@@ -240,7 +240,7 @@ export type Database = {
           week_number?: number
           start_date?: string | null
           end_date?: string | null
-          status?: 'planned' | 'active' | 'completed'
+          status?: 'planned' | 'active' | 'deloaded' | 'completed'
           deload_strategy?: 'scheduled' | 'fatigue_triggered' | 'none'
           created_at?: string
           updated_at?: string
@@ -254,7 +254,7 @@ export type Database = {
           week_number?: number
           start_date?: string | null
           end_date?: string | null
-          status?: 'planned' | 'active' | 'completed'
+          status?: 'planned' | 'active' | 'deloaded' | 'completed'
           deload_strategy?: 'scheduled' | 'fatigue_triggered' | 'none'
           created_at?: string
           updated_at?: string

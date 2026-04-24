@@ -141,4 +141,23 @@ describe('schema completeness', () => {
       expect(fullSql).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
     }
   });
+
+  // TA-19 : vérifie les indexes Phase 3 ajoutés en v4
+  it('creates Phase 3 indexes (v4)', async () => {
+    await openDatabase();
+    const execCalls = ExpoSQLite.__db.execAsync.mock.calls.map(
+      (c: unknown[]) => c[0] as string
+    );
+    const fullSql = execCalls.join('\n');
+    const expectedIndexes = [
+      'idx_programs_user_is_active',
+      'idx_blocks_program_status',
+      'idx_workout_days_block_day_order',
+      'idx_planned_exercises_workout_day_order',
+    ];
+    for (const idx of expectedIndexes) {
+      expect(fullSql).toContain(idx);
+    }
+    expect(fullSql).toContain('PRAGMA user_version = 4');
+  });
 });

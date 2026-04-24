@@ -177,6 +177,48 @@ Ce pattern s'applique à toute donnée lue depuis SQLite : TanStack Query suffit
 
 ---
 
+## ADR-011 : Statut de bloc `deloaded` distinct de `active`
+
+**Statut** : Accepté
+**Date** : 2026-04-24
+
+### Contexte
+`docs/business-rules.md §3.4` décrit le deload comme un état transitoire d'un bloc actif (charges -30/40 %, volume réduit, 1 semaine). Le schéma initial ne distinguait pas un bloc `active` en deload d'un bloc `active` normal. Le moteur de statut de séance (Phase 5) a besoin de cette distinction pour appliquer les règles de deload sans lire toute la fatigue history.
+
+### Décision
+`block.status` accepte 4 valeurs : `planned | active | deloaded | completed`. `deloaded` est un état transitoire explicite : quand le moteur déclenche un deload (auto ou manuel), il bascule le bloc de `active` → `deloaded` le temps de la semaine, puis revient à `active`. `completed` reste réservé à la fin effective du bloc.
+
+### Conséquence
+- Migration Supabase additive (`ALTER TABLE ... DROP/ADD CONSTRAINT`) — safe en Phase 3 (pas de rows en prod).
+- Le type TS `BlockStatus` inclut `deloaded`.
+- Le moteur de Phase 5 lit `status === 'deloaded'` plutôt que de recalculer la fatigue à chaque lecture.
+- Le ticket TA-19 (Phase 3) valide cet invariant dès la création des entités.
+
+---
+
+## ADR-012 : Config SyncQueue par repository — payload snake_case Supabase
+
+**Statut** : Accepté
+**Date** : 2026-04-24
+
+### Contexte
+TA-19 introduit 4 nouvelles entités synchronisables (Program/Block/WorkoutDay/PlannedExercise). Le pattern existant pour `exercises` (TA-17) enrichit `insert`/`update`/`delete` avec un appel `enqueueSyncRecord`. La question est : quel format de payload mettre dans la queue ?
+
+### Décision
+Chaque repository publie un payload **snake_case conforme au schéma Supabase** (pas au schéma SQLite local). Règles :
+- Booléens → `true`/`false` (pas `0`/`1`).
+- Arrays → JS arrays (pas JSON string).
+- Objects (ex: `progression_config`) → objects JS (jsonb-ready côté serveur).
+- L'échec de `enqueueSyncRecord` ne doit **jamais** rollback l'écriture locale : `try/catch` + log, l'op sera retentée par le sync engine (Phase 6).
+- Action `delete` → payload minimal `{ id }` (le serveur n'a besoin que de la clé).
+
+### Conséquence
+- Le sync engine (Phase 6) peut `POST` le payload tel quel sans transformation.
+- La divergence SQLite/Supabase (booleans, JSON) est confinée aux mappers de chaque repository.
+- Idempotence : rejouer une op `insert` produira un conflit sur la PK → géré par `upsert` ou conflict resolution en Phase 6.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
