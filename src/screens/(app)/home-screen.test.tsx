@@ -10,6 +10,14 @@ jest.mock('@/hooks/use-auth', () => ({
   }),
 }));
 
+jest.mock('@/hooks/use-db', () => ({
+  useDB: () => ({}),
+}));
+
+jest.mock('@/dev/seed-active-block', () => ({
+  seedActiveBlock: jest.fn(),
+}));
+
 const fakeUser = { id: 'u1', email: 'test@example.com', createdAt: '2026-04-23T10:00:00Z' };
 
 beforeEach(() => {
