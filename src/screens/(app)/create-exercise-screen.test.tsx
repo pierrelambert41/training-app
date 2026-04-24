@@ -122,7 +122,8 @@ describe('CreateExerciseScreen', () => {
     fireEvent.press(screen.getByTestId('create-exercise-submit'));
 
     await waitFor(() => {
-      expect(db.runAsync).toHaveBeenCalledTimes(1);
+      // 2 calls: 1 for INSERT exercises + 1 for INSERT sync_queue
+      expect(db.runAsync).toHaveBeenCalledTimes(2);
       expect(mockBack).toHaveBeenCalledTimes(1);
     });
   });

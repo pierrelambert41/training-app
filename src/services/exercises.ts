@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Exercise, ExerciseCategory, LogType, MovementPattern } from '@/types';
+import { enqueueSyncRecord } from './sync-queue';
 
 export type CustomExerciseInput = {
   id: string;
@@ -42,6 +43,37 @@ export async function insertCustomExercise(
       now,
     ]
   );
+
+  // Payload targets Supabase schema (TEXT[] columns), not the local SQLite row
+  // where these fields are stored as JSON strings.
+  // enqueueSyncRecord failure must not rollback an already-committed local insert:
+  // the local record exists and the sync will be retried later.
+  try {
+    await enqueueSyncRecord(db, 'exercises', input.id, 'insert', {
+      id: input.id,
+      name: input.name,
+      name_fr: null,
+      category,
+      movement_pattern: input.movementPattern,
+      primary_muscles: input.primaryMuscles,
+      secondary_muscles: input.secondaryMuscles,
+      equipment: input.equipment,
+      log_type: logType,
+      is_unilateral: false,
+      systemic_fatigue: 'moderate',
+      movement_stability: 'stable',
+      morpho_tags: [],
+      recommended_progression_type: null,
+      alternatives: [],
+      coaching_notes: input.notes,
+      tags: [],
+      is_custom: true,
+      created_by: input.createdBy,
+      created_at: now,
+    });
+  } catch (err) {
+    console.warn('[exercises] enqueueSyncRecord failed — local insert preserved, sync will retry', err);
+  }
 }
 
 type ExerciseRow = {
