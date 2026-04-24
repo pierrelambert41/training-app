@@ -10,6 +10,7 @@ export default function ProgramsLayout() {
       }}
     >
       <Stack.Screen name="generate" options={{ headerShown: false }} />
+      <Stack.Screen name="[programId]" options={{ title: 'Programme actif' }} />
     </Stack>
   );
 }
