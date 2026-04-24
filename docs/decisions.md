@@ -243,6 +243,31 @@ TA-21 introduit la fonction `generateProgram(input)`. Deux questions ont dû êt
 
 ---
 
+## ADR-014 : Templates de progression centralisés et scaling par niveau
+
+**Statut** : Accepté
+**Date** : 2026-04-24
+
+### Contexte
+TA-22 introduit `assignProgressionConfig(exercise, blockGoal, userLevel, role, repRange?)` — la fonction qui résout `progressionType` + `progressionConfig` à la création de chaque `PlannedExercise`. Avant, le moteur de génération embarquait des constantes inline dans `program-generation.ts` (un seul jeu de valeurs, indifférent au niveau). Question : où vivent les défauts ? comment varient-ils par niveau ?
+
+### Décision
+1. **Fichier unique** `src/constants/progression-defaults.ts` pour tous les défauts par type × niveau. Toute autre couche (UI override, régénération de bloc, recommandations IA) lit ces constantes — pas de duplication.
+2. **Scaling par niveau** :
+   - `beginner` : incréments agressifs (lower 5 kg, upper 2.5 kg) — progression linéaire rapide.
+   - `intermediate` : valeurs canoniques de `business-rules.md §2` — référence.
+   - `advanced` : incréments fins (lower 1.25 kg, upper 0.5 kg) + `failures_before_reset` augmenté (3 vs 2) — plus de tolérance à l'échec car les charges sont relativement plus proches du 1RM réel.
+3. **Résolution du `progressionType`** : `Exercise.recommendedProgressionType` reste prioritaire (le catalogue est l'ontologie). Fallback déterministe par `logType` puis `category` puis `role + blockGoal`. Pas de heuristique stochastique.
+4. **Fonction pure** : `assignProgressionConfig` ne lit aucune DB, ne dépend d'aucun temps. Testable en isolation, réutilisable au moment de la régénération de bloc, du dégradage manuel d'un exercice, ou du recalcul lors d'un changement de niveau utilisateur.
+
+### Conséquences
+- Le moteur de génération (TA-21) ne contient plus de constantes de progression — il délègue à `assignProgressionConfig`.
+- Ajuster une progression (ex : `increment_kg` plus fin pour avancé) = modifier `progression-defaults.ts`, sans toucher au moteur.
+- Tout futur "override manuel" se branchera après l'appel à `assignProgressionConfig` (priorité : override > recommended > fallback).
+- Le moteur de progression (Phase 5, futur ticket) lit le `progressionConfig` tel qu'il a été assigné — pas de logique de scaling au runtime.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
