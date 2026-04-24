@@ -7,9 +7,9 @@ module.exports = {
     extend: {
       colors: {
         background: {
-          DEFAULT: '#000000',
-          surface: '#111111',
-          elevated: '#1a1a1a',
+          DEFAULT: '#080d1a',
+          surface: '#0f1628',
+          elevated: '#1a2440',
         },
         content: {
           primary: '#ffffff',
@@ -26,8 +26,8 @@ module.exports = {
           danger: '#ef4444',
         },
         border: {
-          DEFAULT: '#262626',
-          strong: '#404040',
+          DEFAULT: '#1e2d4a',
+          strong: '#2d4170',
         },
       },
       fontSize: {

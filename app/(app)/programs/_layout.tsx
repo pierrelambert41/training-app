@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function AppLayout() {
+export default function ProgramsLayout() {
   return (
     <Stack
       screenOptions={{
@@ -9,7 +9,7 @@ export default function AppLayout() {
         contentStyle: { backgroundColor: '#080d1a' },
       }}
     >
-      <Stack.Screen name="create-exercise" options={{ title: 'Nouvel exercice', presentation: 'modal' }} />
+      <Stack.Screen name="generate" options={{ headerShown: false }} />
     </Stack>
   );
 }
