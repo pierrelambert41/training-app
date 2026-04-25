@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router';
+import { colors } from '@/theme/tokens';
 
 export default function ProgramsLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#080d1a' },
-        headerTintColor: '#ffffff',
-        contentStyle: { backgroundColor: '#080d1a' },
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.contentPrimary,
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
       <Stack.Screen name="generate" options={{ headerShown: false }} />

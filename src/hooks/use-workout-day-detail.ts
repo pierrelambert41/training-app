@@ -28,6 +28,9 @@ export function useWorkoutDayDetail(workoutDayId: string) {
       const plannedExercises = await getPlannedExercisesByWorkoutDayId(db, workoutDayId);
 
       const exerciseIds = plannedExercises.map((pe) => pe.exerciseId);
+      if (exerciseIds.length === 0) {
+        return { day, plannedExercises: [] };
+      }
       const exercises = await getExercisesByIds(db, exerciseIds);
       const exercisesById = new Map(exercises.map((e) => [e.id, e]));
 

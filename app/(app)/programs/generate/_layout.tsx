@@ -1,12 +1,13 @@
 import { Stack } from 'expo-router';
+import { colors } from '@/theme/tokens';
 
 export default function GenerateLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: '#080d1a' },
-        headerTintColor: '#ffffff',
-        contentStyle: { backgroundColor: '#080d1a' },
+        headerStyle: { backgroundColor: colors.background },
+        headerTintColor: colors.contentPrimary,
+        contentStyle: { backgroundColor: colors.background },
         animation: 'slide_from_right',
       }}
     >

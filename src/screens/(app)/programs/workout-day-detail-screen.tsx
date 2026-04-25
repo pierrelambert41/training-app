@@ -1,5 +1,5 @@
 import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { AppText, Button, EmptyState } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { useWorkoutDayDetail, type PlannedExerciseWithExercise } from '@/hooks/use-workout-day-detail';
@@ -47,6 +47,9 @@ function RoleBadge({ role }: { role: PlannedExerciseRole }) {
 }
 
 function resolveTargetLoad(pe: PlannedExerciseWithExercise): string {
+  if (pe.progressionConfig === null || typeof pe.progressionConfig !== 'object') {
+    return 'À calibrer';
+  }
   const config = pe.progressionConfig as Record<string, unknown>;
   const target = config['target_load'];
   if (typeof target === 'number') return `${target} kg`;
@@ -223,11 +226,10 @@ function DayHeader({ title, splitType, estimatedDurationMin }: DayHeaderProps) {
 
 export default function WorkoutDayDetailScreen() {
   const { workoutDayId } = useLocalSearchParams<{ workoutDayId: string }>();
-  const router = useRouter();
   const { data, isLoading, error } = useWorkoutDayDetail(workoutDayId ?? '');
 
-  function handleExercisePress(exerciseId: string) {
-    router.push(`/(app)/exercise/${exerciseId}` as Parameters<typeof router.push>[0]);
+  function handleExercisePress(_exerciseId: string) {
+    // TODO TA-XX: route exercise detail pas encore implémentée
   }
 
   function handleReplacePress(pe: PlannedExerciseWithExercise) {
@@ -239,6 +241,17 @@ export default function WorkoutDayDetailScreen() {
 
   function handleStartSession() {
     Alert.alert('Phase 4', 'Le logger de séance sera disponible en Phase 4.');
+  }
+
+  if (!workoutDayId) {
+    return (
+      <View className="flex-1 bg-background p-4 justify-center">
+        <EmptyState
+          title="Séance introuvable"
+          description="Identifiant de séance manquant. Retourne en arrière et réessaie."
+        />
+      </View>
+    );
   }
 
   if (isLoading) {
