@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActionSheetIOS,
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   TextInput,
@@ -14,8 +16,11 @@ import { useSessionExercises } from '@/hooks/use-session-exercises';
 import { useSessionStore } from '@/stores/session-store';
 import { AppText } from '@/components/ui';
 import { RestTimer } from '@/components/session/RestTimer';
+import { ExerciseDots } from '@/components/session/ExerciseDots';
+import { ExercisePager } from '@/components/session/ExercisePager';
 import { colors } from '@/theme/tokens';
-import type { PlannedExercise, SetLog } from '@/types';
+import type { Exercise, PlannedExercise, SetLog } from '@/types';
+import type { SQLiteDatabase } from 'expo-sqlite';
 
 // ---------------------------------------------------------------------------
 // Session elapsed timer
@@ -463,6 +468,190 @@ function SessionHeader({
 }
 
 // ---------------------------------------------------------------------------
+// ExercisePage — one page per planned exercise
+// ---------------------------------------------------------------------------
+
+type ExercisePageProps = {
+  plannedExercise: PlannedExercise;
+  exerciseIndex: number;
+  setLogs: SetLog[];
+  exercisesById: Map<string, Exercise>;
+  sessionId: string;
+  db: SQLiteDatabase;
+  onSkip: (exerciseId: string) => void;
+};
+
+function ExercisePage({
+  plannedExercise,
+  exerciseIndex,
+  setLogs,
+  exercisesById,
+  sessionId,
+  db,
+  onSkip,
+}: ExercisePageProps) {
+  const logSet = useSessionStore((s) => s.logSet);
+  const startRestTimer = useSessionStore((s) => s.startRestTimer);
+
+  const exerciseMeta = exercisesById.get(plannedExercise.exerciseId) ?? null;
+  const exerciseName =
+    exerciseMeta?.nameFr ?? exerciseMeta?.name ?? `Exercice ${exerciseIndex + 1}`;
+
+  const exerciseSetLogs = useMemo(
+    () => setLogs.filter((sl) => sl.exerciseId === plannedExercise.exerciseId),
+    [setLogs, plannedExercise.exerciseId]
+  );
+
+  const { lastSet } = useLastSetForExercise(plannedExercise.exerciseId, sessionId);
+
+  const nextSetNumber = exerciseSetLogs.length + 1;
+
+  const prefillLoad = useMemo(() => {
+    const lastLogged = exerciseSetLogs.at(-1);
+    if (lastLogged?.load !== null && lastLogged?.load !== undefined) return lastLogged.load;
+    if (lastSet?.load !== null && lastSet?.load !== undefined) return lastSet.load;
+    return null;
+  }, [exerciseSetLogs, lastSet]);
+
+  const prefillReps = useMemo(() => {
+    const lastLogged = exerciseSetLogs.at(-1);
+    if (lastLogged?.reps !== null && lastLogged?.reps !== undefined) return lastLogged.reps;
+    if (lastSet?.reps !== null && lastSet?.reps !== undefined) return lastSet.reps;
+    return plannedExercise.repRangeMin;
+  }, [exerciseSetLogs, lastSet, plannedExercise.repRangeMin]);
+
+  const prefillRir = useMemo(() => {
+    const lastLogged = exerciseSetLogs.at(-1);
+    if (lastLogged?.rir !== null && lastLogged?.rir !== undefined) return lastLogged.rir;
+    if (lastSet?.rir !== null && lastSet?.rir !== undefined) return lastSet.rir;
+    return plannedExercise.targetRir ?? null;
+  }, [exerciseSetLogs, lastSet, plannedExercise.targetRir]);
+
+  const allSetsLogged =
+    exerciseSetLogs.filter((sl) => sl.completed).length >= plannedExercise.sets;
+
+  const handleLogSet = useCallback(
+    (load: number | null, reps: number | null, rir: number | null) => {
+      logSet(db, {
+        plannedExerciseId: plannedExercise.id,
+        exerciseId: plannedExercise.exerciseId,
+        setNumber: nextSetNumber,
+        load,
+        reps,
+        rir,
+        completed: true,
+      });
+      const restSeconds = plannedExercise.restSeconds ?? 90;
+      startRestTimer(restSeconds, exerciseName);
+    },
+    [db, plannedExercise, logSet, nextSetNumber, startRestTimer, exerciseName]
+  );
+
+  function handleSkipPress() {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Annuler', 'Passer cet exercice'],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 0,
+          message: `Passer "${exerciseName}" sans logger de set ?`,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) onSkip(plannedExercise.exerciseId);
+        }
+      );
+    } else {
+      // MVP: Android has no native ActionSheet equivalent; skip directly without confirmation.
+      onSkip(plannedExercise.exerciseId);
+    }
+  }
+
+  return (
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
+      <ExerciseHeader
+        name={exerciseName}
+        primaryMuscles={exerciseMeta?.primaryMuscles ?? []}
+        sets={plannedExercise.sets}
+        repRangeMin={plannedExercise.repRangeMin}
+        repRangeMax={plannedExercise.repRangeMax}
+        targetRir={plannedExercise.targetRir}
+        targetLoad={prefillLoad}
+      />
+
+      <View className="gap-1">
+        <View className="flex-row px-4 mb-1">
+          <View className="w-8" />
+          <AppText className="flex-1 text-caption text-content-muted text-center">
+            Charge
+          </AppText>
+          <AppText className="flex-1 text-caption text-content-muted text-center">
+            Reps
+          </AppText>
+          <AppText className="w-12 text-caption text-content-muted text-center">
+            RIR
+          </AppText>
+        </View>
+
+        {Array.from({ length: plannedExercise.sets }, (_, i) => {
+          const setNum = i + 1;
+          const log = exerciseSetLogs.find((sl) => sl.setNumber === setNum) ?? null;
+          const isCurrent = !allSetsLogged && setNum === nextSetNumber;
+
+          return (
+            <SetRow
+              key={setNum}
+              setNumber={setNum}
+              log={log}
+              targetLoad={prefillLoad}
+              targetReps={plannedExercise.repRangeMin}
+              targetRir={plannedExercise.targetRir}
+              isCurrent={isCurrent}
+            />
+          );
+        })}
+      </View>
+
+      {!allSetsLogged ? (
+        <LogSetForm
+          plannedExercise={plannedExercise}
+          prefillLoad={prefillLoad}
+          prefillReps={prefillReps}
+          prefillRir={prefillRir}
+          onLog={handleLogSet}
+          disabled={false}
+        />
+      ) : (
+        <View className="bg-background-elevated rounded-card px-4 py-4 items-center gap-2">
+          <AppText className="text-status-success text-heading font-bold">
+            Tous les sets terminés
+          </AppText>
+          <AppText className="text-caption text-content-secondary">
+            Swipe pour passer à l'exercice suivant.
+          </AppText>
+        </View>
+      )}
+
+      <Pressable
+        onPress={handleSkipPress}
+        hitSlop={8}
+        style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}
+        accessibilityLabel="Passer cet exercice"
+        testID="skip-exercise-button"
+      >
+        <AppText className="text-label text-content-muted underline">
+          Passer cet exercice
+        </AppText>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main screen
 // ---------------------------------------------------------------------------
 
@@ -474,8 +663,9 @@ export default function SessionLiveScreen() {
   const plannedExercises = useSessionStore((s) => s.plannedExercises);
   const setLogs = useSessionStore((s) => s.setLogs);
   const currentExerciseIndex = useSessionStore((s) => s.currentExerciseIndex);
-  const logSet = useSessionStore((s) => s.logSet);
-  const startRestTimer = useSessionStore((s) => s.startRestTimer);
+  const skippedExerciseIds = useSessionStore((s) => s.skippedExerciseIds);
+  const setCurrentExercise = useSessionStore((s) => s.setCurrentExercise);
+  const skipExercise = useSessionStore((s) => s.skipExercise);
   const completeSession = useSessionStore((s) => s.completeSession);
 
   const elapsed = useElapsedTime(session?.startedAt ?? null);
@@ -487,85 +677,22 @@ export default function SessionLiveScreen() {
   const exercisesById = sessionExercisesData?.exercisesById ?? new Map();
   const workoutDay = sessionExercisesData?.workoutDay ?? null;
 
-  const currentPlanned: PlannedExercise | null =
-    plannedExercises[currentExerciseIndex] ?? null;
+  const doneIndices = useMemo(() => {
+    return plannedExercises
+      .map((pe, i) => {
+        const logsForExercise = setLogs.filter(
+          (sl) => sl.exerciseId === pe.exerciseId && sl.completed
+        );
+        return logsForExercise.length >= pe.sets ? i : -1;
+      })
+      .filter((i) => i >= 0);
+  }, [plannedExercises, setLogs]);
 
-  const currentExerciseSetLogs = useMemo(() => {
-    if (!currentPlanned) return [];
-    return setLogs.filter((sl) => sl.exerciseId === currentPlanned.exerciseId);
-  }, [setLogs, currentPlanned]);
-
-  const { lastSet } = useLastSetForExercise(
-    currentPlanned?.exerciseId ?? null,
-    session?.id
-  );
-
-  const nextSetNumber = currentExerciseSetLogs.length + 1;
-
-  const prefillLoad = useMemo(() => {
-    const lastLogged = currentExerciseSetLogs.at(-1);
-    if (lastLogged?.load !== null && lastLogged?.load !== undefined) {
-      return lastLogged.load;
-    }
-    if (lastSet?.load !== null && lastSet?.load !== undefined) {
-      return lastSet.load;
-    }
-    return null;
-  }, [currentExerciseSetLogs, lastSet]);
-
-  const prefillReps = useMemo(() => {
-    const lastLogged = currentExerciseSetLogs.at(-1);
-    if (lastLogged?.reps !== null && lastLogged?.reps !== undefined) {
-      return lastLogged.reps;
-    }
-    if (lastSet?.reps !== null && lastSet?.reps !== undefined) {
-      return lastSet.reps;
-    }
-    if (currentPlanned) return currentPlanned.repRangeMin;
-    return null;
-  }, [currentExerciseSetLogs, lastSet, currentPlanned]);
-
-  const prefillRir = useMemo(() => {
-    const lastLogged = currentExerciseSetLogs.at(-1);
-    if (lastLogged?.rir !== null && lastLogged?.rir !== undefined) {
-      return lastLogged.rir;
-    }
-    if (lastSet?.rir !== null && lastSet?.rir !== undefined) {
-      return lastSet.rir;
-    }
-    return currentPlanned?.targetRir ?? null;
-  }, [currentExerciseSetLogs, lastSet, currentPlanned]);
-
-  const allSetsLogged =
-    currentPlanned !== null &&
-    currentExerciseSetLogs.filter((sl) => sl.completed).length >=
-      currentPlanned.sets;
-
-  const currentExerciseMeta = currentPlanned
-    ? exercisesById.get(currentPlanned.exerciseId) ?? null
-    : null;
-
-  const handleLogSet = useCallback(
-    (load: number | null, reps: number | null, rir: number | null) => {
-      if (!currentPlanned || !session) return;
-
-      logSet(db, {
-        plannedExerciseId: currentPlanned.id,
-        exerciseId: currentPlanned.exerciseId,
-        setNumber: nextSetNumber,
-        load,
-        reps,
-        rir,
-        completed: true,
-      });
-
-      const restSeconds = currentPlanned.restSeconds ?? 90;
-      const exerciseName =
-        currentExerciseMeta?.nameFr ?? currentExerciseMeta?.name ?? `Exercice ${currentExerciseIndex + 1}`;
-      startRestTimer(restSeconds, exerciseName);
-    },
-    [db, currentPlanned, session, logSet, nextSetNumber, startRestTimer, currentExerciseMeta, currentExerciseIndex]
-  );
+  const skippedIndices = useMemo(() => {
+    return plannedExercises
+      .map((pe, i) => (skippedExerciseIds.has(pe.exerciseId) ? i : -1))
+      .filter((i) => i >= 0);
+  }, [plannedExercises, skippedExerciseIds]);
 
   const handleEndSession = useCallback(async () => {
     await completeSession(db);
@@ -584,14 +711,39 @@ export default function SessionLiveScreen() {
 
   const sessionName = workoutDay?.title ?? 'Séance';
 
-  const currentExercise = currentExerciseMeta;
-
-  // prefillLoad = dernière charge loggée (séance en cours ou séance précédente).
-  // Il ne s'agit PAS d'un targetLoad prescrit par le moteur de progression —
-  // cette valeur est un fallback pratique pour pré-remplir le champ.
-  // TA-prog: quand le moteur calculera une charge cible, elle proviendra de
-  // PlannedExercise.targetLoad (champ à ajouter) et sera prioritaire ici.
-  const targetLoadForCurrentExercise = prefillLoad;
+  if (plannedExercises.length === 0) {
+    return (
+      <SafeAreaView className="flex-1 bg-background">
+        <SessionHeader
+          sessionName={sessionName}
+          elapsed={elapsed}
+          exerciseIndex={0}
+          exerciseCount={1}
+        />
+        <RestTimer />
+        <View className="flex-1 items-center justify-center py-12 gap-3">
+          <AppText variant="heading" className="text-content-primary text-center">
+            Séance libre
+          </AppText>
+          <AppText variant="body" className="text-content-secondary text-center">
+            Aucun exercice planifié pour cette séance.
+          </AppText>
+        </View>
+        <View className="px-4 pb-6 pt-2 gap-2 border-t border-border bg-background">
+          <Pressable
+            onPress={handleEndSession}
+            className="h-14 rounded-button items-center justify-center bg-background-surface border border-border-strong"
+            accessibilityLabel="Terminer la séance"
+            testID="end-session-button"
+          >
+            <AppText className="text-label font-semibold text-content-secondary">
+              Terminer la séance
+            </AppText>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -599,99 +751,39 @@ export default function SessionLiveScreen() {
         sessionName={sessionName}
         elapsed={elapsed}
         exerciseIndex={currentExerciseIndex}
-        exerciseCount={plannedExercises.length || 1}
+        exerciseCount={plannedExercises.length}
       />
       <RestTimer />
 
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-4 pt-4 pb-6 gap-4"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {currentPlanned ? (
-          <>
-            <ExerciseHeader
-              name={
-                currentExercise?.nameFr ?? currentExercise?.name
-                  ?? `Exercice ${currentExerciseIndex + 1}`
-              }
-              primaryMuscles={currentExercise?.primaryMuscles ?? []}
-              sets={currentPlanned.sets}
-              repRangeMin={currentPlanned.repRangeMin}
-              repRangeMax={currentPlanned.repRangeMax}
-              targetRir={currentPlanned.targetRir}
-              targetLoad={targetLoadForCurrentExercise}
+      <ExerciseDots
+        count={plannedExercises.length}
+        currentIndex={currentExerciseIndex}
+        doneIndices={doneIndices}
+        skippedIndices={skippedIndices}
+        onPress={setCurrentExercise}
+      />
+
+      <ExercisePager
+        currentIndex={currentExerciseIndex}
+        count={plannedExercises.length}
+        onPageChange={setCurrentExercise}
+        renderPage={(i) => {
+          const pe = plannedExercises[i];
+          if (!pe) return null;
+          return (
+            <ExercisePage
+              key={pe.id}
+              plannedExercise={pe}
+              exerciseIndex={i}
+              setLogs={setLogs}
+              exercisesById={exercisesById}
+              sessionId={session.id}
+              db={db}
+              onSkip={skipExercise}
             />
-
-            <View className="gap-1">
-              <View className="flex-row px-4 mb-1">
-                <View className="w-8" />
-                <AppText className="flex-1 text-caption text-content-muted text-center">
-                  Charge
-                </AppText>
-                <AppText className="flex-1 text-caption text-content-muted text-center">
-                  Reps
-                </AppText>
-                <AppText className="w-12 text-caption text-content-muted text-center">
-                  RIR
-                </AppText>
-              </View>
-
-              {Array.from({ length: currentPlanned.sets }, (_, i) => {
-                const setNum = i + 1;
-                const log =
-                  currentExerciseSetLogs.find(
-                    (sl) => sl.setNumber === setNum
-                  ) ?? null;
-                const isCurrent =
-                  !allSetsLogged && setNum === nextSetNumber;
-
-                return (
-                  <SetRow
-                    key={setNum}
-                    setNumber={setNum}
-                    log={log}
-                    targetLoad={prefillLoad}
-                    targetReps={currentPlanned.repRangeMin}
-                    targetRir={currentPlanned.targetRir}
-                    isCurrent={isCurrent}
-                  />
-                );
-              })}
-            </View>
-
-            {!allSetsLogged ? (
-              <LogSetForm
-                plannedExercise={currentPlanned}
-                prefillLoad={prefillLoad}
-                prefillReps={prefillReps}
-                prefillRir={prefillRir}
-                onLog={handleLogSet}
-                disabled={false}
-              />
-            ) : (
-              <View className="bg-background-elevated rounded-card px-4 py-4 items-center gap-2">
-                <AppText className="text-status-success text-heading font-bold">
-                  Tous les sets terminés
-                </AppText>
-                <AppText className="text-caption text-content-secondary">
-                  Navigue vers l'exercice suivant ou termine la séance.
-                </AppText>
-              </View>
-            )}
-          </>
-        ) : (
-          <View className="flex-1 items-center justify-center py-12 gap-3">
-            <AppText variant="heading" className="text-content-primary text-center">
-              Séance libre
-            </AppText>
-            <AppText variant="body" className="text-content-secondary text-center">
-              Aucun exercice planifié pour cette séance.
-            </AppText>
-          </View>
-        )}
-      </ScrollView>
+          );
+        }}
+      />
 
       <View className="px-4 pb-6 pt-2 gap-2 border-t border-border bg-background">
         <Pressable
