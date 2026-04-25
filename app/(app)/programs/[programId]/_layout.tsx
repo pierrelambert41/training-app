@@ -12,6 +12,10 @@ export default function ProgramIdLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'Programme actif' }} />
       <Stack.Screen name="day/[workoutDayId]" options={{ title: 'Séance' }} />
+      <Stack.Screen
+        name="day/replace-exercise"
+        options={{ title: 'Remplacer l\'exercice', presentation: 'modal' }}
+      />
     </Stack>
   );
 }

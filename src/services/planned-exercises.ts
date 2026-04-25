@@ -225,3 +225,21 @@ export async function getPlannedExercisesByWorkoutDayId(
   );
   return rows.map(rowToPlannedExercise);
 }
+
+export async function replaceExercise(
+  db: SQLiteDatabase,
+  plannedExerciseId: string,
+  newExerciseId: string
+): Promise<PlannedExercise | null> {
+  const existing = await getPlannedExerciseById(db, plannedExerciseId);
+  if (!existing) return null;
+
+  await db.runAsync(
+    'UPDATE planned_exercises SET exercise_id = ? WHERE id = ?',
+    [newExerciseId, plannedExerciseId]
+  );
+
+  const updated: PlannedExercise = { ...existing, exerciseId: newExerciseId };
+  await safeEnqueue(db, TABLE, updated.id, 'update', toSupabasePayload(updated));
+  return updated;
+}

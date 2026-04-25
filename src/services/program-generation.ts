@@ -364,7 +364,7 @@ type FilterContext = {
   avoidNameTokens: string[];
 };
 
-const EQUIPMENT_AVAILABLE_BY_TYPE: Record<string, string[]> = {
+export const EQUIPMENT_AVAILABLE_BY_TYPE: Record<string, string[]> = {
   full_gym: [
     'barbell', 'ez_bar', 'trap_bar', 'safety_bar', 'bench', 'incline_bench',
     'decline_bench', 'rack', 'power_rack', 'pull_up_bar', 'dip_bars',
