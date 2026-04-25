@@ -15,10 +15,10 @@ const SPLIT_COLORS: Record<SplitType, string> = {
 
 const SPLIT_ICONS: Record<SplitType, string> = {
   push: 'P',
-  pull: 'P',
+  pull: 'Pl',
   legs: 'L',
   upper: 'U',
-  lower: 'L',
+  lower: 'Lo',
   full: 'F',
 };
 
