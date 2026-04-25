@@ -84,6 +84,8 @@ jest.mock('expo-haptics', () => ({
 
 const mockLogSet = jest.fn();
 const mockCompleteSession = jest.fn();
+const mockEditSet = jest.fn();
+const mockDeleteSet = jest.fn();
 
 const fakeSession: Session = {
   id: 'session-1',
@@ -144,6 +146,8 @@ function setupStore(
     restTimer: null,
     logSet: mockLogSet,
     completeSession: mockCompleteSession,
+    editSet: mockEditSet,
+    deleteSet: mockDeleteSet,
     ...partial,
   } as ReturnType<typeof useSessionStore.getState>);
 }
@@ -152,6 +156,8 @@ beforeEach(() => {
   mockReplace.mockReset();
   mockLogSet.mockReset().mockResolvedValue(undefined);
   mockCompleteSession.mockReset().mockResolvedValue(undefined);
+  mockEditSet.mockReset();
+  mockDeleteSet.mockReset();
 });
 
 describe('SessionLiveScreen', () => {
@@ -292,6 +298,117 @@ describe('SessionLiveScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Aucune séance en cours.')).toBeTruthy();
+    });
+  });
+
+  it('affiche le bouton "Repeat previous set" quand un set est déjà loggé', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 80,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('repeat-previous-button')).toBeTruthy();
+    });
+  });
+
+  it("n'affiche pas le bouton 'Repeat previous set' quand aucun set loggé", async () => {
+    setupStore({ setLogs: [] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('log-set-button'));
+
+    expect(screen.queryByTestId('repeat-previous-button')).toBeNull();
+  });
+
+  it('préremplit les champs via "Repeat previous set"', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 95,
+      reps: 7,
+      rir: 1,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('repeat-previous-button'));
+
+    fireEvent.press(screen.getByTestId('repeat-previous-button'));
+
+    await waitFor(() => {
+      const loadInput = screen.getByTestId('load-input');
+      const repsInput = screen.getByTestId('reps-input');
+      expect(loadInput.props.value).toBe('95');
+      expect(repsInput.props.value).toBe('7');
+    });
+  });
+
+  it('ouvre l\'éditeur inline au tap sur un set loggé', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByLabelText('Modifier le set 1'));
+
+    fireEvent.press(screen.getByLabelText('Modifier le set 1'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Valider les modifications')).toBeTruthy();
+      expect(screen.getByLabelText('Supprimer ce set')).toBeTruthy();
     });
   });
 });
