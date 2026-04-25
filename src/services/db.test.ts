@@ -160,4 +160,17 @@ describe('schema completeness', () => {
     }
     expect(fullSql).toContain('PRAGMA user_version = 4');
   });
+
+  // TA-72 : vérifie les indexes Phase 4 + table app_meta en v5
+  it('creates Phase 4 indexes and app_meta (v5)', async () => {
+    await openDatabase();
+    const execCalls = ExpoSQLite.__db.execAsync.mock.calls.map(
+      (c: unknown[]) => c[0] as string
+    );
+    const fullSql = execCalls.join('\n');
+    expect(fullSql).toContain('idx_sessions_workout_day');
+    expect(fullSql).toContain('idx_set_logs_planned_exercise');
+    expect(fullSql).toContain('CREATE TABLE IF NOT EXISTS app_meta');
+    expect(fullSql).toContain('PRAGMA user_version = 5');
+  });
 });

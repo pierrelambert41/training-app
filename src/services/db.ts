@@ -179,6 +179,21 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_planned_exercises_workout_day_order ON planned_exercises(workout_day_id, exercise_order);
     `,
   },
+  // TA-72 — Phase 4 : indexes Session/SetLog manquants + table app_meta
+  // pour stocker le device_id local (utilisé à la création de Session).
+  // Les tables sessions, set_logs et sync_queue existent déjà depuis v1.
+  {
+    version: 5,
+    sql: `
+      CREATE INDEX IF NOT EXISTS idx_sessions_workout_day ON sessions(workout_day_id);
+      CREATE INDEX IF NOT EXISTS idx_set_logs_planned_exercise ON set_logs(planned_exercise_id);
+
+      CREATE TABLE IF NOT EXISTS app_meta (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
