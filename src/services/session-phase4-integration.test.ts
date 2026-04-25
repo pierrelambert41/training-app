@@ -186,7 +186,7 @@ function makeInMemoryDb(): SQLiteDatabase & { __store: Store } {
     async <T>(sql: string, params: unknown[] = []): Promise<T[]> => {
       const trimmed = sql.trim();
 
-      if (trimmed.includes('FROM set_logs') && trimmed.includes('session_id') && trimmed.includes('SELECT id')) {
+      if (trimmed.startsWith('SELECT id FROM set_logs WHERE session_id')) {
         const sessionId = params[0] as string;
         return store.set_logs
           .filter((r) => r.session_id === sessionId)

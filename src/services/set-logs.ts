@@ -46,6 +46,7 @@ function rowToSetLog(row: SetLogRow): SetLog {
     durationSeconds: row.duration_seconds,
     distanceMeters: row.distance_meters,
     completed: row.completed === 1,
+    // Safe cast : la CHECK constraint DB garantit que side ∈ {left, right} ou NULL.
     side: row.side as SetLogSide | null,
     notes: row.notes,
     createdAt: row.created_at,
