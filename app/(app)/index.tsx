@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable } from 'react-native';
+import { View, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuth } from '@/hooks/use-auth';
@@ -161,7 +161,7 @@ export default function HomeScreen() {
   const { logout, isLoading } = useAuth();
   const db = useDB();
 
-  useActiveProgram();
+  const { isLoading: isProgramLoading } = useActiveProgram();
   const { data: todayData } = useTodayWorkout();
   const session = useSessionStore((s) => s.session);
 
@@ -174,6 +174,13 @@ export default function HomeScreen() {
     const userId = user?.id ?? 'dev-user';
     const programId = await seedActiveBlock(db, userId);
     router.push(`/(app)/programs/${programId}` as Parameters<typeof router.push>[0]);
+  }
+
+  async function handleResetDB() {
+    const userId = user?.id;
+    if (!userId) return;
+    await db.runAsync('DELETE FROM programs WHERE user_id = ? AND is_active = 0', [userId]);
+    Alert.alert('DB nettoyée', 'Programmes inactifs supprimés.');
   }
 
   function handleStartSession() {
@@ -210,7 +217,11 @@ export default function HomeScreen() {
       <View className="gap-3">
         <AppText variant="caption" muted>SÉANCE DU JOUR</AppText>
 
-        {!todayData || todayData.state === 'no_program' ? (
+        {isProgramLoading ? (
+          <View className="items-center py-8">
+            <ActivityIndicator color="#ffffff" />
+          </View>
+        ) : !todayData || todayData.state === 'no_program' ? (
           <NoProgramCard onGenerate={handleGenerateProgram} />
         ) : todayData.state === 'rest_day' ? (
           <RestDayCard onViewProgram={handleViewProgram} />
@@ -250,6 +261,11 @@ export default function HomeScreen() {
             onPress={handleSeedTestData}
             variant="secondary"
             testID="seed-test-button"
+          />
+          <Button
+            label="Nettoyer DB (suppr. programmes inactifs)"
+            onPress={handleResetDB}
+            variant="secondary"
           />
         </View>
       ) : null}
