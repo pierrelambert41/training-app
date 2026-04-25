@@ -27,7 +27,7 @@ export function CardChoice({ label, description, icon, selected, onPress, testID
         <View className="flex-1">
           <Text
             className={`text-body font-semibold ${
-              selected ? 'text-white' : 'text-content-primary'
+              selected ? 'text-content-on-accent' : 'text-content-primary'
             }`}
           >
             {label}
@@ -35,7 +35,7 @@ export function CardChoice({ label, description, icon, selected, onPress, testID
           {description ? (
             <Text
               className={`text-caption mt-0.5 ${
-                selected ? 'text-white opacity-80' : 'text-content-secondary'
+                selected ? 'text-content-on-accent opacity-80' : 'text-content-secondary'
               }`}
             >
               {description}
@@ -44,11 +44,11 @@ export function CardChoice({ label, description, icon, selected, onPress, testID
         </View>
         <View
           className={`w-5 h-5 rounded-full border-2 items-center justify-center ${
-            selected ? 'border-white' : 'border-border-strong'
+            selected ? 'border-content-on-accent' : 'border-border-strong'
           }`}
         >
           {selected ? (
-            <View className="w-2.5 h-2.5 rounded-full bg-white" />
+            <View className="w-2.5 h-2.5 rounded-full bg-content-on-accent" />
           ) : null}
         </View>
       </View>

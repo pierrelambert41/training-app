@@ -32,7 +32,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange, t
           >
             <Text
               className={`text-label font-medium ${
-                isSelected ? 'text-white' : 'text-content-secondary'
+                isSelected ? 'text-content-on-accent' : 'text-content-secondary'
               }`}
             >
               {option.label}

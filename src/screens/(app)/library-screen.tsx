@@ -76,7 +76,7 @@ export default function LibraryScreen() {
         className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
         style={{ elevation: 4 }}
       >
-        <Text className="text-white text-display leading-none" style={{ marginTop: -2 }}>+</Text>
+        <Text className="text-content-on-accent text-display leading-none" style={{ marginTop: -2 }}>+</Text>
       </TouchableOpacity>
     </View>
   );

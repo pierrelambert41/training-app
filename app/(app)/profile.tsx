@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useAuthStore } from '@/stores/auth-store';
 import { useAuth } from '@/hooks/use-auth';
+import { colors } from '@/theme/tokens';
 
 export default function ProfileScreen() {
   const user = useAuthStore((s) => s.user);
@@ -18,9 +19,9 @@ export default function ProfileScreen() {
         className="bg-accent rounded-button h-tap items-center justify-center mt-auto disabled:opacity-50"
       >
         {isLoading ? (
-          <ActivityIndicator color="#ffffff" />
+          <ActivityIndicator color={colors.contentOnAccent} />
         ) : (
-          <Text className="text-body text-white font-semibold">Se déconnecter</Text>
+          <Text className="text-body text-content-on-accent font-semibold">Se déconnecter</Text>
         )}
       </Pressable>
     </View>
