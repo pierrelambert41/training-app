@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { generateUUID } from '@/utils/uuid';
 import { useDB } from '@/hooks/use-db';
 import { useAuthStore } from '@/stores/auth-store';
 import { useSessionStore } from '@/stores/session-store';
@@ -106,7 +107,7 @@ export default function SessionStartScreen() {
     setIsStarting(true);
 
     const today = new Date().toISOString().slice(0, 10);
-    const sessionId = crypto.randomUUID();
+    const sessionId = generateUUID();
 
     await startSession(db, {
       sessionId,

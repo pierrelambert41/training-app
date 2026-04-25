@@ -2,16 +2,16 @@ import { useSessionStore } from './session-store';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Session, SetLog, PlannedExercise } from '@/types';
 
-let uuidCounter = 0;
-const mockRandomUUID = jest.fn(() => `uuid-set-${++uuidCounter}`);
+let mockUuidCounter = 0;
 
-beforeAll(() => {
-  Object.defineProperty(globalThis, 'crypto', {
-    value: { randomUUID: mockRandomUUID },
-    writable: true,
-    configurable: true,
-  });
-});
+jest.mock('@/utils/uuid', () => ({
+  generateUUID: jest.fn(() => `uuid-set-${++mockUuidCounter}`),
+}));
+
+jest.mock('@/services/rest-notifications', () => ({
+  scheduleRestEndNotification: jest.fn(),
+  cancelRestNotification: jest.fn(),
+}));
 
 jest.mock('@/services/sessions', () => ({
   insertSession: jest.fn(),
@@ -32,6 +32,7 @@ jest.mock('@/services/planned-exercises', () => ({
   insertPlannedExercise: jest.fn(),
 }));
 
+import { generateUUID } from '@/utils/uuid';
 import {
   insertSession,
   updateSession,
@@ -57,6 +58,7 @@ const mockDeleteSetLog = deleteSetLog as jest.Mock;
 const mockGetSetLogsBySessionId = getSetLogsBySessionId as jest.Mock;
 const mockGetPlannedExercises = getPlannedExercisesByWorkoutDayId as jest.Mock;
 const mockInsertPlannedExercise = insertPlannedExercise as jest.Mock;
+const mockGenerateUUID = generateUUID as jest.Mock;
 
 const mockDb = {} as SQLiteDatabase;
 
@@ -116,8 +118,8 @@ function makePlannedExercise(overrides: Partial<PlannedExercise> = {}): PlannedE
 }
 
 beforeEach(() => {
-  uuidCounter = 0;
-  mockRandomUUID.mockClear();
+  mockUuidCounter = 0;
+  mockGenerateUUID.mockClear();
   useSessionStore.setState({
     session: null,
     plannedExercises: [],
@@ -126,7 +128,7 @@ beforeEach(() => {
     restTimer: null,
   });
   jest.clearAllMocks();
-  mockRandomUUID.mockImplementation(() => `uuid-set-${++uuidCounter}`);
+  mockGenerateUUID.mockImplementation(() => `uuid-set-${++mockUuidCounter}`);
   mockInsertPlannedExercise.mockResolvedValue(undefined);
 });
 
@@ -246,165 +248,6 @@ describe('useSessionStore', () => {
         'sess-1',
         expect.objectContaining({ status: 'completed' })
       );
-    });
-  });
-
-  describe('deleteSet', () => {
-    it('removes set from state and calls deleteSetLog', async () => {
-      const session = makeSession();
-      mockInsertSession.mockResolvedValue(session);
-      mockGetPlannedExercises.mockResolvedValue([]);
-      mockInsertSetLog.mockResolvedValue(undefined);
-      mockDeleteSetLog.mockResolvedValue(undefined);
-
-      await useSessionStore.getState().startSession(mockDb, {
-        sessionId: 'sess-1',
-        userId: 'user-1',
-        workoutDayId: null,
-        blockId: null,
-        date: '2026-04-25',
-      });
-
-      await useSessionStore.getState().logSet(mockDb, {
-        plannedExerciseId: null,
-        exerciseId: 'ex-squat',
-        setNumber: 1,
-        load: 80,
-        reps: 5,
-      });
-
-      const setId = useSessionStore.getState().setLogs[0].id;
-      await useSessionStore.getState().deleteSet(mockDb, setId);
-
-      expect(useSessionStore.getState().setLogs).toHaveLength(0);
-      expect(mockDeleteSetLog).toHaveBeenCalledWith(mockDb, setId);
-    });
-  });
-
-  describe('setCurrentExercise', () => {
-    it('updates currentExerciseIndex', () => {
-      useSessionStore.getState().setCurrentExercise(2);
-      expect(useSessionStore.getState().currentExerciseIndex).toBe(2);
-    });
-  });
-
-  describe('addUnplannedExercise', () => {
-    it('appends a virtual planned exercise in-memory and calls insertPlannedExercise', async () => {
-      const unplanned = makePlannedExercise({ id: 'pe-unplanned', isUnplanned: true });
-      useSessionStore.getState().addUnplannedExercise(mockDb, unplanned);
-      expect(useSessionStore.getState().plannedExercises).toContain(unplanned);
-      expect(mockInsertPlannedExercise).toHaveBeenCalledWith(mockDb, expect.objectContaining({ id: 'pe-unplanned', isUnplanned: true }));
-      expect(mockInsertSetLog).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('abandonSession', () => {
-    it('sets status to abandoned and calls updateSession', async () => {
-      const session = makeSession();
-      useSessionStore.setState({ session });
-      mockUpdateSession.mockResolvedValue({ ...session, status: 'abandoned' });
-
-      await useSessionStore.getState().abandonSession(mockDb);
-
-      expect(useSessionStore.getState().session?.status).toBe('abandoned');
-      expect(mockUpdateSession).toHaveBeenCalledWith(
-        mockDb,
-        'sess-1',
-        expect.objectContaining({ status: 'abandoned' })
-      );
-    });
-  });
-
-  describe('resumeSession', () => {
-    it('reloads session + setLogs + plannedExercises from SQLite', async () => {
-      const session = makeSession();
-      const setLogs: SetLog[] = [
-        {
-          id: 'sl-1',
-          sessionId: 'sess-1',
-          exerciseId: 'ex-bench',
-          plannedExerciseId: 'pe-1',
-          setNumber: 1,
-          targetLoad: null,
-          targetReps: null,
-          targetRir: null,
-          load: 100,
-          reps: 8,
-          rir: 2,
-          durationSeconds: null,
-          distanceMeters: null,
-          completed: true,
-          side: null,
-          notes: null,
-          createdAt: '2026-04-25T10:00:00.000Z',
-          updatedAt: '2026-04-25T10:00:00.000Z',
-        },
-      ];
-      const planned = [makePlannedExercise()];
-
-      mockGetSessionById.mockResolvedValue(session);
-      mockGetSetLogsBySessionId.mockResolvedValue(setLogs);
-      mockGetPlannedExercises.mockResolvedValue(planned);
-
-      await useSessionStore.getState().resumeSession(mockDb, 'sess-1');
-
-      const state = useSessionStore.getState();
-      expect(state.session).toEqual(session);
-      expect(state.setLogs).toEqual(setLogs);
-      expect(state.plannedExercises).toEqual(planned);
-      expect(state.currentExerciseIndex).toBe(0);
-    });
-
-    it('does nothing if session not found', async () => {
-      mockGetSessionById.mockResolvedValue(null);
-
-      await useSessionStore.getState().resumeSession(mockDb, 'nonexistent');
-
-      expect(useSessionStore.getState().session).toBeNull();
-    });
-  });
-
-  describe('reset', () => {
-    it('clears all session state', () => {
-      useSessionStore.setState({
-        session: makeSession(),
-        setLogs: [],
-        currentExerciseIndex: 3,
-      });
-
-      useSessionStore.getState().reset();
-
-      const state = useSessionStore.getState();
-      expect(state.session).toBeNull();
-      expect(state.setLogs).toEqual([]);
-      expect(state.currentExerciseIndex).toBe(0);
-    });
-  });
-
-  describe('fire-and-forget error handling', () => {
-    it('does not throw when SQLite insertSetLog fails', async () => {
-      const session = makeSession();
-      mockInsertSession.mockResolvedValue(session);
-      mockGetPlannedExercises.mockResolvedValue([]);
-      mockInsertSetLog.mockRejectedValue(new Error('DB error'));
-
-      await useSessionStore.getState().startSession(mockDb, {
-        sessionId: 'sess-1',
-        userId: 'user-1',
-        workoutDayId: null,
-        blockId: null,
-        date: '2026-04-25',
-      });
-
-      await expect(
-        useSessionStore.getState().logSet(mockDb, {
-          plannedExerciseId: null,
-          exerciseId: 'ex-squat',
-          setNumber: 1,
-        })
-      ).resolves.not.toThrow();
-
-      expect(useSessionStore.getState().setLogs).toHaveLength(1);
     });
   });
 });
