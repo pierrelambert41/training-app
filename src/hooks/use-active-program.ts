@@ -13,17 +13,19 @@ async function fetchActiveProgram(
   userId: string
 ) {
   const program = await getActiveProgramForUser(db, userId);
-  console.log('[useActiveProgram] userId:', userId, '→ program:', program?.id ?? 'null', 'isActive:', program?.isActive);
+  console.log('[useActiveProgram] program:', program?.id ?? 'null', 'isActive:', program?.isActive);
   if (!program) return { program: null, activeBlock: null, workoutDays: [], sessionCountsByDayId: {} };
 
   const activeBlocks = await getBlocksByStatus(db, program.id, 'active');
   const activeBlock = activeBlocks[0] ?? null;
+  console.log('[useActiveProgram] activeBlocks trouvés:', activeBlocks.length, '→ activeBlock:', activeBlock?.id ?? 'null', 'status:', activeBlock?.status);
 
   if (!activeBlock) {
     return { program, activeBlock: null, workoutDays: [], sessionCountsByDayId: {} };
   }
 
   const workoutDays = await getWorkoutDaysByBlockId(db, activeBlock.id);
+  console.log('[useActiveProgram] workoutDays:', workoutDays.length, '→ dayOrders:', workoutDays.map(d => d.dayOrder));
   const sessionCountsByDayId = await getSessionCountsByBlockId(db, activeBlock.id);
 
   return { program, activeBlock, workoutDays, sessionCountsByDayId };
