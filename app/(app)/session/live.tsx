@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   Alert,
+  ActivityIndicator,
+  FlatList,
   Keyboard,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDB } from '@/hooks/use-db';
+import { useDebounce } from '@/hooks/use-debounce';
+import { useExercises } from '@/hooks/use-exercises';
 import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
 import { useSessionStore } from '@/stores/session-store';
@@ -21,7 +26,8 @@ import { RestTimer } from '@/components/session/RestTimer';
 import { ExerciseDots } from '@/components/session/ExerciseDots';
 import { ExercisePager } from '@/components/session/ExercisePager';
 import { colors } from '@/theme/tokens';
-import type { Exercise, PlannedExercise, SetLog } from '@/types';
+import type { Exercise, ExerciseCategory, PlannedExercise, SetLog } from '@/types';
+import type { ProgressionType } from '@/types/planned-exercise';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 // ---------------------------------------------------------------------------
@@ -408,6 +414,323 @@ function RirSelector({
 }
 
 // ---------------------------------------------------------------------------
+// Defaults par catégorie d'exercice (spec TA-80)
+// ---------------------------------------------------------------------------
+
+type UnplannedDefaults = {
+  sets: number;
+  repRangeMin: number;
+  repRangeMax: number;
+  targetRir: number;
+  restSeconds: number;
+  progressionType: ProgressionType;
+};
+
+function defaultsForCategory(category: ExerciseCategory | undefined): UnplannedDefaults {
+  switch (category) {
+    case 'compound':
+      return { sets: 3, repRangeMin: 6, repRangeMax: 8, targetRir: 2, restSeconds: 180, progressionType: 'double_progression' };
+    case 'bodyweight':
+      return { sets: 3, repRangeMin: 8, repRangeMax: 12, targetRir: 2, restSeconds: 90, progressionType: 'bodyweight_progression' };
+    default:
+      return { sets: 3, repRangeMin: 10, repRangeMax: 15, targetRir: 2, restSeconds: 60, progressionType: 'accessory_linear' };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// ExercisePickerModal — liste de la bibliothèque pour choisir un exercice
+// ---------------------------------------------------------------------------
+
+type ExercisePickerModalProps = {
+  visible: boolean;
+  onSelect: (exercise: Exercise) => void;
+  onClose: () => void;
+};
+
+function ExercisePickerModal({ visible, onSelect, onClose }: ExercisePickerModalProps) {
+  const [rawQuery, setRawQuery] = useState('');
+  const searchQuery = useDebounce(rawQuery, 300);
+  const { data: exercises, isLoading } = useExercises(searchQuery);
+
+  function handleClose() {
+    setRawQuery('');
+    onClose();
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={handleClose}
+    >
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+          <AppText className="text-heading font-bold text-content-primary">
+            Choisir un exercice
+          </AppText>
+          <Pressable
+            onPress={handleClose}
+            style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+            accessibilityLabel="Fermer"
+            testID="exercise-picker-close"
+          >
+            <AppText className="text-body text-accent">Annuler</AppText>
+          </Pressable>
+        </View>
+
+        <View className="px-4 pt-3 pb-2">
+          <TextInput
+            value={rawQuery}
+            onChangeText={setRawQuery}
+            placeholder="Rechercher…"
+            placeholderTextColor={colors.contentMuted}
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            className="h-tap rounded-button bg-background-surface border border-border px-4 text-body text-content-primary"
+            testID="exercise-picker-search"
+          />
+        </View>
+
+        {isLoading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        ) : (
+          <FlatList
+            data={exercises ?? []}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            renderItem={({ item }) => {
+              const displayName = item.nameFr ?? item.name;
+              const muscles = item.primaryMuscles.slice(0, 2).join(', ');
+              return (
+                <Pressable
+                  onPress={() => {
+                    setRawQuery('');
+                    onSelect(item);
+                  }}
+                  style={{ minHeight: 44 }}
+                  className="flex-row items-center px-4 py-3 border-b border-border active:bg-background-elevated"
+                  testID={`picker-exercise-${item.id}`}
+                >
+                  <View className="flex-1 gap-0.5">
+                    <AppText className="text-body text-content-primary">{displayName}</AppText>
+                    {muscles.length > 0 && (
+                      <AppText className="text-caption text-content-muted">{muscles}</AppText>
+                    )}
+                  </View>
+                  <AppText className="text-caption text-content-muted ml-3">›</AppText>
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <View className="p-8 items-center">
+                <AppText className="text-body text-content-muted">
+                  {searchQuery.trim().length > 0 ? `Aucun résultat pour "${searchQuery.trim()}"` : 'Bibliothèque vide.'}
+                </AppText>
+              </View>
+            }
+          />
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AddUnplannedConfigModal — configuration avant ajout
+// ---------------------------------------------------------------------------
+
+type AddUnplannedConfigModalProps = {
+  visible: boolean;
+  exercise: Exercise | null;
+  onConfirm: (config: UnplannedDefaults) => void;
+  onBack: () => void;
+  onClose: () => void;
+};
+
+function AddUnplannedConfigModal({
+  visible,
+  exercise,
+  onConfirm,
+  onBack,
+  onClose,
+}: AddUnplannedConfigModalProps) {
+  const defaults = defaultsForCategory(exercise?.category);
+
+  const [sets, setSets] = useState(String(defaults.sets));
+  const [repMin, setRepMin] = useState(String(defaults.repRangeMin));
+  const [repMax, setRepMax] = useState(String(defaults.repRangeMax));
+  const [rir, setRir] = useState(defaults.targetRir);
+  const [rest, setRest] = useState(String(defaults.restSeconds));
+
+  useEffect(() => {
+    if (visible && exercise) {
+      const d = defaultsForCategory(exercise.category);
+      setSets(String(d.sets));
+      setRepMin(String(d.repRangeMin));
+      setRepMax(String(d.repRangeMax));
+      setRir(d.targetRir);
+      setRest(String(d.restSeconds));
+    }
+  }, [visible, exercise]);
+
+  const parsedSets = sets.length > 0 ? parseInt(sets, 10) : null;
+  const parsedRepMin = repMin.length > 0 ? parseInt(repMin, 10) : null;
+  const parsedRepMax = repMax.length > 0 ? parseInt(repMax, 10) : null;
+  const parsedRest = rest.length > 0 ? parseInt(rest, 10) : null;
+
+  const canConfirm =
+    parsedSets !== null && parsedSets > 0 &&
+    parsedRepMin !== null && parsedRepMin > 0 &&
+    parsedRepMax !== null && parsedRepMax >= (parsedRepMin ?? 0) &&
+    parsedRest !== null && parsedRest >= 0;
+
+  function handleConfirm() {
+    if (!canConfirm) return;
+    onConfirm({
+      sets: parsedSets!,
+      repRangeMin: parsedRepMin!,
+      repRangeMax: parsedRepMax!,
+      targetRir: rir,
+      restSeconds: parsedRest!,
+      progressionType: defaults.progressionType,
+    });
+  }
+
+  if (!exercise) return null;
+
+  const displayName = exercise.nameFr ?? exercise.name;
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView className="flex-1 bg-background">
+        <View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+          <Pressable
+            onPress={onBack}
+            style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}
+            accessibilityLabel="Retour"
+            testID="config-modal-back"
+          >
+            <AppText className="text-body text-accent">‹ Retour</AppText>
+          </Pressable>
+          <Pressable
+            onPress={onClose}
+            style={{ minHeight: 44, minWidth: 44, alignItems: 'flex-end', justifyContent: 'center' }}
+            accessibilityLabel="Annuler"
+            testID="config-modal-cancel"
+          >
+            <AppText className="text-body text-content-muted">Annuler</AppText>
+          </Pressable>
+        </View>
+
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="px-4 pt-4 pb-8 gap-5"
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-1">
+            <AppText className="text-caption text-content-muted uppercase font-semibold">
+              Exercice sélectionné
+            </AppText>
+            <AppText className="text-heading font-bold text-content-primary">
+              {displayName}
+            </AppText>
+          </View>
+
+          <View className="flex-row gap-3">
+            <View className="flex-1 gap-1">
+              <AppText className="text-label text-content-secondary text-center">Sets</AppText>
+              <TextInput
+                value={sets}
+                onChangeText={setSets}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+                style={{ fontSize: 22, fontWeight: '700' }}
+                placeholderTextColor={colors.contentMuted}
+                placeholder="3"
+                testID="config-sets-input"
+              />
+            </View>
+
+            <View className="flex-1 gap-1">
+              <AppText className="text-label text-content-secondary text-center">Reps min</AppText>
+              <TextInput
+                value={repMin}
+                onChangeText={setRepMin}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+                style={{ fontSize: 22, fontWeight: '700' }}
+                placeholderTextColor={colors.contentMuted}
+                testID="config-rep-min-input"
+              />
+            </View>
+
+            <View className="flex-1 gap-1">
+              <AppText className="text-label text-content-secondary text-center">Reps max</AppText>
+              <TextInput
+                value={repMax}
+                onChangeText={setRepMax}
+                keyboardType="number-pad"
+                selectTextOnFocus
+                className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+                style={{ fontSize: 22, fontWeight: '700' }}
+                placeholderTextColor={colors.contentMuted}
+                testID="config-rep-max-input"
+              />
+            </View>
+          </View>
+
+          <View className="gap-1">
+            <AppText className="text-label text-content-secondary">RIR cible</AppText>
+            <RirSelector value={rir} onChange={setRir} />
+          </View>
+
+          <View className="gap-1">
+            <AppText className="text-label text-content-secondary text-center">Repos (secondes)</AppText>
+            <TextInput
+              value={rest}
+              onChangeText={setRest}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+              style={{ fontSize: 22, fontWeight: '700' }}
+              placeholderTextColor={colors.contentMuted}
+              testID="config-rest-input"
+            />
+          </View>
+
+          <Pressable
+            onPress={handleConfirm}
+            disabled={!canConfirm}
+            style={{ minHeight: 56 }}
+            className={`rounded-button items-center justify-center ${canConfirm ? 'bg-accent' : 'bg-background-elevated'}`}
+            accessibilityLabel="Ajouter l'exercice"
+            testID="config-confirm-button"
+          >
+            <AppText
+              className={`text-label font-bold ${canConfirm ? 'text-content-on-accent' : 'text-content-muted'}`}
+            >
+              Ajouter l'exercice
+            </AppText>
+          </Pressable>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // LogSetForm — input area for the current set
 // ---------------------------------------------------------------------------
 
@@ -662,6 +985,7 @@ type SessionHeaderProps = {
   elapsed: string;
   exerciseIndex: number;
   exerciseCount: number;
+  onAddExercise: () => void;
 };
 
 function SessionHeader({
@@ -669,6 +993,7 @@ function SessionHeader({
   elapsed,
   exerciseIndex,
   exerciseCount,
+  onAddExercise,
 }: SessionHeaderProps) {
   return (
     <View className="flex-row items-center justify-between px-4 py-3 bg-background-surface border-b border-border">
@@ -683,6 +1008,17 @@ function SessionHeader({
         <AppText className="text-label font-mono text-content-secondary">
           {elapsed}
         </AppText>
+        <Pressable
+          onPress={onAddExercise}
+          style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel="Ajouter un exercice"
+          accessibilityRole="button"
+          testID="add-exercise-button"
+        >
+          <AppText className="text-heading font-bold text-accent" style={{ fontSize: 24, lineHeight: 28 }}>
+            +
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );
@@ -928,6 +1264,10 @@ export default function SessionLiveScreen() {
   const setCurrentExercise = useSessionStore((s) => s.setCurrentExercise);
   const skipExercise = useSessionStore((s) => s.skipExercise);
   const completeSession = useSessionStore((s) => s.completeSession);
+  const addUnplannedExercise = useSessionStore((s) => s.addUnplannedExercise);
+
+  const [pickerVisible, setPickerVisible] = useState(false);
+  const [configExercise, setConfigExercise] = useState<Exercise | null>(null);
 
   const elapsed = useElapsedTime(session?.startedAt ?? null);
 
@@ -960,6 +1300,54 @@ export default function SessionLiveScreen() {
     router.replace('/(app)');
   }, [completeSession, db, router]);
 
+  const handlePickerSelect = useCallback((exercise: Exercise) => {
+    setPickerVisible(false);
+    setConfigExercise(exercise);
+  }, []);
+
+  const handleConfigConfirm = useCallback(
+    (config: UnplannedDefaults) => {
+      if (!configExercise || !session) return;
+
+      const insertAfter = currentExerciseIndex + 1;
+      const nextOrder = insertAfter + 1;
+
+      const newPe: PlannedExercise = {
+        id: crypto.randomUUID(),
+        workoutDayId: session.workoutDayId ?? `free-${session.id}`,
+        exerciseId: configExercise.id,
+        exerciseOrder: nextOrder,
+        role: 'accessory',
+        sets: config.sets,
+        repRangeMin: config.repRangeMin,
+        repRangeMax: config.repRangeMax,
+        targetRir: config.targetRir,
+        restSeconds: config.restSeconds,
+        tempo: null,
+        progressionType: config.progressionType,
+        progressionConfig: {},
+        notes: null,
+        isUnplanned: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      // Le store appende newPe en fin de tableau, mais on navigue vers insertAfter
+      // (currentIndex + 1) : l'intercalation est logique (navigation) pas structurelle
+      // (ordre d'insertion). Intentionnel — pas de réordonnancement au MVP.
+      addUnplannedExercise(db, newPe);
+      setCurrentExercise(insertAfter);
+      setConfigExercise(null);
+    },
+    [
+      configExercise,
+      session,
+      currentExerciseIndex,
+      addUnplannedExercise,
+      db,
+      setCurrentExercise,
+    ]
+  );
+
   if (!session) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
@@ -972,6 +1360,23 @@ export default function SessionLiveScreen() {
 
   const sessionName = workoutDay?.title ?? 'Séance';
 
+  const sharedModals = (
+    <>
+      <ExercisePickerModal
+        visible={pickerVisible}
+        onSelect={handlePickerSelect}
+        onClose={() => setPickerVisible(false)}
+      />
+      <AddUnplannedConfigModal
+        visible={configExercise !== null}
+        exercise={configExercise}
+        onConfirm={handleConfigConfirm}
+        onBack={() => { setConfigExercise(null); setPickerVisible(true); }}
+        onClose={() => setConfigExercise(null)}
+      />
+    </>
+  );
+
   if (plannedExercises.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-background">
@@ -980,6 +1385,7 @@ export default function SessionLiveScreen() {
           elapsed={elapsed}
           exerciseIndex={0}
           exerciseCount={1}
+          onAddExercise={() => setPickerVisible(true)}
         />
         <RestTimer />
         <View className="flex-1 items-center justify-center py-12 gap-3">
@@ -1002,6 +1408,7 @@ export default function SessionLiveScreen() {
             </AppText>
           </Pressable>
         </View>
+        {sharedModals}
       </SafeAreaView>
     );
   }
@@ -1013,6 +1420,7 @@ export default function SessionLiveScreen() {
         elapsed={elapsed}
         exerciseIndex={currentExerciseIndex}
         exerciseCount={plannedExercises.length}
+        onAddExercise={() => setPickerVisible(true)}
       />
       <RestTimer />
 
@@ -1058,6 +1466,8 @@ export default function SessionLiveScreen() {
           </AppText>
         </Pressable>
       </View>
+
+      {sharedModals}
     </SafeAreaView>
   );
 }

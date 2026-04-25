@@ -291,6 +291,28 @@ Le `device_id` (UUID v4) est stocké dans une table SQLite locale `app_meta(key 
 
 ---
 
+## ADR-016 : Exercice non-prévu en séance — colonne `is_unplanned` sur `planned_exercises`
+
+**Statut** : Accepté
+**Date** : 2026-04-25
+
+### Contexte
+TA-80 introduit l'ajout à la volée d'exercices non-prévus pendant une séance live. Ces exercices sont représentés comme des `PlannedExercise` virtuels insérés localement. La spec proposait deux options : `is_unplanned BOOLEAN DEFAULT 0` (nouvelle colonne) ou `notes = 'ajouté en séance'` (marqueur dans un champ texte existant).
+
+### Décision
+Colonne `is_unplanned INTEGER NOT NULL DEFAULT 0` sur `planned_exercises` (migration v7, `ALTER TABLE ADD COLUMN`). Migration additive, 0 downtime, toutes les lignes existantes restent valides (DEFAULT 0).
+
+### Alternatives rejetées
+- **notes = 'ajouté en séance'** : couplage sémantique fragile sur un champ texte libre, impossible à indexer ou filtrer proprement, et `notes` peut légitimement être rempli sur un exercice planifié normal.
+
+### Conséquences
+- Le type `PlannedExercise` expose `isUnplanned: boolean`.
+- `addUnplannedExercise(db, exercise)` persiste en SQLite (fire-and-forget) + enqueue sync — même pattern que `logSet`.
+- Les `PlannedExercise` avec `is_unplanned = 1` ne doivent pas modifier le `WorkoutDay` d'origine (invariant vérifié dans le store).
+- Phase 6 (sync Supabase) : le payload inclut `is_unplanned: boolean` — Supabase doit avoir cette colonne.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  

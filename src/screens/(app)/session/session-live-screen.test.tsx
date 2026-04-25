@@ -83,10 +83,45 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
+const fakeLibraryExercise = {
+  id: 'ex-squat',
+  name: 'Barbell Squat',
+  nameFr: 'Squat barre',
+  category: 'compound',
+  movementPattern: 'squat',
+  primaryMuscles: ['quadriceps'],
+  secondaryMuscles: ['glutes'],
+  equipment: ['barbell'],
+  logType: 'weight_reps',
+  isUnilateral: false,
+  systemicFatigue: 'high',
+  movementStability: 'stable',
+  morphoTags: [],
+  recommendedProgressionType: null,
+  alternatives: [],
+  coachingNotes: null,
+  tags: [],
+  isCustom: false,
+  createdBy: null,
+  createdAt: '2026-04-25T10:00:00Z',
+};
+
+jest.mock('@/hooks/use-exercises', () => ({
+  useExercises: () => ({
+    data: [fakeLibraryExercise],
+    isLoading: false,
+  }),
+}));
+
+jest.mock('@/hooks/use-debounce', () => ({
+  useDebounce: (value: string) => value,
+}));
+
 const mockLogSet = jest.fn();
 const mockCompleteSession = jest.fn();
 const mockEditSet = jest.fn();
 const mockDeleteSet = jest.fn();
+const mockAddUnplannedExercise = jest.fn();
 
 const fakeSession: Session = {
   id: 'session-1',
@@ -133,6 +168,7 @@ const fakePlannedExercise: PlannedExercise = {
     regressions_before_alert: 2,
   },
   notes: 'Bench Press',
+  isUnplanned: false,
   createdAt: '2026-04-25T10:00:00Z',
 };
 
@@ -149,6 +185,7 @@ function setupStore(
     completeSession: mockCompleteSession,
     editSet: mockEditSet,
     deleteSet: mockDeleteSet,
+    addUnplannedExercise: mockAddUnplannedExercise,
     ...partial,
   } as ReturnType<typeof useSessionStore.getState>);
 }
@@ -159,6 +196,7 @@ beforeEach(() => {
   mockCompleteSession.mockReset().mockResolvedValue(undefined);
   mockEditSet.mockReset();
   mockDeleteSet.mockReset();
+  mockAddUnplannedExercise.mockReset();
 });
 
 describe('SessionLiveScreen', () => {
@@ -501,5 +539,90 @@ describe('SessionLiveScreen', () => {
     expect(mockDeleteSet).toHaveBeenCalledWith(expect.anything(), 'sl-1');
 
     alertSpy.mockRestore();
+  });
+
+  it('affiche le bouton "+ Ajouter un exercice" dans le header', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('add-exercise-button')).toBeTruthy();
+    });
+  });
+
+  it('ouvre le picker au tap sur le bouton +', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('add-exercise-button'));
+
+    fireEvent.press(screen.getByTestId('add-exercise-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-picker-search')).toBeTruthy();
+    });
+  });
+
+  it('navigue vers la config après sélection dans le picker', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('add-exercise-button'));
+    fireEvent.press(screen.getByTestId('add-exercise-button'));
+
+    await waitFor(() => screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+    fireEvent.press(screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('config-confirm-button')).toBeTruthy();
+      expect(screen.getByText('Squat barre')).toBeTruthy();
+    });
+  });
+
+  it('appelle addUnplannedExercise et ferme la modal après confirmation', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('add-exercise-button'));
+    fireEvent.press(screen.getByTestId('add-exercise-button'));
+
+    await waitFor(() => screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+    fireEvent.press(screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+
+    await waitFor(() => screen.getByTestId('config-confirm-button'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('config-confirm-button'));
+    });
+
+    expect(mockAddUnplannedExercise).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        exerciseId: fakeLibraryExercise.id,
+        isUnplanned: true,
+        sets: 3,
+        repRangeMin: 6,
+        repRangeMax: 8,
+        restSeconds: 180,
+      })
+    );
+  });
+
+  it('le bouton Retour dans la config rouvre le picker', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('add-exercise-button'));
+    fireEvent.press(screen.getByTestId('add-exercise-button'));
+
+    await waitFor(() => screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+    fireEvent.press(screen.getByTestId(`picker-exercise-${fakeLibraryExercise.id}`));
+
+    await waitFor(() => screen.getByTestId('config-modal-back'));
+    fireEvent.press(screen.getByTestId('config-modal-back'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('exercise-picker-search')).toBeTruthy();
+    });
   });
 });

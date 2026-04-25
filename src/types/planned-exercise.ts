@@ -71,6 +71,7 @@ export interface PlannedExercise {
   progressionType: ProgressionType;
   progressionConfig: ProgressionConfig;
   notes: string | null;
+  isUnplanned: boolean;
   createdAt: string;
 }
 
@@ -89,6 +90,7 @@ export type NewPlannedExerciseInput = {
   progressionType: ProgressionType;
   progressionConfig: ProgressionConfig;
   notes?: string | null;
+  isUnplanned?: boolean;
 };
 
 export type UpdatePlannedExerciseInput = Partial<

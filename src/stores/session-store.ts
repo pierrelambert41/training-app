@@ -8,7 +8,10 @@ import {
   getInProgressSessionForToday,
 } from '@/services/sessions';
 import { insertSetLog, updateSetLog, deleteSetLog, getSetLogsBySessionId } from '@/services/set-logs';
-import { getPlannedExercisesByWorkoutDayId } from '@/services/planned-exercises';
+import {
+  getPlannedExercisesByWorkoutDayId,
+  insertPlannedExercise,
+} from '@/services/planned-exercises';
 import {
   scheduleRestEndNotification,
   cancelRestNotification,
@@ -41,7 +44,7 @@ interface SessionActions {
   deleteSet: (db: SQLiteDatabase, setLogId: string) => void;
   setCurrentExercise: (index: number) => void;
   skipExercise: (exerciseId: string) => void;
-  addUnplannedExercise: (exercise: PlannedExercise) => void;
+  addUnplannedExercise: (db: SQLiteDatabase, exercise: PlannedExercise) => void;
   completeSession: (db: SQLiteDatabase) => Promise<void>;
   abandonSession: (db: SQLiteDatabase) => Promise<void>;
   resumeSession: (db: SQLiteDatabase, sessionId: string) => Promise<void>;
@@ -230,10 +233,30 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
     set({ skippedExerciseIds: next, currentExerciseIndex: nextIndex });
   },
 
-  addUnplannedExercise: (exercise) => {
+  addUnplannedExercise: (db, exercise) => {
     set((state) => ({
       plannedExercises: [...state.plannedExercises, exercise],
     }));
+
+    insertPlannedExercise(db, {
+      id: exercise.id,
+      workoutDayId: exercise.workoutDayId,
+      exerciseId: exercise.exerciseId,
+      exerciseOrder: exercise.exerciseOrder,
+      role: exercise.role,
+      sets: exercise.sets,
+      repRangeMin: exercise.repRangeMin,
+      repRangeMax: exercise.repRangeMax,
+      targetRir: exercise.targetRir,
+      restSeconds: exercise.restSeconds,
+      tempo: exercise.tempo,
+      progressionType: exercise.progressionType,
+      progressionConfig: exercise.progressionConfig,
+      notes: exercise.notes,
+      isUnplanned: true,
+    }).catch((e) =>
+      console.error('[session-store] insertPlannedExercise (unplanned) failed', e)
+    );
   },
 
   completeSession: async (db) => {
