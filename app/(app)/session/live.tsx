@@ -13,6 +13,7 @@ import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
 import { useSessionStore } from '@/stores/session-store';
 import { AppText } from '@/components/ui';
+import { RestTimer } from '@/components/session/RestTimer';
 import { colors } from '@/theme/tokens';
 import type { PlannedExercise, SetLog } from '@/types';
 
@@ -474,6 +475,7 @@ export default function SessionLiveScreen() {
   const setLogs = useSessionStore((s) => s.setLogs);
   const currentExerciseIndex = useSessionStore((s) => s.currentExerciseIndex);
   const logSet = useSessionStore((s) => s.logSet);
+  const startRestTimer = useSessionStore((s) => s.startRestTimer);
   const completeSession = useSessionStore((s) => s.completeSession);
 
   const elapsed = useElapsedTime(session?.startedAt ?? null);
@@ -539,6 +541,10 @@ export default function SessionLiveScreen() {
     currentExerciseSetLogs.filter((sl) => sl.completed).length >=
       currentPlanned.sets;
 
+  const currentExerciseMeta = currentPlanned
+    ? exercisesById.get(currentPlanned.exerciseId) ?? null
+    : null;
+
   const handleLogSet = useCallback(
     (load: number | null, reps: number | null, rir: number | null) => {
       if (!currentPlanned || !session) return;
@@ -552,8 +558,13 @@ export default function SessionLiveScreen() {
         rir,
         completed: true,
       });
+
+      const restSeconds = currentPlanned.restSeconds ?? 90;
+      const exerciseName =
+        currentExerciseMeta?.nameFr ?? currentExerciseMeta?.name ?? `Exercice ${currentExerciseIndex + 1}`;
+      startRestTimer(restSeconds, exerciseName);
     },
-    [db, currentPlanned, session, logSet, nextSetNumber]
+    [db, currentPlanned, session, logSet, nextSetNumber, startRestTimer, currentExerciseMeta, currentExerciseIndex]
   );
 
   const handleEndSession = useCallback(async () => {
@@ -573,9 +584,7 @@ export default function SessionLiveScreen() {
 
   const sessionName = workoutDay?.title ?? 'Séance';
 
-  const currentExercise = currentPlanned
-    ? exercisesById.get(currentPlanned.exerciseId) ?? null
-    : null;
+  const currentExercise = currentExerciseMeta;
 
   // prefillLoad = dernière charge loggée (séance en cours ou séance précédente).
   // Il ne s'agit PAS d'un targetLoad prescrit par le moteur de progression —
@@ -592,6 +601,7 @@ export default function SessionLiveScreen() {
         exerciseIndex={currentExerciseIndex}
         exerciseCount={plannedExercises.length || 1}
       />
+      <RestTimer />
 
       <ScrollView
         className="flex-1"
