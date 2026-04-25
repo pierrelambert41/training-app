@@ -81,22 +81,17 @@ export default function Step8SummaryScreen() {
         catalogue,
       });
 
-      let savedProgram: import('@/types').Program | null = null;
-      let savedBlock: import('@/types').Block | null = null;
-      const savedDays: import('@/types/workout-day').WorkoutDay[] = [];
-
-      await db.withTransactionAsync(async () => {
-        await deactivateAllProgramsForUser(db, user.id);
-        savedProgram = await insertProgram(db, result.program);
-        savedBlock = await insertBlock(db, result.block);
-        for (const { day, plannedExercises } of result.days) {
-          const savedDay = await insertWorkoutDay(db, day);
-          savedDays.push(savedDay);
-          for (const pe of plannedExercises) {
-            await insertPlannedExercise(db, pe);
-          }
+      await deactivateAllProgramsForUser(db, user.id);
+      const savedProgram = await insertProgram(db, result.program);
+      const savedBlock = await insertBlock(db, result.block);
+      const savedDays = [];
+      for (const { day, plannedExercises } of result.days) {
+        const savedDay = await insertWorkoutDay(db, day);
+        savedDays.push(savedDay);
+        for (const pe of plannedExercises) {
+          await insertPlannedExercise(db, pe);
         }
-      });
+      }
 
       setProgram(savedProgram);
       setActiveBlock(savedBlock);
