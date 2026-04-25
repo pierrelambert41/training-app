@@ -53,6 +53,35 @@ jest.mock('@/hooks/use-session-exercises', () => ({
   }),
 }));
 
+jest.mock('expo-av', () => ({
+  Audio: {
+    setAudioModeAsync: jest.fn(),
+    Sound: {
+      createAsync: jest.fn(() => Promise.resolve({
+        sound: {
+          setOnPlaybackStatusUpdate: jest.fn(),
+          unloadAsync: jest.fn(),
+        },
+      })),
+    },
+  },
+}));
+
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('notif-id')),
+  cancelScheduledNotificationAsync: jest.fn(),
+}));
+
+jest.mock('expo-haptics', () => ({
+  notificationAsync: jest.fn(),
+  NotificationFeedbackType: {
+    Success: 'Success',
+  },
+}));
+
 const mockLogSet = jest.fn();
 const mockCompleteSession = jest.fn();
 

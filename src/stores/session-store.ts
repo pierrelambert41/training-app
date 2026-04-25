@@ -9,11 +9,17 @@ import {
 } from '@/services/sessions';
 import { insertSetLog, updateSetLog, deleteSetLog, getSetLogsBySessionId } from '@/services/set-logs';
 import { getPlannedExercisesByWorkoutDayId } from '@/services/planned-exercises';
+import {
+  scheduleRestEndNotification,
+  cancelRestNotification,
+} from '@/services/rest-notifications';
 
 
 export type RestTimer = {
   startedAt: number;
   durationSec: number;
+  notificationId: string | null;
+  exerciseName: string;
 };
 
 interface SessionState {
@@ -37,6 +43,8 @@ interface SessionActions {
   completeSession: (db: SQLiteDatabase) => Promise<void>;
   abandonSession: (db: SQLiteDatabase) => Promise<void>;
   resumeSession: (db: SQLiteDatabase, sessionId: string) => Promise<void>;
+  startRestTimer: (durationSec: number, exerciseName: string) => Promise<void>;
+  skipRestTimer: () => Promise<void>;
   reset: () => void;
 }
 
@@ -202,7 +210,11 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
   },
 
   setCurrentExercise: (index) => {
-    set({ currentExerciseIndex: index });
+    const { restTimer } = get();
+    if (restTimer?.notificationId) {
+      cancelRestNotification(restTimer.notificationId);
+    }
+    set({ currentExerciseIndex: index, restTimer: null });
   },
 
   addUnplannedExercise: (exercise) => {
@@ -271,6 +283,35 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       currentExerciseIndex: 0,
       restTimer: null,
     });
+  },
+
+  startRestTimer: async (durationSec, exerciseName) => {
+    const { restTimer } = get();
+    if (restTimer?.notificationId) {
+      await cancelRestNotification(restTimer.notificationId);
+    }
+
+    const notificationId = await scheduleRestEndNotification(durationSec, exerciseName);
+
+    set({
+      restTimer: {
+        startedAt: Date.now(),
+        durationSec,
+        notificationId,
+        exerciseName,
+      },
+    });
+  },
+
+  skipRestTimer: async () => {
+    const { restTimer } = get();
+    if (!restTimer) return;
+
+    if (restTimer.notificationId) {
+      await cancelRestNotification(restTimer.notificationId);
+    }
+
+    set({ restTimer: null });
   },
 
   reset: () => set(INITIAL_STATE),
