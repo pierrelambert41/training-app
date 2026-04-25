@@ -1,6 +1,7 @@
 import { View, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/auth-store';
+import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useAuth } from '@/hooks/use-auth';
 import { useDB } from '@/hooks/use-db';
 import { useActiveProgram } from '@/hooks/use-active-program';
@@ -163,6 +164,7 @@ export default function HomeScreen() {
 
   const { isLoading: isProgramLoading } = useActiveProgram();
   const { data: todayData } = useTodayWorkout();
+  const activeProgram = useActiveProgramStore((s) => s.program);
   const session = useSessionStore((s) => s.session);
 
   async function handleLogout() {
@@ -207,7 +209,9 @@ export default function HomeScreen() {
   }
 
   function handleViewProgram() {
-    router.push('/(app)/programs' as Parameters<typeof router.push>[0]);
+    if (activeProgram) {
+      router.push(`/(app)/programs/${activeProgram.id}` as Parameters<typeof router.push>[0]);
+    }
   }
 
   function handleGenerateProgram() {
