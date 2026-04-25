@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
+  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -14,6 +15,7 @@ import { useDB } from '@/hooks/use-db';
 import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
 import { useSessionStore } from '@/stores/session-store';
+import type { EditSetPayload } from '@/stores/session-store';
 import { AppText } from '@/components/ui';
 import { RestTimer } from '@/components/session/RestTimer';
 import { ExerciseDots } from '@/components/session/ExerciseDots';
@@ -63,7 +65,7 @@ function repsColor(actual: number | null, target: number | null): string {
 }
 
 // ---------------------------------------------------------------------------
-// SetRow — one logged set line
+// SetRow — one logged set line (tappable when logged)
 // ---------------------------------------------------------------------------
 
 type SetRowProps = {
@@ -73,6 +75,8 @@ type SetRowProps = {
   targetReps: number | null;
   targetRir: number | null;
   isCurrent: boolean;
+  isEditing: boolean;
+  onTap: () => void;
 };
 
 function SetRow({
@@ -82,11 +86,15 @@ function SetRow({
   targetReps,
   targetRir,
   isCurrent,
+  isEditing,
+  onTap,
 }: SetRowProps) {
   const isLogged = log !== null && log.completed;
 
-  const rowBg = isCurrent
+  const rowBg = isEditing
     ? 'bg-background-elevated border border-accent'
+    : isCurrent
+    ? 'bg-background-elevated border border-border'
     : isLogged
     ? 'bg-background-surface opacity-60'
     : 'bg-background-surface';
@@ -119,9 +127,9 @@ function SetRow({
     ? repsColor(log?.reps ?? null, targetReps)
     : colors.contentSecondary;
 
-  return (
+  const rowContent = (
     <View
-      className={`flex-row items-center rounded-card px-4 py-3 mb-2 ${rowBg}`}
+      className={`flex-row items-center rounded-card px-4 py-3 mb-0 ${rowBg}`}
     >
       <View className="w-8 items-center">
         {isLogged ? (
@@ -169,6 +177,192 @@ function SetRow({
           {rirDisplay}
         </AppText>
         <AppText className="text-caption text-content-muted">RIR</AppText>
+      </View>
+    </View>
+  );
+
+  if (!isLogged) {
+    return <View className="mb-2">{rowContent}</View>;
+  }
+
+  return (
+    <Pressable
+      onPress={onTap}
+      accessibilityLabel={`Modifier le set ${setNumber}`}
+      accessibilityRole="button"
+      style={{ minHeight: 44 }}
+      className="mb-2"
+    >
+      {rowContent}
+    </Pressable>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// InlineSetEditor — édition d'un set déjà loggé
+// ---------------------------------------------------------------------------
+
+type InlineSetEditorProps = {
+  log: SetLog;
+  targetReps: number | null;
+  onSave: (payload: EditSetPayload) => void;
+  onDelete: () => void;
+  onCancel: () => void;
+};
+
+function InlineSetEditor({ log, targetReps, onSave, onDelete, onCancel }: InlineSetEditorProps) {
+  const loadRef = useRef<TextInput>(null);
+  const repsRef = useRef<TextInput>(null);
+  const notesRef = useRef<TextInput>(null);
+
+  const [load, setLoad] = useState(log.load !== null ? String(log.load) : '');
+  const [reps, setReps] = useState(log.reps !== null ? String(log.reps) : '');
+  const [rir, setRir] = useState<number | null>(log.rir);
+  const [notes, setNotes] = useState(log.notes ?? '');
+
+  const parsedLoad = load.length > 0 ? parseFloat(load) : null;
+  const parsedReps = reps.length > 0 ? parseInt(reps, 10) : null;
+
+  const canSave =
+    (parsedLoad === null || !isNaN(parsedLoad)) &&
+    parsedReps !== null &&
+    !isNaN(parsedReps) &&
+    parsedReps > 0;
+
+  function handleSave() {
+    if (!canSave) return;
+    Keyboard.dismiss();
+    onSave({
+      load: parsedLoad,
+      reps: parsedReps,
+      rir,
+      notes: notes.trim() || null,
+    });
+  }
+
+  function handleDeletePress() {
+    Alert.alert(
+      'Supprimer ce set ?',
+      'Cette action est irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: onDelete,
+        },
+      ]
+    );
+  }
+
+  return (
+    <View className="bg-background-elevated border border-accent rounded-card px-4 py-4 mb-2 gap-3">
+      <View className="flex-row gap-3">
+        <View className="flex-1 gap-1">
+          <AppText className="text-label text-content-secondary text-center">
+            Charge (kg)
+          </AppText>
+          <TextInput
+            ref={loadRef}
+            value={load}
+            onChangeText={setLoad}
+            keyboardType="decimal-pad"
+            returnKeyType="next"
+            onSubmitEditing={() => repsRef.current?.focus()}
+            selectTextOnFocus
+            autoFocus
+            className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+            style={{ fontSize: 22, fontWeight: '700' }}
+            placeholderTextColor={colors.contentMuted}
+            placeholder="—"
+            accessibilityLabel="Charge en kg"
+            testID="edit-load-input"
+          />
+        </View>
+
+        <View className="flex-1 gap-1">
+          <AppText className="text-label text-content-secondary text-center">
+            Reps
+          </AppText>
+          <TextInput
+            ref={repsRef}
+            value={reps}
+            onChangeText={setReps}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+            selectTextOnFocus
+            className="h-14 rounded-card bg-background-surface border border-border text-xl text-content-primary text-center font-bold"
+            style={{ fontSize: 22, fontWeight: '700' }}
+            placeholderTextColor={colors.contentMuted}
+            placeholder="—"
+            accessibilityLabel="Nombre de répétitions"
+            testID="edit-reps-input"
+          />
+        </View>
+      </View>
+
+      <View className="gap-1">
+        <AppText className="text-label text-content-secondary">RIR</AppText>
+        <RirSelector value={rir} onChange={setRir} />
+      </View>
+
+      <View className="gap-1">
+        <AppText className="text-label text-content-secondary">Notes</AppText>
+        <TextInput
+          ref={notesRef}
+          value={notes}
+          onChangeText={setNotes}
+          returnKeyType="done"
+          onSubmitEditing={handleSave}
+          className="h-10 rounded-card bg-background-surface border border-border text-body text-content-primary px-3"
+          style={{ fontSize: 14 }}
+          placeholderTextColor={colors.contentMuted}
+          placeholder="Optionnel…"
+          accessibilityLabel="Notes sur le set"
+        />
+      </View>
+
+      <View className="flex-row gap-2">
+        <Pressable
+          onPress={handleDeletePress}
+          style={{ minHeight: 44, flex: 1 }}
+          className="rounded-button items-center justify-center bg-background-surface border border-border"
+          accessibilityLabel="Supprimer ce set"
+        >
+          <AppText className="text-label font-semibold text-status-error">
+            Supprimer
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={onCancel}
+          style={{ minHeight: 44, flex: 1 }}
+          className="rounded-button items-center justify-center bg-background-surface border border-border"
+          accessibilityLabel="Annuler l'édition"
+        >
+          <AppText className="text-label font-semibold text-content-secondary">
+            Annuler
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={handleSave}
+          disabled={!canSave}
+          style={{ minHeight: 44, flex: 2 }}
+          className={`rounded-button items-center justify-center ${
+            canSave ? 'bg-accent' : 'bg-background-elevated'
+          }`}
+          accessibilityLabel="Valider les modifications"
+        >
+          <AppText
+            className={`text-label font-bold ${
+              canSave ? 'text-content-on-accent' : 'text-content-muted'
+            }`}
+          >
+            Valider
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );
@@ -222,6 +416,7 @@ type LogSetFormProps = {
   prefillLoad: number | null;
   prefillReps: number | null;
   prefillRir: number | null;
+  previousSetLog: SetLog | null;
   onLog: (load: number | null, reps: number | null, rir: number | null) => void;
   disabled: boolean;
 };
@@ -231,6 +426,7 @@ function LogSetForm({
   prefillLoad,
   prefillReps,
   prefillRir,
+  previousSetLog,
   onLog,
   disabled,
 }: LogSetFormProps) {
@@ -285,8 +481,33 @@ function LogSetForm({
     );
   }
 
+  function handleRepeatPrevious() {
+    if (!previousSetLog) return;
+    setLoad(previousSetLog.load !== null ? String(previousSetLog.load) : '');
+    setReps(previousSetLog.reps !== null ? String(previousSetLog.reps) : '');
+    setRir(previousSetLog.rir);
+  }
+
   return (
     <View className="gap-4">
+      {previousSetLog !== null ? (
+        <Pressable
+          onPress={handleRepeatPrevious}
+          style={{ minHeight: 44 }}
+          className="rounded-button items-center justify-center bg-background-surface border border-border flex-row gap-2"
+          accessibilityLabel="Répéter le set précédent"
+          testID="repeat-previous-button"
+        >
+          <AppText className="text-label font-semibold text-content-secondary">
+            ↩ Repeat previous set
+          </AppText>
+          <AppText className="text-caption text-content-muted">
+            {previousSetLog.load ?? '—'}kg × {previousSetLog.reps ?? '—'}
+            {previousSetLog.rir !== null ? ` · RIR ${previousSetLog.rir}` : ''}
+          </AppText>
+        </Pressable>
+      ) : null}
+
       <View className="flex-row gap-3">
         <View className="flex-1 gap-1">
           <AppText className="text-label text-content-secondary text-center">
@@ -491,7 +712,11 @@ function ExercisePage({
   onSkip,
 }: ExercisePageProps) {
   const logSet = useSessionStore((s) => s.logSet);
+  const editSet = useSessionStore((s) => s.editSet);
+  const deleteSet = useSessionStore((s) => s.deleteSet);
   const startRestTimer = useSessionStore((s) => s.startRestTimer);
+
+  const [editingSetId, setEditingSetId] = useState<string | null>(null);
 
   const exerciseMeta = exercisesById.get(plannedExercise.exerciseId) ?? null;
   const exerciseName =
@@ -530,6 +755,8 @@ function ExercisePage({
   const allSetsLogged =
     exerciseSetLogs.filter((sl) => sl.completed).length >= plannedExercise.sets;
 
+  const previousSetLog = exerciseSetLogs.filter((sl) => sl.id !== editingSetId).at(-1) ?? null;
+
   const handleLogSet = useCallback(
     (load: number | null, reps: number | null, rir: number | null) => {
       logSet(db, {
@@ -545,6 +772,22 @@ function ExercisePage({
       startRestTimer(restSeconds, exerciseName);
     },
     [db, plannedExercise, logSet, nextSetNumber, startRestTimer, exerciseName]
+  );
+
+  const handleEditSave = useCallback(
+    (setLogId: string, payload: EditSetPayload) => {
+      editSet(db, setLogId, payload);
+      setEditingSetId(null);
+    },
+    [db, editSet]
+  );
+
+  const handleEditDelete = useCallback(
+    (setLogId: string) => {
+      deleteSet(db, setLogId);
+      setEditingSetId(null);
+    },
+    [db, deleteSet]
   );
 
   function handleSkipPress() {
@@ -601,17 +844,34 @@ function ExercisePage({
           const setNum = i + 1;
           const log = exerciseSetLogs.find((sl) => sl.setNumber === setNum) ?? null;
           const isCurrent = !allSetsLogged && setNum === nextSetNumber;
+          const isEditing = log !== null && editingSetId === log.id;
 
           return (
-            <SetRow
-              key={setNum}
-              setNumber={setNum}
-              log={log}
-              targetLoad={prefillLoad}
-              targetReps={plannedExercise.repRangeMin}
-              targetRir={plannedExercise.targetRir}
-              isCurrent={isCurrent}
-            />
+            <View key={setNum}>
+              <SetRow
+                setNumber={setNum}
+                log={log}
+                targetLoad={prefillLoad}
+                targetReps={plannedExercise.repRangeMin}
+                targetRir={plannedExercise.targetRir}
+                isCurrent={isCurrent}
+                isEditing={isEditing}
+                onTap={() => {
+                  if (log && log.completed) {
+                    setEditingSetId(isEditing ? null : log.id);
+                  }
+                }}
+              />
+              {isEditing && log ? (
+                <InlineSetEditor
+                  log={log}
+                  targetReps={plannedExercise.repRangeMin}
+                  onSave={(payload) => handleEditSave(log.id, payload)}
+                  onDelete={() => handleEditDelete(log.id)}
+                  onCancel={() => setEditingSetId(null)}
+                />
+              ) : null}
+            </View>
           );
         })}
       </View>
@@ -622,6 +882,7 @@ function ExercisePage({
           prefillLoad={prefillLoad}
           prefillReps={prefillReps}
           prefillRir={prefillRir}
+          previousSetLog={previousSetLog}
           onLog={handleLogSet}
           disabled={false}
         />
