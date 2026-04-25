@@ -1731,6 +1731,8 @@ export default function SessionLiveScreen() {
   const completeSession = useSessionStore((s) => s.completeSession);
   const addUnplannedExercise = useSessionStore((s) => s.addUnplannedExercise);
   const updateSessionNotes = useSessionStore((s) => s.updateSessionNotes);
+  const abandonSession = useSessionStore((s) => s.abandonSession);
+  const resetSession = useSessionStore((s) => s.reset);
 
   const [pickerVisible, setPickerVisible] = useState(false);
   const [configExercise, setConfigExercise] = useState<Exercise | null>(null);
@@ -1765,6 +1767,25 @@ export default function SessionLiveScreen() {
   const handleEndSession = useCallback(() => {
     router.push('/(app)/session/end' as Parameters<typeof router.push>[0]);
   }, [router]);
+
+  const handleAbandonSession = useCallback(() => {
+    Alert.alert(
+      'Abandonner la séance ?',
+      'Les sets loggés seront conservés mais la séance sera marquée comme non terminée.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Abandonner',
+          style: 'destructive',
+          onPress: async () => {
+            await abandonSession(db);
+            router.replace('/(app)' as Parameters<typeof router.replace>[0]);
+            resetSession();
+          },
+        },
+      ]
+    );
+  }, [abandonSession, db, resetSession, router]);
 
   const handlePickerSelect = useCallback((exercise: Exercise) => {
     setPickerVisible(false);
@@ -1887,6 +1908,18 @@ export default function SessionLiveScreen() {
               Terminer la séance
             </AppText>
           </Pressable>
+          <Pressable
+            onPress={handleAbandonSession}
+            hitSlop={8}
+            style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}
+            accessibilityLabel="Abandonner la séance"
+            accessibilityRole="button"
+            testID="abandon-session-button"
+          >
+            <AppText className="text-label text-content-muted underline">
+              Abandonner la séance
+            </AppText>
+          </Pressable>
         </View>
         {sharedModals}
       </SafeAreaView>
@@ -1945,6 +1978,18 @@ export default function SessionLiveScreen() {
         >
           <AppText className="text-label font-semibold text-content-secondary">
             Terminer la séance
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={handleAbandonSession}
+          hitSlop={8}
+          style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}
+          accessibilityLabel="Abandonner la séance"
+          accessibilityRole="button"
+          testID="abandon-session-button"
+        >
+          <AppText className="text-label text-content-muted underline">
+            Abandonner la séance
           </AppText>
         </Pressable>
       </View>

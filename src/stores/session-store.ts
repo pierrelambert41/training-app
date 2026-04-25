@@ -1,3 +1,6 @@
+// Contrat crash-safe : SQLite est la source de vérité — chaque mutation est
+// persistée immédiatement (writes synchrones côté domaine, fire-and-forget côté
+// effet de bord); l'état Zustand est reconstructible via resumeSession().
 import { create } from 'zustand';
 import type { Session, SetLog, PlannedExercise } from '@/types';
 import type { SQLiteDatabase } from 'expo-sqlite';

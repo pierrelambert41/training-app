@@ -36,6 +36,11 @@ jest.mock('@/hooks/use-today-workout', () => ({
 
 jest.mock('@/stores/session-store', () => ({
   useSessionStore: () => null,
+  lookupInProgressSessionForToday: jest.fn(() => Promise.resolve(null)),
+}));
+
+jest.mock('@/hooks/use-active-session', () => ({
+  useActiveSession: jest.fn(),
 }));
 
 const fakeUser = { id: 'u1', email: 'test@example.com', createdAt: '2026-04-23T10:00:00Z' };
