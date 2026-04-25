@@ -201,7 +201,13 @@ export default function HomeScreen() {
   }
 
   function handleStartSession() {
-    router.push('/(app)/session/readiness' as Parameters<typeof router.push>[0]);
+    const workoutDayId = todayData?.state === 'workout' || todayData?.state === 'in_progress'
+      ? todayData.data.workoutDay.id
+      : undefined;
+    const path = workoutDayId
+      ? (`/(app)/session/start?workoutDayId=${workoutDayId}` as Parameters<typeof router.push>[0])
+      : ('/(app)/session/start' as Parameters<typeof router.push>[0]);
+    router.push(path);
   }
 
   function handleResumeSession() {
