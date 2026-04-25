@@ -312,6 +312,20 @@ export async function getInProgressSessionForToday(
   return row ? rowToSession(row) : null;
 }
 
+export async function getInProgressSessionForWorkoutDay(
+  db: SQLiteDatabase,
+  workoutDayId: string
+): Promise<Session | null> {
+  const row = await db.getFirstAsync<SessionRow>(
+    `SELECT * FROM sessions
+     WHERE workout_day_id = ? AND status = 'in_progress'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [workoutDayId]
+  );
+  return row ? rowToSession(row) : null;
+}
+
 /**
  * Conservé depuis TA-25 : compteur de séances `completed` par workout_day
  * pour un bloc donné. Utilisé par l'UI "détail bloc" pour afficher la
