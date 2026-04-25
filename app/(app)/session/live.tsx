@@ -224,8 +224,7 @@ function InlineSetEditor({ log, targetReps, onSave, onDelete, onCancel }: Inline
   const parsedReps = reps.length > 0 ? parseInt(reps, 10) : null;
 
   const canSave =
-    parsedLoad !== null &&
-    !isNaN(parsedLoad) &&
+    (parsedLoad === null || !isNaN(parsedLoad)) &&
     parsedReps !== null &&
     !isNaN(parsedReps) &&
     parsedReps > 0;
@@ -277,6 +276,7 @@ function InlineSetEditor({ log, targetReps, onSave, onDelete, onCancel }: Inline
             placeholderTextColor={colors.contentMuted}
             placeholder="—"
             accessibilityLabel="Charge en kg"
+            testID="edit-load-input"
           />
         </View>
 
@@ -297,6 +297,7 @@ function InlineSetEditor({ log, targetReps, onSave, onDelete, onCancel }: Inline
             placeholderTextColor={colors.contentMuted}
             placeholder="—"
             accessibilityLabel="Nombre de répétitions"
+            testID="edit-reps-input"
           />
         </View>
       </View>
@@ -754,7 +755,7 @@ function ExercisePage({
   const allSetsLogged =
     exerciseSetLogs.filter((sl) => sl.completed).length >= plannedExercise.sets;
 
-  const previousSetLog = exerciseSetLogs.length >= 1 ? exerciseSetLogs.at(-1) ?? null : null;
+  const previousSetLog = exerciseSetLogs.filter((sl) => sl.id !== editingSetId).at(-1) ?? null;
 
   const handleLogSet = useCallback(
     (load: number | null, reps: number | null, rir: number | null) => {

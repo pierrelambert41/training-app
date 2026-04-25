@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import { useSessionStore } from '@/stores/session-store';
 import SessionLiveScreen from '../../../../app/(app)/session/live';
 import type { Session, PlannedExercise } from '@/types';
@@ -410,5 +411,95 @@ describe('SessionLiveScreen', () => {
       expect(screen.getByLabelText('Valider les modifications')).toBeTruthy();
       expect(screen.getByLabelText('Supprimer ce set')).toBeTruthy();
     });
+  });
+
+  it('appelle editSet avec les nouvelles valeurs après validation de l\'éditeur inline', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByLabelText('Modifier le set 1'));
+    fireEvent.press(screen.getByLabelText('Modifier le set 1'));
+
+    await waitFor(() => screen.getByLabelText('Valider les modifications'));
+
+    fireEvent.changeText(screen.getByTestId('edit-load-input'), '105');
+    fireEvent.changeText(screen.getByTestId('edit-reps-input'), '6');
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Valider les modifications'));
+    });
+
+    expect(mockEditSet).toHaveBeenCalledWith(
+      expect.anything(),
+      'sl-1',
+      expect.objectContaining({ load: 105, reps: 6 })
+    );
+  });
+
+  it('appelle deleteSet après confirmation de suppression dans l\'éditeur inline', async () => {
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation((_title, _message, buttons) => {
+        const destructiveButton = (buttons ?? []).find((b) => b.style === 'destructive');
+        destructiveButton?.onPress?.();
+      });
+
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByLabelText('Modifier le set 1'));
+    fireEvent.press(screen.getByLabelText('Modifier le set 1'));
+
+    await waitFor(() => screen.getByLabelText('Supprimer ce set'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('Supprimer ce set'));
+    });
+
+    expect(mockDeleteSet).toHaveBeenCalledWith(expect.anything(), 'sl-1');
+
+    alertSpy.mockRestore();
   });
 });
