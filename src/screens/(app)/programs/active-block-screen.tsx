@@ -234,7 +234,10 @@ export default function ActiveBlockScreen() {
   const displayWeek = calendarWeek ?? activeBlock.weekNumber;
 
   function handleDayPress(day: WorkoutDay) {
-    Alert.alert('Phase 4', `Détail du jour "${day.title}" — pas encore implémenté.`);
+    if (!program) return;
+    router.push(
+      `/(app)/programs/${program.id}/day/${day.id}` as Parameters<typeof router.push>[0]
+    );
   }
 
   function handleStartSession() {

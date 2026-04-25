@@ -159,7 +159,7 @@ export async function getActiveProgramForUser(
   userId: string
 ): Promise<Program | null> {
   const row = await db.getFirstAsync<ProgramRow>(
-    'SELECT * FROM programs WHERE user_id = ? AND is_active = 1 LIMIT 1',
+    'SELECT * FROM programs WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1',
     [userId]
   );
   return row ? rowToProgram(row) : null;
