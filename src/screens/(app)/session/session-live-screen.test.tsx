@@ -122,6 +122,7 @@ const mockCompleteSession = jest.fn();
 const mockEditSet = jest.fn();
 const mockDeleteSet = jest.fn();
 const mockAddUnplannedExercise = jest.fn();
+const mockUpdateSessionNotes = jest.fn();
 
 const fakeSession: Session = {
   id: 'session-1',
@@ -186,6 +187,7 @@ function setupStore(
     editSet: mockEditSet,
     deleteSet: mockDeleteSet,
     addUnplannedExercise: mockAddUnplannedExercise,
+    updateSessionNotes: mockUpdateSessionNotes,
     ...partial,
   } as ReturnType<typeof useSessionStore.getState>);
 }
@@ -197,6 +199,7 @@ beforeEach(() => {
   mockEditSet.mockReset();
   mockDeleteSet.mockReset();
   mockAddUnplannedExercise.mockReset();
+  mockUpdateSessionNotes.mockReset();
 });
 
 describe('SessionLiveScreen', () => {
@@ -624,5 +627,155 @@ describe('SessionLiveScreen', () => {
     await waitFor(() => {
       expect(screen.getByTestId('exercise-picker-search')).toBeTruthy();
     });
+  });
+
+  it('affiche le bouton notes de séance dans le header', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-notes-button')).toBeTruthy();
+    });
+  });
+
+  it('ouvre le bottom sheet des notes de séance au tap', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('session-notes-button'));
+    fireEvent.press(screen.getByTestId('session-notes-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('pre-session-notes-input')).toBeTruthy();
+      expect(screen.getByTestId('post-session-notes-input')).toBeTruthy();
+    });
+  });
+
+  it('appelle updateSessionNotes après enregistrement des notes de séance', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('session-notes-button'));
+    fireEvent.press(screen.getByTestId('session-notes-button'));
+
+    await waitFor(() => screen.getByTestId('pre-session-notes-input'));
+
+    fireEvent.changeText(screen.getByTestId('pre-session-notes-input'), 'Bien dormi');
+    fireEvent.changeText(screen.getByTestId('post-session-notes-input'), 'Séance intense');
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('session-notes-save'));
+    });
+
+    expect(mockUpdateSessionNotes).toHaveBeenCalledWith(
+      expect.anything(),
+      'Bien dormi',
+      'Séance intense'
+    );
+  });
+
+  it('affiche le bouton de note sur chaque set loggé', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('set-note-button-1')).toBeTruthy();
+    });
+  });
+
+  it('ouvre le bottom sheet de note set au tap sur l\'icône bulle', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('set-note-button-1'));
+    fireEvent.press(screen.getByTestId('set-note-button-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('set-note-input')).toBeTruthy();
+    });
+  });
+
+  it('appelle editSet avec la note après enregistrement', async () => {
+    const oneLoggedSet = {
+      id: 'sl-1',
+      sessionId: 'session-1',
+      exerciseId: 'ex-1',
+      plannedExerciseId: 'pe-1',
+      setNumber: 1,
+      targetLoad: null,
+      targetReps: null,
+      targetRir: null,
+      load: 100,
+      reps: 8,
+      rir: 2,
+      durationSeconds: null,
+      distanceMeters: null,
+      completed: true,
+      side: null,
+      notes: null,
+      createdAt: '2026-04-25T10:00:00Z',
+      updatedAt: '2026-04-25T10:00:00Z',
+    };
+
+    setupStore({ setLogs: [oneLoggedSet] });
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('set-note-button-1'));
+    fireEvent.press(screen.getByTestId('set-note-button-1'));
+
+    await waitFor(() => screen.getByTestId('set-note-input'));
+    fireEvent.changeText(screen.getByTestId('set-note-input'), 'Bonne série');
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('set-note-save'));
+    });
+
+    expect(mockEditSet).toHaveBeenCalledWith(
+      expect.anything(),
+      'sl-1',
+      expect.objectContaining({ notes: 'Bonne série' })
+    );
   });
 });

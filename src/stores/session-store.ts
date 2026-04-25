@@ -45,6 +45,7 @@ interface SessionActions {
   setCurrentExercise: (index: number) => void;
   skipExercise: (exerciseId: string) => void;
   addUnplannedExercise: (db: SQLiteDatabase, exercise: PlannedExercise) => void;
+  updateSessionNotes: (db: SQLiteDatabase, preSessionNotes: string | null, postSessionNotes: string | null) => void;
   completeSession: (db: SQLiteDatabase) => Promise<void>;
   abandonSession: (db: SQLiteDatabase) => Promise<void>;
   resumeSession: (db: SQLiteDatabase, sessionId: string) => Promise<void>;
@@ -256,6 +257,19 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       isUnplanned: true,
     }).catch((e) =>
       console.error('[session-store] insertPlannedExercise (unplanned) failed', e)
+    );
+  },
+
+  updateSessionNotes: (db, preSessionNotes, postSessionNotes) => {
+    const { session } = get();
+    if (!session) return;
+
+    const now = new Date().toISOString();
+    const updated: Session = { ...session, preSessionNotes, postSessionNotes, updatedAt: now };
+    set({ session: updated });
+
+    updateSession(db, session.id, { preSessionNotes, postSessionNotes }).catch(
+      (e) => console.error('[session-store] updateSessionNotes updateSession failed', e)
     );
   },
 
