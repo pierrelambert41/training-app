@@ -169,3 +169,54 @@ export async function searchExercises(
   );
   return rows.map(rowToExercise);
 }
+
+export type AlternativeExercisesFilter = {
+  movementPattern: string;
+  availableEquipment: string[];
+  excludedNameTokens: string[];
+  excludeIds: string[];
+  searchQuery?: string;
+};
+
+export async function getAlternativeExercises(
+  db: SQLiteDatabase,
+  filter: AlternativeExercisesFilter
+): Promise<Exercise[]> {
+  const allRows = await db.getAllAsync<ExerciseRow>(
+    'SELECT * FROM exercises WHERE movement_pattern = ? ORDER BY name ASC',
+    [filter.movementPattern]
+  );
+
+  const equipmentSet = new Set(filter.availableEquipment);
+  const excludedIdSet = new Set(filter.excludeIds);
+
+  const avoidTokens = filter.excludedNameTokens
+    .map((t) => t.toLowerCase().trim())
+    .filter((t) => t.length >= 3);
+
+  const searchTrimmed = (filter.searchQuery ?? '').toLowerCase().trim();
+
+  return allRows
+    .map(rowToExercise)
+    .filter((ex) => {
+      if (excludedIdSet.has(ex.id)) return false;
+
+      const hasEquipment =
+        ex.equipment.length === 0 ||
+        ex.equipment.every((eq) => equipmentSet.has(eq));
+      if (!hasEquipment) return false;
+
+      const displayName = (ex.nameFr ?? ex.name).toLowerCase();
+      const nameEn = ex.name.toLowerCase();
+      const isAvoided = avoidTokens.some(
+        (token) => displayName.includes(token) || nameEn.includes(token)
+      );
+      if (isAvoided) return false;
+
+      if (searchTrimmed.length > 0) {
+        return displayName.includes(searchTrimmed) || nameEn.includes(searchTrimmed);
+      }
+
+      return true;
+    });
+}

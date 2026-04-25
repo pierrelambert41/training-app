@@ -1,5 +1,5 @@
 import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppText, Button, EmptyState } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { useWorkoutDayDetail, type PlannedExerciseWithExercise } from '@/hooks/use-workout-day-detail';
@@ -225,7 +225,11 @@ function DayHeader({ title, splitType, estimatedDurationMin }: DayHeaderProps) {
 }
 
 export default function WorkoutDayDetailScreen() {
-  const { workoutDayId } = useLocalSearchParams<{ workoutDayId: string }>();
+  const { workoutDayId, programId } = useLocalSearchParams<{
+    workoutDayId: string;
+    programId: string;
+  }>();
+  const router = useRouter();
   const { data, isLoading, error } = useWorkoutDayDetail(workoutDayId ?? '');
 
   function handleExercisePress(_exerciseId: string) {
@@ -233,10 +237,19 @@ export default function WorkoutDayDetailScreen() {
   }
 
   function handleReplacePress(pe: PlannedExerciseWithExercise) {
-    Alert.alert(
-      'Remplacer l\'exercice',
-      `Remplacement de "${pe.exercise.nameFr ?? pe.exercise.name}" — disponible dans un prochain ticket.`
-    );
+    router.push({
+      pathname: '/(app)/programs/[programId]/day/replace-exercise',
+      params: {
+        programId: programId ?? '',
+        plannedExerciseId: pe.id,
+        workoutDayId: workoutDayId ?? '',
+        currentExerciseId: pe.exercise.id,
+        currentExerciseName: pe.exercise.name,
+        currentExerciseNameFr: pe.exercise.nameFr ?? '',
+        currentMovementPattern: pe.exercise.movementPattern,
+        currentPrimaryMuscles: pe.exercise.primaryMuscles.join(','),
+      },
+    });
   }
 
   function handleStartSession() {
