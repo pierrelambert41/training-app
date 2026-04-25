@@ -27,6 +27,7 @@ interface SessionState {
   plannedExercises: PlannedExercise[];
   setLogs: SetLog[];
   currentExerciseIndex: number;
+  skippedExerciseIds: Set<string>;
   restTimer: RestTimer | null;
 }
 
@@ -39,6 +40,7 @@ interface SessionActions {
   editSet: (db: SQLiteDatabase, setLogId: string, payload: EditSetPayload) => void;
   deleteSet: (db: SQLiteDatabase, setLogId: string) => void;
   setCurrentExercise: (index: number) => void;
+  skipExercise: (exerciseId: string) => void;
   addUnplannedExercise: (exercise: PlannedExercise) => void;
   completeSession: (db: SQLiteDatabase) => Promise<void>;
   abandonSession: (db: SQLiteDatabase) => Promise<void>;
@@ -90,6 +92,7 @@ const INITIAL_STATE: SessionState = {
   plannedExercises: [],
   setLogs: [],
   currentExerciseIndex: 0,
+  skippedExerciseIds: new Set(),
   restTimer: null,
 };
 
@@ -133,6 +136,7 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       plannedExercises,
       setLogs: [],
       currentExerciseIndex: 0,
+      skippedExerciseIds: new Set(),
       restTimer: null,
     });
   },
@@ -217,6 +221,15 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
     set({ currentExerciseIndex: index, restTimer: null });
   },
 
+  skipExercise: (exerciseId) => {
+    const { skippedExerciseIds, plannedExercises, currentExerciseIndex } = get();
+    const next = new Set(skippedExerciseIds);
+    next.add(exerciseId);
+    // Math.min keeps the index on the last exercise if we're already there — intentional.
+    const nextIndex = Math.min(currentExerciseIndex + 1, plannedExercises.length - 1);
+    set({ skippedExerciseIds: next, currentExerciseIndex: nextIndex });
+  },
+
   addUnplannedExercise: (exercise) => {
     set((state) => ({
       plannedExercises: [...state.plannedExercises, exercise],
@@ -281,6 +294,7 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       setLogs,
       plannedExercises,
       currentExerciseIndex: 0,
+      skippedExerciseIds: new Set(),
       restTimer: null,
     });
   },
