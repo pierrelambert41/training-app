@@ -12,6 +12,7 @@ import { insertBlock } from '@/services/blocks';
 import { insertWorkoutDay } from '@/services/workout-days';
 import { insertPlannedExercise } from '@/services/planned-exercises';
 import { AppText, Button, Card, StepLayout } from '@/components/ui';
+import type { WorkoutDay } from '@/types/workout-day';
 
 const GOAL_LABELS: Record<string, string> = {
   hypertrophy: 'Hypertrophie',
@@ -84,7 +85,7 @@ export default function Step8SummaryScreen() {
       await deactivateAllProgramsForUser(db, user.id);
       const savedProgram = await insertProgram(db, result.program);
       const savedBlock = await insertBlock(db, result.block);
-      const savedDays: import('@/types/workout-day').WorkoutDay[] = [];
+      const savedDays: WorkoutDay[] = [];
       for (const { day, plannedExercises } of result.days) {
         const savedDay = await insertWorkoutDay(db, day);
         savedDays.push(savedDay);
