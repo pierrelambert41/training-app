@@ -295,3 +295,31 @@ export async function getLastSetLogForExercise(
   );
   return row ? rowToSetLog(row) : null;
 }
+
+/**
+ * Dernière série loggée pour un exercice unilatéral, filtrée par côté.
+ * Utilisé pour le pré-remplissage intelligent par côté (G/D).
+ * Retourne null s'il n'y a pas d'historique pour ce côté.
+ */
+export async function getLastSetLogForExerciseBySide(
+  db: SQLiteDatabase,
+  exerciseId: string,
+  side: SetLogSide,
+  excludeSessionId?: string
+): Promise<SetLog | null> {
+  const excludeClause = excludeSessionId ? 'AND sl.session_id != ?' : '';
+  const params: (string | null)[] = excludeSessionId
+    ? [exerciseId, side, excludeSessionId]
+    : [exerciseId, side];
+
+  const row = await db.getFirstAsync<SetLogRow>(
+    `SELECT sl.* FROM set_logs sl
+     JOIN sessions s ON sl.session_id = s.id
+     WHERE sl.exercise_id = ? AND sl.side = ? ${excludeClause}
+       AND sl.completed = 1
+     ORDER BY s.date DESC, sl.set_number DESC
+     LIMIT 1`,
+    params
+  );
+  return row ? rowToSetLog(row) : null;
+}
