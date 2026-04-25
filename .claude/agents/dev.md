@@ -30,6 +30,8 @@ Si la zone est ambiguë (limite du garde-fou), tranche dans le doute vers l'esca
 ## Référentiel à consulter (à la demande, pas systématiquement)
 
 - `CLAUDE.md` — toujours respecté (stack, conventions, principes)
+- `docs/pitfalls.md` — **lis en début de story** : pièges à éviter + stubs ouverts à brancher
+- `docs/story-log.md` — **lis en début de story** : contexte des stories précédentes, ce qui s'imbrique
 - `docs/architecture.md` — structure technique
 - `docs/tech-stack.md` — libs autorisées
 - `docs/decisions.md` — ADRs (ne pas contredire sans mise à jour)
@@ -73,7 +75,23 @@ Attends validation avant de coder si le design change une décision de `docs/dec
 - Type-check si tu as modifié des types partagés.
 - Si tu as touché un fichier testé, lance les tests colocalisés.
 - N'invente pas de fonctionnalité hors spec.
-- **ADR** : si l'implémentation a forcé une décision produit ou d'architecture non encore documentée (règle métier précisée, compromis technique, choix de lib), ajoute un ADR court dans `docs/decisions.md` (3-5 lignes : **Contexte / Décision / Conséquence**). Pas d'ADR pour les détails triviaux — seulement quand une prochaine feature pourrait faire le choix inverse sans cette trace.
+- **ADR** : si l'implémentation a forcé une décision produit ou d'architecture non encore documentée, ajoute un ADR court dans `docs/decisions.md` (3-5 lignes : **Contexte / Décision / Conséquence**). Pas d'ADR pour les détails triviaux.
+
+### 4. Capitaliser (obligatoire en fin de story)
+
+Met à jour les deux fichiers suivants avant de passer la main au reviewer :
+
+**`docs/pitfalls.md`** :
+- Ajoute tout nouveau piège technique découvert pendant l'implémentation (format : symptôme, fix, story détectée).
+- Mets à jour la table "Stubs ouverts" : supprime les stubs consommés, ajoute les nouveaux créés.
+
+**`docs/story-log.md`** :
+- Ajoute une entrée pour la story livrée (format des entrées existantes) :
+  - Ce qui a été livré
+  - Sur quoi ça s'appuie (stories/fichiers clés)
+  - Ce que ça ouvre pour les prochaines stories
+  - Bugs découverts post-implémentation
+  - Stubs laissés ouverts
 
 ## Format de sortie
 

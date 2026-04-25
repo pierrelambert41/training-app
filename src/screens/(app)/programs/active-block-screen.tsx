@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useActiveProgram } from '@/hooks/use-active-program';
@@ -242,7 +242,7 @@ export default function ActiveBlockScreen() {
 
   function handleStartSession() {
     if (!todayDay) return;
-    Alert.alert('Phase 4', `Démarrer la séance "${todayDay.title}" — pas encore implémenté.`);
+    router.push(`/(app)/session/start?workoutDayId=${todayDay.id}` as Parameters<typeof router.push>[0]);
   }
 
   const blockWeekNumber = activeBlock.weekNumber;

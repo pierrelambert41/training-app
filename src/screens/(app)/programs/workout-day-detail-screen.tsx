@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppText, Button, EmptyState } from '@/components/ui';
 import { colors } from '@/theme/tokens';
@@ -253,7 +253,8 @@ export default function WorkoutDayDetailScreen() {
   }
 
   function handleStartSession() {
-    Alert.alert('Phase 4', 'Le logger de séance sera disponible en Phase 4.');
+    if (!workoutDayId) return;
+    router.push(`/(app)/session/start?workoutDayId=${workoutDayId}` as Parameters<typeof router.push>[0]);
   }
 
   if (!workoutDayId) {

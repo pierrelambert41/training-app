@@ -2,6 +2,7 @@
 // persistée immédiatement (writes synchrones côté domaine, fire-and-forget côté
 // effet de bord); l'état Zustand est reconstructible via resumeSession().
 import { create } from 'zustand';
+import { generateUUID } from '@/utils/uuid';
 import type { Session, SetLog, PlannedExercise } from '@/types';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import {
@@ -154,7 +155,7 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
     if (!session) return;
 
     const setLog: SetLog = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       sessionId: session.id,
       exerciseId: params.exerciseId,
       plannedExerciseId: params.plannedExerciseId,

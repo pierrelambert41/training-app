@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { generateUUID } from '@/utils/uuid';
 import { useRouter } from 'expo-router';
 import { useDB } from '@/hooks/use-db';
 import { useDebounce } from '@/hooks/use-debounce';
@@ -1800,7 +1801,7 @@ export default function SessionLiveScreen() {
       const nextOrder = insertAfter + 1;
 
       const newPe: PlannedExercise = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         workoutDayId: session.workoutDayId ?? `free-${session.id}`,
         exerciseId: configExercise.id,
         exerciseOrder: nextOrder,

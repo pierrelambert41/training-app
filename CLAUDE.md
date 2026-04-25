@@ -30,6 +30,8 @@ Toute la documentation projet est dans `docs/` :
 - `integrations.md` — Intégrations tierces
 - `program-generation.md` — Moteur de génération de programmes
 - `decisions.md` — Architecture Decision Records
+- `pitfalls.md` — Pièges techniques connus + stubs ouverts (mis à jour chaque story)
+- `story-log.md` — Journal des stories livrées, contexte et imbrications
 
 **Consulter ces fichiers avant de prendre une décision d'architecture ou de design.**
 
