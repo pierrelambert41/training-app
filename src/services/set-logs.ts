@@ -268,3 +268,30 @@ export async function getSetLogsBySessionAndExercise(
   );
   return rows.map(rowToSetLog);
 }
+
+/**
+ * Dernière série loggée pour un exercice donné (hors session courante).
+ * Utilisé pour le pré-remplissage intelligent dans l'écran live.
+ * Retourne null s'il n'y a pas d'historique.
+ */
+export async function getLastSetLogForExercise(
+  db: SQLiteDatabase,
+  exerciseId: string,
+  excludeSessionId?: string
+): Promise<SetLog | null> {
+  const excludeClause = excludeSessionId ? 'AND session_id != ?' : '';
+  const params: string[] = excludeSessionId
+    ? [exerciseId, excludeSessionId]
+    : [exerciseId];
+
+  const row = await db.getFirstAsync<SetLogRow>(
+    `SELECT sl.* FROM set_logs sl
+     JOIN sessions s ON sl.session_id = s.id
+     WHERE sl.exercise_id = ? ${excludeClause}
+       AND sl.completed = 1
+     ORDER BY s.date DESC, sl.set_number DESC
+     LIMIT 1`,
+    params
+  );
+  return row ? rowToSetLog(row) : null;
+}
