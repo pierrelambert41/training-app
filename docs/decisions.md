@@ -268,6 +268,29 @@ TA-22 introduit `assignProgressionConfig(exercise, blockGoal, userLevel, role, r
 
 ---
 
+## ADR-015 : device_id local stocké en SQLite (table `app_meta`)
+
+**Statut** : Accepté
+**Date** : 2026-04-25
+
+### Contexte
+TA-72 (Phase 4) introduit `Session.device_id`, identifiant stable de l'appareil ayant créé la séance, utilisé pour le conflict resolution lors de la sync (Phase 6 — last-write-wins par `updated_at` + `device_id` comme tie-breaker). Il faut un endroit pour persister ce `device_id` localement.
+
+### Décision
+Le `device_id` (UUID v4) est stocké dans une table SQLite locale `app_meta(key TEXT PK, value TEXT)`. Helper unique : `getOrCreateDeviceId(db)` — idempotent, génère un UUID au premier appel et retourne le même ensuite. Pas d'usage d'AsyncStorage.
+
+### Alternatives rejetées
+- **AsyncStorage** : déjà utilisé pour la session Supabase Auth ; on évite de doubler les emplacements de persistance pour des données critiques de la couche data.
+- **`Constants.installationId`** (expo-constants) : deprecated dans expo SDK 54.
+- **`expo-application` `getAndroidId()` / `getIosIdForVendorAsync()`** : nouvelle dépendance pour un besoin couvert en 5 lignes de DDL.
+
+### Conséquence
+- Le `device_id` survit aux redémarrages de l'app et aux mises à jour, mais est régénéré si la DB locale est réinitialisée (réinstallation) — sémantiquement, c'est un nouvel appareil.
+- Le pattern `app_meta` est extensible : tout futur scalaire singleton applicatif (ex: `last_sync_at`, `prompt_cache_version`) peut le réutiliser sans nouvelle migration.
+- `INSERT OR IGNORE` + re-read protègent contre les races éventuelles.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  

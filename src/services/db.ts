@@ -179,6 +179,93 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_planned_exercises_workout_day_order ON planned_exercises(workout_day_id, exercise_order);
     `,
   },
+  // TA-72 — Phase 4 : indexes Session/SetLog manquants + table app_meta
+  // pour stocker le device_id local (utilisé à la création de Session).
+  // Les tables sessions, set_logs et sync_queue existent déjà depuis v1.
+  {
+    version: 5,
+    sql: `
+      CREATE INDEX IF NOT EXISTS idx_sessions_workout_day ON sessions(workout_day_id);
+      CREATE INDEX IF NOT EXISTS idx_set_logs_planned_exercise ON set_logs(planned_exercise_id);
+
+      CREATE TABLE IF NOT EXISTS app_meta (
+        key TEXT PRIMARY KEY NOT NULL,
+        value TEXT NOT NULL
+      );
+    `,
+  },
+  // TA-72 — Phase 4 (review) : ajout des CHECK constraints manquantes sur
+  // sessions.status et set_logs.side. SQLite ne supporte pas ALTER TABLE ADD
+  // CONSTRAINT, on recrée les tables via rename → create → copy → drop.
+  {
+    version: 6,
+    sql: `
+      ALTER TABLE sessions RENAME TO sessions_v5;
+
+      CREATE TABLE sessions (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        workout_day_id TEXT,
+        block_id TEXT,
+        date TEXT NOT NULL,
+        started_at TEXT,
+        ended_at TEXT,
+        status TEXT NOT NULL DEFAULT 'in_progress'
+          CHECK (status IN ('in_progress', 'completed', 'abandoned')),
+        readiness INTEGER,
+        energy INTEGER,
+        motivation INTEGER,
+        sleep_quality INTEGER,
+        pre_session_notes TEXT,
+        completion_score REAL,
+        performance_score REAL,
+        fatigue_score REAL,
+        post_session_notes TEXT,
+        device_id TEXT,
+        synced_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      INSERT INTO sessions SELECT * FROM sessions_v5;
+      DROP TABLE sessions_v5;
+
+      ALTER TABLE set_logs RENAME TO set_logs_v5;
+
+      CREATE TABLE set_logs (
+        id TEXT PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        exercise_id TEXT NOT NULL,
+        planned_exercise_id TEXT,
+        set_number INTEGER NOT NULL CHECK (set_number > 0),
+        target_load REAL,
+        target_reps INTEGER,
+        target_rir INTEGER,
+        load REAL,
+        reps INTEGER,
+        rir INTEGER,
+        duration_seconds INTEGER,
+        distance_meters REAL,
+        completed INTEGER NOT NULL DEFAULT 1,
+        side TEXT CHECK (side IN ('left', 'right')),
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES sessions(id),
+        FOREIGN KEY (exercise_id) REFERENCES exercises(id),
+        FOREIGN KEY (planned_exercise_id) REFERENCES planned_exercises(id)
+      );
+
+      INSERT INTO set_logs SELECT * FROM set_logs_v5;
+      DROP TABLE set_logs_v5;
+
+      CREATE INDEX IF NOT EXISTS idx_sessions_user_date ON sessions(user_id, date);
+      CREATE INDEX IF NOT EXISTS idx_sessions_workout_day ON sessions(workout_day_id);
+      CREATE INDEX IF NOT EXISTS idx_set_logs_session ON set_logs(session_id);
+      CREATE INDEX IF NOT EXISTS idx_set_logs_exercise ON set_logs(exercise_id);
+      CREATE INDEX IF NOT EXISTS idx_set_logs_planned_exercise ON set_logs(planned_exercise_id);
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
