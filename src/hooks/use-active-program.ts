@@ -13,6 +13,7 @@ async function fetchActiveProgram(
   userId: string
 ) {
   const program = await getActiveProgramForUser(db, userId);
+  console.log('[useActiveProgram] userId:', userId, '→ program:', program?.id ?? 'null', 'isActive:', program?.isActive);
   if (!program) return { program: null, activeBlock: null, workoutDays: [], sessionCountsByDayId: {} };
 
   const activeBlocks = await getBlocksByStatus(db, program.id, 'active');

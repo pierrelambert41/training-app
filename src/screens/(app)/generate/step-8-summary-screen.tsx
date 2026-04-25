@@ -7,7 +7,7 @@ import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useDB } from '@/hooks/use-db';
 import { generateProgram } from '@/services/program-generation';
 import { searchExercises } from '@/services/exercises';
-import { deactivateAllProgramsForUser, insertProgram } from '@/services/programs';
+import { deactivateAllProgramsForUser, getProgramsByUserId, insertProgram } from '@/services/programs';
 import { insertBlock } from '@/services/blocks';
 import { insertWorkoutDay } from '@/services/workout-days';
 import { insertPlannedExercise } from '@/services/planned-exercises';
@@ -84,7 +84,7 @@ export default function Step8SummaryScreen() {
       await deactivateAllProgramsForUser(db, user.id);
       const savedProgram = await insertProgram(db, result.program);
       const savedBlock = await insertBlock(db, result.block);
-      const savedDays = [];
+      const savedDays: import('@/types/workout-day').WorkoutDay[] = [];
       for (const { day, plannedExercises } of result.days) {
         const savedDay = await insertWorkoutDay(db, day);
         savedDays.push(savedDay);
@@ -93,11 +93,20 @@ export default function Step8SummaryScreen() {
         }
       }
 
-      setProgram(savedProgram);
-      setActiveBlock(savedBlock);
-      setWorkoutDays(savedDays);
-      reset();
-      router.replace('/(app)');
+      const allPrograms = await getProgramsByUserId(db, user.id);
+      Alert.alert(
+        'DEBUG — État base',
+        `Programmes en base : ${allPrograms.length}\n` +
+        allPrograms.map(p => `• ${p.id.slice(0, 8)} isActive=${p.isActive}`).join('\n') +
+        `\n\nsavedProgram: ${savedProgram?.id?.slice(0, 8) ?? 'NULL'}\nsavedBlock: ${savedBlock?.id?.slice(0, 8) ?? 'NULL'}\nsavedDays: ${savedDays.length}`,
+        [{ text: 'OK', onPress: () => {
+          setProgram(savedProgram);
+          setActiveBlock(savedBlock);
+          setWorkoutDays(savedDays);
+          reset();
+          router.replace('/(app)');
+        }}]
+      );
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Une erreur inattendue est survenue.';
       Alert.alert('Erreur de génération', message);
