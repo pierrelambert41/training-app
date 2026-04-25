@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Alert, ScrollView, View } from 'react-native';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useAuthStore } from '@/stores/auth-store';
+import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useDB } from '@/hooks/use-db';
 import { generateProgram } from '@/services/program-generation';
 import { searchExercises } from '@/services/exercises';
@@ -60,6 +61,9 @@ export default function Step8SummaryScreen() {
   const reset = useGenerationStore((s) => s.reset);
   const user = useAuthStore((s) => s.user);
   const db = useDB();
+  const setProgram = useActiveProgramStore((s) => s.setProgram);
+  const setActiveBlock = useActiveProgramStore((s) => s.setActiveBlock);
+  const setWorkoutDays = useActiveProgramStore((s) => s.setWorkoutDays);
   const [isGenerating, setIsGenerating] = useState(false);
 
   async function handleGenerate() {
@@ -77,19 +81,26 @@ export default function Step8SummaryScreen() {
         catalogue,
       });
 
+      let savedProgram: import('@/types').Program | null = null;
+      let savedBlock: import('@/types').Block | null = null;
+      const savedDays: import('@/types/workout-day').WorkoutDay[] = [];
+
       await db.withTransactionAsync(async () => {
         await deactivateAllProgramsForUser(db, user.id);
-        await insertProgram(db, result.program);
-        await insertBlock(db, result.block);
-
+        savedProgram = await insertProgram(db, result.program);
+        savedBlock = await insertBlock(db, result.block);
         for (const { day, plannedExercises } of result.days) {
-          await insertWorkoutDay(db, day);
+          const savedDay = await insertWorkoutDay(db, day);
+          savedDays.push(savedDay);
           for (const pe of plannedExercises) {
             await insertPlannedExercise(db, pe);
           }
         }
       });
 
+      setProgram(savedProgram);
+      setActiveBlock(savedBlock);
+      setWorkoutDays(savedDays);
       reset();
       router.replace('/(app)');
     } catch (err) {
