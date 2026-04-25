@@ -179,8 +179,23 @@ export default function HomeScreen() {
   async function handleResetDB() {
     const userId = user?.id;
     if (!userId) return;
-    await db.runAsync('DELETE FROM programs WHERE user_id = ? AND is_active = 0', [userId]);
-    Alert.alert('DB nettoyée', 'Programmes inactifs supprimés.');
+    const inactivePrograms = await db.getAllAsync<{ id: string }>(
+      'SELECT id FROM programs WHERE user_id = ? AND is_active = 0',
+      [userId]
+    );
+    for (const { id: programId } of inactivePrograms) {
+      const blocks = await db.getAllAsync<{ id: string }>('SELECT id FROM blocks WHERE program_id = ?', [programId]);
+      for (const { id: blockId } of blocks) {
+        const days = await db.getAllAsync<{ id: string }>('SELECT id FROM workout_days WHERE block_id = ?', [blockId]);
+        for (const { id: dayId } of days) {
+          await db.runAsync('DELETE FROM planned_exercises WHERE workout_day_id = ?', [dayId]);
+        }
+        await db.runAsync('DELETE FROM workout_days WHERE block_id = ?', [blockId]);
+      }
+      await db.runAsync('DELETE FROM blocks WHERE program_id = ?', [programId]);
+      await db.runAsync('DELETE FROM programs WHERE id = ?', [programId]);
+    }
+    Alert.alert('DB nettoyée', `${inactivePrograms.length} programmes inactifs supprimés.`);
   }
 
   function handleStartSession() {
