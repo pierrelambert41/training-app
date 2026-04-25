@@ -1762,10 +1762,9 @@ export default function SessionLiveScreen() {
       .filter((i) => i >= 0);
   }, [plannedExercises, skippedExerciseIds]);
 
-  const handleEndSession = useCallback(async () => {
-    await completeSession(db);
-    router.replace('/(app)');
-  }, [completeSession, db, router]);
+  const handleEndSession = useCallback(() => {
+    router.push('/(app)/session/end' as Parameters<typeof router.push>[0]);
+  }, [router]);
 
   const handlePickerSelect = useCallback((exercise: Exercise) => {
     setPickerVisible(false);

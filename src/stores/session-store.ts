@@ -16,6 +16,7 @@ import {
   scheduleRestEndNotification,
   cancelRestNotification,
 } from '@/services/rest-notifications';
+import { computeSessionScores } from '@/services/session-scores';
 
 
 export type RestTimer = {
@@ -274,14 +275,29 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
   },
 
   completeSession: async (db) => {
-    const { session } = get();
+    const { session, setLogs, plannedExercises } = get();
     if (!session) return;
 
+    const scores = computeSessionScores(session, setLogs, plannedExercises);
     const now = new Date().toISOString();
-    const updated: Session = { ...session, status: 'completed', endedAt: now, updatedAt: now };
+    const updated: Session = {
+      ...session,
+      status: 'completed',
+      endedAt: now,
+      completionScore: scores.completion_score,
+      performanceScore: scores.performance_score,
+      fatigueScore: scores.fatigue_score,
+      updatedAt: now,
+    };
     set({ session: updated });
 
-    updateSession(db, session.id, { status: 'completed', endedAt: now }).catch(
+    updateSession(db, session.id, {
+      status: 'completed',
+      endedAt: now,
+      completionScore: scores.completion_score,
+      performanceScore: scores.performance_score,
+      fatigueScore: scores.fatigue_score,
+    }).catch(
       (e) => console.error('[session-store] completeSession updateSession failed', e)
     );
   },
