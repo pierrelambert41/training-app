@@ -1766,7 +1766,7 @@ export default function SessionLiveScreen() {
   }, [plannedExercises, skippedExerciseIds]);
 
   const handleEndSession = useCallback(() => {
-    router.push('/(app)/session/end' as Parameters<typeof router.push>[0]);
+    router.replace('/(app)/session/end' as Parameters<typeof router.replace>[0]);
   }, [router]);
 
   const handleAbandonSession = useCallback(() => {
