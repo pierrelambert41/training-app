@@ -5,6 +5,7 @@ import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useAuth } from '@/hooks/use-auth';
 import { useDB } from '@/hooks/use-db';
 import { useActiveProgram } from '@/hooks/use-active-program';
+import { useActiveSession } from '@/hooks/use-active-session';
 import { useTodayWorkout } from '@/hooks/use-today-workout';
 import { useSessionStore } from '@/stores/session-store';
 import { AppText, Button, Card, SessionStatusBadge } from '@/components/ui';
@@ -167,6 +168,9 @@ export default function HomeScreen() {
   const activeProgram = useActiveProgramStore((s) => s.program);
   const session = useSessionStore((s) => s.session);
 
+  // Reprend automatiquement une session in_progress du jour depuis SQLite au boot.
+  useActiveSession();
+
   async function handleLogout() {
     await logout();
   }
@@ -241,6 +245,21 @@ export default function HomeScreen() {
 
       <View className="gap-3">
         <AppText variant="caption" muted>SÉANCE DU JOUR</AppText>
+
+        {inProgressFromStore && (todayData?.state === 'rest_day' || todayData?.state === 'no_program' || !todayData) ? (
+          <Card elevation="elevated" className="gap-3">
+            <AppText variant="body" className="text-content-secondary">
+              Une séance est en cours
+            </AppText>
+            <Button
+              label="Reprendre la séance en cours"
+              onPress={handleResumeSession}
+              variant="primary"
+              size="lg"
+              testID="resume-session-button"
+            />
+          </Card>
+        ) : null}
 
         {isProgramLoading ? (
           <View className="items-center py-8">
