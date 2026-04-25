@@ -71,6 +71,12 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
 
       CREATE TABLE IF NOT EXISTS planned_exercises (
         id TEXT PRIMARY KEY NOT NULL,
+        -- workout_day_id is NOT NULL but has a FK to workout_days(id).
+        -- For unplanned exercises added during a free session (session.workoutDayId IS NULL),
+        -- live.tsx uses a synthetic id ("free-<sessionId>") that references no real workout_day row.
+        -- SQLite does NOT enforce FK constraints by default (PRAGMA foreign_keys = OFF),
+        -- so this succeeds at runtime. If FK enforcement is ever enabled, free-session
+        -- unplanned exercises must be handled differently (e.g. nullable workout_day_id).
         workout_day_id TEXT NOT NULL,
         exercise_id TEXT NOT NULL,
         exercise_order INTEGER NOT NULL,
@@ -264,6 +270,17 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_set_logs_session ON set_logs(session_id);
       CREATE INDEX IF NOT EXISTS idx_set_logs_exercise ON set_logs(exercise_id);
       CREATE INDEX IF NOT EXISTS idx_set_logs_planned_exercise ON set_logs(planned_exercise_id);
+    `,
+  },
+  // TA-80 — Ajout exercice non-prévu en séance : colonne is_unplanned pour
+  // distinguer les PlannedExercise virtuels insérés à la volée pendant une
+  // séance des exercices planifiés dans le programme d'origine.
+  // ALTER TABLE ADD COLUMN est safe sur SQLite : additive, valeur DEFAULT 0
+  // pour toutes les lignes existantes.
+  {
+    version: 7,
+    sql: `
+      ALTER TABLE planned_exercises ADD COLUMN is_unplanned INTEGER NOT NULL DEFAULT 0;
     `,
   },
 ];

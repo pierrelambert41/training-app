@@ -24,6 +24,7 @@ type PlannedExerciseRow = {
   progression_type: string;
   progression_config: string;
   notes: string | null;
+  is_unplanned: number;
   created_at: string;
 };
 
@@ -53,6 +54,7 @@ function rowToPlannedExercise(row: PlannedExerciseRow): PlannedExercise {
     progressionType: row.progression_type as PlannedExercise['progressionType'],
     progressionConfig: parseProgressionConfig(row.progression_config),
     notes: row.notes,
+    isUnplanned: row.is_unplanned === 1,
     createdAt: row.created_at,
   };
 }
@@ -73,6 +75,7 @@ function toSupabasePayload(pe: PlannedExercise): Record<string, unknown> {
     progression_type: pe.progressionType,
     progression_config: pe.progressionConfig,
     notes: pe.notes,
+    is_unplanned: pe.isUnplanned,
     created_at: pe.createdAt,
   };
 }
@@ -106,6 +109,7 @@ export async function insertPlannedExercise(
     progressionType: input.progressionType,
     progressionConfig: input.progressionConfig,
     notes: input.notes ?? null,
+    isUnplanned: input.isUnplanned ?? false,
     createdAt: now,
   };
 
@@ -113,8 +117,8 @@ export async function insertPlannedExercise(
     `INSERT INTO planned_exercises (
       id, workout_day_id, exercise_id, exercise_order, role,
       sets, rep_range_min, rep_range_max, target_rir, rest_seconds,
-      tempo, progression_type, progression_config, notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      tempo, progression_type, progression_config, notes, is_unplanned, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       pe.id,
       pe.workoutDayId,
@@ -130,6 +134,7 @@ export async function insertPlannedExercise(
       pe.progressionType,
       JSON.stringify(pe.progressionConfig),
       pe.notes,
+      pe.isUnplanned ? 1 : 0,
       pe.createdAt,
     ]
   );

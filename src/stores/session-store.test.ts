@@ -29,6 +29,7 @@ jest.mock('@/services/set-logs', () => ({
 
 jest.mock('@/services/planned-exercises', () => ({
   getPlannedExercisesByWorkoutDayId: jest.fn(),
+  insertPlannedExercise: jest.fn(),
 }));
 
 import {
@@ -42,7 +43,10 @@ import {
   deleteSetLog,
   getSetLogsBySessionId,
 } from '@/services/set-logs';
-import { getPlannedExercisesByWorkoutDayId } from '@/services/planned-exercises';
+import {
+  getPlannedExercisesByWorkoutDayId,
+  insertPlannedExercise,
+} from '@/services/planned-exercises';
 
 const mockInsertSession = insertSession as jest.Mock;
 const mockUpdateSession = updateSession as jest.Mock;
@@ -52,6 +56,7 @@ const mockUpdateSetLog = updateSetLog as jest.Mock;
 const mockDeleteSetLog = deleteSetLog as jest.Mock;
 const mockGetSetLogsBySessionId = getSetLogsBySessionId as jest.Mock;
 const mockGetPlannedExercises = getPlannedExercisesByWorkoutDayId as jest.Mock;
+const mockInsertPlannedExercise = insertPlannedExercise as jest.Mock;
 
 const mockDb = {} as SQLiteDatabase;
 
@@ -104,6 +109,7 @@ function makePlannedExercise(overrides: Partial<PlannedExercise> = {}): PlannedE
       reset_delta_kg: 5,
     },
     notes: null,
+    isUnplanned: false,
     createdAt: '2026-04-25T00:00:00.000Z',
     ...overrides,
   };
@@ -121,6 +127,7 @@ beforeEach(() => {
   });
   jest.clearAllMocks();
   mockRandomUUID.mockImplementation(() => `uuid-set-${++uuidCounter}`);
+  mockInsertPlannedExercise.mockResolvedValue(undefined);
 });
 
 describe('useSessionStore', () => {
@@ -282,10 +289,11 @@ describe('useSessionStore', () => {
   });
 
   describe('addUnplannedExercise', () => {
-    it('appends a virtual planned exercise in-memory without SQLite call', () => {
-      const unplanned = makePlannedExercise({ id: 'pe-unplanned' });
-      useSessionStore.getState().addUnplannedExercise(unplanned);
+    it('appends a virtual planned exercise in-memory and calls insertPlannedExercise', async () => {
+      const unplanned = makePlannedExercise({ id: 'pe-unplanned', isUnplanned: true });
+      useSessionStore.getState().addUnplannedExercise(mockDb, unplanned);
       expect(useSessionStore.getState().plannedExercises).toContain(unplanned);
+      expect(mockInsertPlannedExercise).toHaveBeenCalledWith(mockDb, expect.objectContaining({ id: 'pe-unplanned', isUnplanned: true }));
       expect(mockInsertSetLog).not.toHaveBeenCalled();
     });
   });

@@ -160,6 +160,7 @@ describe('planned_exercises repository', () => {
         progression_type: 'double_progression',
         progression_config: JSON.stringify(DOUBLE_PROGRESSION_CONFIG),
         notes: null,
+        is_unplanned: 0,
         created_at: '2026-04-01T00:00:00.000Z',
       });
       await expect(
@@ -184,6 +185,7 @@ describe('planned_exercises repository', () => {
         progression_type: 'double_progression',
         progression_config: JSON.stringify(DOUBLE_PROGRESSION_CONFIG),
         notes: null,
+        is_unplanned: 0,
         created_at: '2026-04-01T00:00:00.000Z',
       });
 
@@ -227,6 +229,7 @@ describe('planned_exercises repository', () => {
         progression_type: 'double_progression',
         progression_config: JSON.stringify(DOUBLE_PROGRESSION_CONFIG),
         notes: 'Focus squeeze',
+        is_unplanned: 0,
         created_at: '2026-04-01T00:00:00.000Z',
       });
       const pe = await getPlannedExerciseById(db, 'pe1');
@@ -245,6 +248,7 @@ describe('planned_exercises repository', () => {
         progressionType: 'double_progression',
         progressionConfig: DOUBLE_PROGRESSION_CONFIG,
         notes: 'Focus squeeze',
+        isUnplanned: false,
         createdAt: '2026-04-01T00:00:00.000Z',
       });
     });
@@ -266,6 +270,7 @@ describe('planned_exercises repository', () => {
         progression_type: 'double_progression',
         progression_config: '{{not-json',
         notes: null,
+        is_unplanned: 0,
         created_at: '2026-04-01T00:00:00.000Z',
       });
       const pe = await getPlannedExerciseById(db, 'pe1');
