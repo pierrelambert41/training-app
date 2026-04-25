@@ -51,13 +51,19 @@ export function useReplaceExerciseMutation(workoutDayId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       plannedExerciseId,
       newExerciseId,
     }: {
       plannedExerciseId: string;
       newExerciseId: string;
-    }) => replaceExercise(db, plannedExerciseId, newExerciseId),
+    }) => {
+      const result = await replaceExercise(db, plannedExerciseId, newExerciseId);
+      if (result === null) {
+        throw new Error('Exercice introuvable en base de données.');
+      }
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['workout-day-detail', workoutDayId],

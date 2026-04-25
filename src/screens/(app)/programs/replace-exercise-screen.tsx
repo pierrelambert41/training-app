@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback } from 'react';
@@ -210,7 +211,7 @@ export default function ReplaceExerciseScreen() {
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  const displayName = currentExerciseNameFr ?? currentExerciseName ?? '';
+  const displayName = currentExerciseNameFr || currentExerciseName || '';
   const primaryMuscles = currentPrimaryMuscles
     ? formatMuscles(currentPrimaryMuscles.split(','))
     : '';
@@ -246,6 +247,10 @@ export default function ReplaceExerciseScreen() {
         },
         onError: () => {
           setConfirmVisible(false);
+          Alert.alert(
+            'Erreur',
+            "Le remplacement a échoué. Vérifie ta connexion et réessaie.",
+          );
         },
       }
     );
