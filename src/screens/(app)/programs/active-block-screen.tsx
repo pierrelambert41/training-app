@@ -1,8 +1,9 @@
 import { View, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveProgramStore } from '@/stores/active-program-store';
-import { Button, AppText, EmptyState } from '@/components/ui';
+import { Button, AppText, EmptyState, WeekCalendar } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { WorkoutDay } from '@/types/workout-day';
 
@@ -177,6 +178,7 @@ export default function ActiveBlockScreen() {
   const activeBlock = useActiveProgramStore((s) => s.activeBlock);
   const workoutDays = useActiveProgramStore((s) => s.workoutDays);
   const sessionCountsByDayId = useActiveProgramStore((s) => s.sessionCountsByDayId);
+  const [calendarWeek, setCalendarWeek] = useState<number | null>(null);
 
   if (isLoading) {
     return (
@@ -229,6 +231,8 @@ export default function ActiveBlockScreen() {
     (d) => (sessionCountsByDayId[d.id] ?? 0) === 0
   );
 
+  const displayWeek = calendarWeek ?? activeBlock.weekNumber;
+
   function handleDayPress(day: WorkoutDay) {
     Alert.alert('Phase 4', `Détail du jour "${day.title}" — pas encore implémenté.`);
   }
@@ -236,6 +240,19 @@ export default function ActiveBlockScreen() {
   function handleStartSession() {
     if (!todayDay) return;
     Alert.alert('Phase 4', `Démarrer la séance "${todayDay.title}" — pas encore implémenté.`);
+  }
+
+  const blockWeekNumber = activeBlock.weekNumber;
+  const blockDurationWeeks = activeBlock.durationWeeks;
+
+  function handlePrevWeek() {
+    setCalendarWeek((w) => Math.max(1, (w ?? blockWeekNumber) - 1));
+  }
+
+  function handleNextWeek() {
+    setCalendarWeek((w) =>
+      Math.min(blockDurationWeeks, (w ?? blockWeekNumber) + 1)
+    );
   }
 
   return (
@@ -253,6 +270,16 @@ export default function ActiveBlockScreen() {
           isDeload={isDeload}
           daysDone={daysDone}
           totalDays={workoutDays.length}
+        />
+
+        <WeekCalendar
+          startDate={activeBlock.startDate}
+          weekNumber={displayWeek}
+          durationWeeks={activeBlock.durationWeeks}
+          workoutDays={workoutDays}
+          onDayPress={handleDayPress}
+          onPrevWeek={handlePrevWeek}
+          onNextWeek={handleNextWeek}
         />
 
         <View className="px-4 pt-5 gap-3">

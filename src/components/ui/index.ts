@@ -9,3 +9,4 @@ export { MultiSelect } from './multi-select';
 export { CardChoice } from './card-choice';
 export { SegmentedControl } from './segmented-control';
 export { StepLayout } from './step-layout';
+export { WeekCalendar } from './week-calendar';
