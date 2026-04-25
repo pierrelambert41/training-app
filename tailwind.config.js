@@ -15,6 +15,8 @@ module.exports = {
           primary: '#ffffff',
           secondary: '#a3a3a3',
           muted: '#525252',
+          placeholder: '#6b7280',
+          'on-accent': '#ffffff',
         },
         accent: {
           DEFAULT: '#3b82f6',

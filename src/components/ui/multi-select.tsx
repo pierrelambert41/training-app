@@ -34,7 +34,7 @@ export function MultiSelect({ label, options, selected, onToggle, testID }: Prop
               >
                 <Text
                   className={`text-label ${
-                    isSelected ? 'text-white' : 'text-content-secondary'
+                    isSelected ? 'text-content-on-accent' : 'text-content-secondary'
                   }`}
                 >
                   {option}

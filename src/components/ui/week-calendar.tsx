@@ -161,7 +161,7 @@ function DayCell({ cell, onPress }: DayCellProps) {
       <View
         className={`w-6 h-6 rounded-chip items-center justify-center ${dotColor}`}
       >
-        <AppText className="text-caption text-white font-bold leading-none">
+        <AppText className="text-caption text-content-on-accent font-bold leading-none">
           {icon}
         </AppText>
       </View>

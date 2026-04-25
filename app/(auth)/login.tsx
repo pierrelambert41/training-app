@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
+import { colors } from '@/theme/tokens';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function LoginScreen() {
           <TextInput
             className="w-full bg-background-surface border border-border rounded-button h-tap px-4 text-body text-content-primary"
             placeholder="Email"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.contentPlaceholder}
             autoCapitalize="none"
             keyboardType="email-address"
             autoComplete="email"
@@ -37,7 +38,7 @@ export default function LoginScreen() {
           <TextInput
             className="w-full bg-background-surface border border-border rounded-button h-tap px-4 text-body text-content-primary"
             placeholder="Mot de passe"
-            placeholderTextColor="#6B7280"
+            placeholderTextColor={colors.contentPlaceholder}
             secureTextEntry
             autoComplete="password"
             value={password}
@@ -47,7 +48,7 @@ export default function LoginScreen() {
         </View>
 
         {errorMessage ? (
-          <Text className="text-label text-red-400 text-center">{errorMessage}</Text>
+          <Text className="text-label text-status-danger text-center">{errorMessage}</Text>
         ) : null}
 
         <Pressable
@@ -56,9 +57,9 @@ export default function LoginScreen() {
           className="w-full bg-accent rounded-button h-tap items-center justify-center disabled:opacity-50"
         >
           {isLoading ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.contentOnAccent} />
           ) : (
-            <Text className="text-body text-white font-semibold">Se connecter</Text>
+            <Text className="text-body text-content-on-accent font-semibold">Se connecter</Text>
           )}
         </Pressable>
 

@@ -17,7 +17,7 @@ type Props = {
 const variantClasses: Record<Variant, { container: string; text: string }> = {
   primary: {
     container: 'bg-accent',
-    text: 'text-white font-semibold',
+    text: 'text-content-on-accent font-semibold',
   },
   secondary: {
     container: 'bg-background-surface border border-border-strong',
@@ -61,7 +61,7 @@ export function Button({
       className={`items-center justify-center ${variantContainer} ${sizeContainer} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#ffffff' : colors.accent} />
+        <ActivityIndicator color={variant === 'primary' ? colors.contentOnAccent : colors.accent} />
       ) : (
         <Text className={`${variantText} ${sizeText}`}>{label}</Text>
       )}
