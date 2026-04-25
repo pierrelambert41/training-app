@@ -164,3 +164,22 @@ export async function getActiveProgramForUser(
   );
   return row ? rowToProgram(row) : null;
 }
+
+export async function deactivateAllProgramsForUser(
+  db: SQLiteDatabase,
+  userId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+  const rows = await db.getAllAsync<ProgramRow>(
+    'SELECT * FROM programs WHERE user_id = ? AND is_active = 1',
+    [userId]
+  );
+  for (const row of rows) {
+    await db.runAsync(
+      'UPDATE programs SET is_active = 0, updated_at = ? WHERE id = ?',
+      [now, row.id]
+    );
+    const updated = rowToProgram({ ...row, is_active: 0, updated_at: now });
+    await safeEnqueue(db, TABLE, row.id, 'update', toSupabasePayload(updated));
+  }
+}
