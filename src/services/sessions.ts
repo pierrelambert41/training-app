@@ -294,6 +294,25 @@ export async function getSessionsByUserId(
 }
 
 /**
+ * Retourne la séance in_progress du jour pour un utilisateur donné, ou null.
+ * Utilisée au boot par useActiveSession pour reprendre une séance en cours.
+ */
+export async function getInProgressSessionForToday(
+  db: SQLiteDatabase,
+  userId: string,
+  todayDate: string
+): Promise<Session | null> {
+  const row = await db.getFirstAsync<SessionRow>(
+    `SELECT * FROM sessions
+     WHERE user_id = ? AND date = ? AND status = 'in_progress'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, todayDate]
+  );
+  return row ? rowToSession(row) : null;
+}
+
+/**
  * Conservé depuis TA-25 : compteur de séances `completed` par workout_day
  * pour un bloc donné. Utilisé par l'UI "détail bloc" pour afficher la
  * progression jour par jour.
