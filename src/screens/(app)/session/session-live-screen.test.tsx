@@ -5,9 +5,10 @@ import SessionLiveScreen from '../../../../app/(app)/session/live';
 import type { Session, PlannedExercise } from '@/types';
 
 const mockReplace = jest.fn();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace }),
+  useRouter: () => ({ replace: mockReplace, push: mockPush }),
 }));
 
 jest.mock('@/hooks/use-db', () => ({
@@ -311,7 +312,7 @@ describe('SessionLiveScreen', () => {
     });
   });
 
-  it('termine la séance et navigue vers home', async () => {
+  it('navigue vers l\'écran de fin de séance au clic sur Terminer', async () => {
     setupStore();
     render(<SessionLiveScreen />);
 
@@ -321,10 +322,7 @@ describe('SessionLiveScreen', () => {
       fireEvent.press(screen.getByTestId('end-session-button'));
     });
 
-    expect(mockCompleteSession).toHaveBeenCalled();
-    await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/(app)');
-    });
+    expect(mockPush).toHaveBeenCalledWith('/(app)/session/end');
   });
 
   it('affiche un message si aucune session en cours', async () => {

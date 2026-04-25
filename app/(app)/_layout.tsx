@@ -13,6 +13,7 @@ export default function AppLayout() {
       <Stack.Screen name="create-exercise" options={{ title: 'Nouvel exercice', presentation: 'modal' }} />
       <Stack.Screen name="session/start" options={{ title: 'Avant la séance', headerBackTitle: 'Retour' }} />
       <Stack.Screen name="session/live" options={{ headerShown: false }} />
+      <Stack.Screen name="session/end" options={{ headerShown: false }} />
     </Stack>
   );
 }
