@@ -1,15 +1,171 @@
-import { View, ScrollView } from 'react-native';
+import { View, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/stores/auth-store';
+import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useAuth } from '@/hooks/use-auth';
 import { useDB } from '@/hooks/use-db';
-import { AppText, Button, EmptyState } from '@/components/ui';
+import { useActiveProgram } from '@/hooks/use-active-program';
+import { useTodayWorkout } from '@/hooks/use-today-workout';
+import { useSessionStore } from '@/stores/session-store';
+import { AppText, Button, Card, SessionStatusBadge } from '@/components/ui';
+import type { TodayWorkoutData } from '@/hooks/use-today-workout';
+import type { PlannedExerciseWithExercise } from '@/hooks/use-workout-day-detail';
+import type { Session } from '@/types/session';
+import type { SplitType } from '@/types/workout-day';
+
+const SPLIT_LABELS: Record<SplitType, string> = {
+  push: 'Push',
+  pull: 'Pull',
+  legs: 'Legs',
+  upper: 'Upper',
+  lower: 'Lower',
+  full: 'Full Body',
+};
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+function ExerciseList({ exercises }: { exercises: PlannedExerciseWithExercise[] }) {
+  return (
+    <View className="gap-2 mt-3">
+      {exercises.slice(0, 5).map((pe) => (
+        <View key={pe.id} className="flex-row items-center justify-between">
+          <AppText variant="body" className="flex-1 mr-2" numberOfLines={1}>
+            {pe.exercise.nameFr ?? pe.exercise.name}
+          </AppText>
+          <AppText variant="caption" muted>
+            {pe.sets} x {pe.repRangeMin}–{pe.repRangeMax}
+          </AppText>
+        </View>
+      ))}
+      {exercises.length > 5 ? (
+        <AppText variant="caption" muted>
+          +{exercises.length - 5} autres exercices
+        </AppText>
+      ) : null}
+    </View>
+  );
+}
+
+function MiniSummary({
+  lastSession,
+  streak,
+}: {
+  lastSession: Session | null;
+  streak: number;
+}) {
+  return (
+    <View className="flex-row gap-3">
+      <Card elevation="default" className="flex-1 gap-1">
+        <AppText variant="caption" muted>Dernière séance</AppText>
+        {lastSession ? (
+          <>
+            <AppText variant="body" className="font-semibold" numberOfLines={1}>
+              {lastSession.date ? formatDate(lastSession.date) : '—'}
+            </AppText>
+          </>
+        ) : (
+          <AppText variant="body" muted>Aucune</AppText>
+        )}
+      </Card>
+      <Card elevation="default" className="flex-1 gap-1">
+        <AppText variant="caption" muted>Streak</AppText>
+        <View className="flex-row items-baseline gap-1">
+          <AppText variant="heading" className="text-accent">{streak}</AppText>
+          <AppText variant="caption" muted>séance{streak > 1 ? 's' : ''}</AppText>
+        </View>
+      </Card>
+    </View>
+  );
+}
+
+function WorkoutCard({
+  data,
+  onStart,
+  onResume,
+  isInProgress,
+}: {
+  data: TodayWorkoutData;
+  onStart: () => void;
+  onResume: () => void;
+  isInProgress: boolean;
+}) {
+  const { workoutDay, plannedExercises, sessionStatus } = data;
+
+  return (
+    <Card elevation="elevated" className="gap-3">
+      <View className="flex-row items-start justify-between gap-2">
+        <View className="flex-1 gap-1">
+          <AppText variant="heading">{workoutDay.title}</AppText>
+          {workoutDay.splitType ? (
+            <AppText variant="caption" muted>{SPLIT_LABELS[workoutDay.splitType]}</AppText>
+          ) : null}
+          {workoutDay.estimatedDurationMin ? (
+            <AppText variant="caption" muted>{workoutDay.estimatedDurationMin} min</AppText>
+          ) : null}
+        </View>
+        <SessionStatusBadge status={sessionStatus} />
+      </View>
+
+      {plannedExercises.length > 0 ? (
+        <ExerciseList exercises={plannedExercises} />
+      ) : null}
+
+      <Button
+        label={isInProgress ? 'Reprendre la séance' : 'Démarrer la séance'}
+        onPress={isInProgress ? onResume : onStart}
+        variant="primary"
+        size="lg"
+        testID={isInProgress ? 'resume-session-button' : 'start-session-button'}
+      />
+    </Card>
+  );
+}
+
+function RestDayCard({ onViewProgram }: { onViewProgram: () => void }) {
+  return (
+    <Card elevation="default" className="items-center gap-3 py-6">
+      <AppText variant="heading">Jour de repos</AppText>
+      <AppText variant="body" muted className="text-center">
+        Profite bien de ta récupération. Ton prochain entraînement est planifié.
+      </AppText>
+      <Pressable onPress={onViewProgram} className="mt-1">
+        <AppText variant="body" className="text-accent font-semibold">Voir mon programme</AppText>
+      </Pressable>
+    </Card>
+  );
+}
+
+function NoProgramCard({ onGenerate }: { onGenerate: () => void }) {
+  return (
+    <Card elevation="default" className="items-center gap-3 py-6">
+      <AppText variant="heading">Aucun programme actif</AppText>
+      <AppText variant="body" muted className="text-center">
+        Génère ton programme personnalisé pour commencer à t'entraîner.
+      </AppText>
+      <Button
+        label="Créer un programme"
+        onPress={onGenerate}
+        variant="primary"
+        size="lg"
+        testID="generate-program-button"
+      />
+    </Card>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { logout, isLoading } = useAuth();
   const db = useDB();
+
+  const { isLoading: isProgramLoading } = useActiveProgram();
+  const { data: todayData } = useTodayWorkout();
+  const activeProgram = useActiveProgramStore((s) => s.program);
+  const session = useSessionStore((s) => s.session);
 
   async function handleLogout() {
     await logout();
@@ -22,45 +178,99 @@ export default function HomeScreen() {
     router.push(`/(app)/programs/${programId}` as Parameters<typeof router.push>[0]);
   }
 
+  async function handleResetDB() {
+    const userId = user?.id;
+    if (!userId) return;
+    const inactivePrograms = await db.getAllAsync<{ id: string }>(
+      'SELECT id FROM programs WHERE user_id = ? AND is_active = 0',
+      [userId]
+    );
+    for (const { id: programId } of inactivePrograms) {
+      const blocks = await db.getAllAsync<{ id: string }>('SELECT id FROM blocks WHERE program_id = ?', [programId]);
+      for (const { id: blockId } of blocks) {
+        const days = await db.getAllAsync<{ id: string }>('SELECT id FROM workout_days WHERE block_id = ?', [blockId]);
+        for (const { id: dayId } of days) {
+          await db.runAsync('DELETE FROM planned_exercises WHERE workout_day_id = ?', [dayId]);
+        }
+        await db.runAsync('DELETE FROM workout_days WHERE block_id = ?', [blockId]);
+      }
+      await db.runAsync('DELETE FROM blocks WHERE program_id = ?', [programId]);
+      await db.runAsync('DELETE FROM programs WHERE id = ?', [programId]);
+    }
+    Alert.alert('DB nettoyée', `${inactivePrograms.length} programmes inactifs supprimés.`);
+  }
+
+  function handleStartSession() {
+    router.push('/(app)/session/readiness' as Parameters<typeof router.push>[0]);
+  }
+
+  function handleResumeSession() {
+    router.push('/(app)/session/live' as Parameters<typeof router.push>[0]);
+  }
+
+  function handleViewProgram() {
+    if (activeProgram) {
+      router.push(`/(app)/programs/${activeProgram.id}` as Parameters<typeof router.push>[0]);
+    }
+  }
+
+  function handleGenerateProgram() {
+    router.push('/(app)/programs/generate' as Parameters<typeof router.push>[0]);
+  }
+
+  const inProgressFromStore = session?.status === 'in_progress';
+
   return (
     <ScrollView
       className="flex-1 bg-background"
-      contentContainerClassName="p-4 gap-6"
+      contentContainerClassName="p-4 gap-6 pb-12"
       testID="home-screen"
     >
       <View className="mt-4 gap-1">
-        <AppText variant="heading">Bonjour</AppText>
+        <AppText variant="heading">Aujourd'hui</AppText>
         {user?.email ? (
           <AppText variant="body" muted>{user.email}</AppText>
         ) : null}
       </View>
 
-      <View className="gap-2">
+      <View className="gap-3">
         <AppText variant="caption" muted>SÉANCE DU JOUR</AppText>
-        <EmptyState title="Aucune séance planifiée" description="Ton programme apparaîtra ici une fois généré." />
+
+        {isProgramLoading ? (
+          <View className="items-center py-8">
+            <ActivityIndicator color="#ffffff" />
+          </View>
+        ) : !todayData || todayData.state === 'no_program' ? (
+          <NoProgramCard onGenerate={handleGenerateProgram} />
+        ) : todayData.state === 'rest_day' ? (
+          <RestDayCard onViewProgram={handleViewProgram} />
+        ) : todayData.state === 'workout' || todayData.state === 'in_progress' ? (
+          <WorkoutCard
+            data={todayData.data}
+            onStart={handleStartSession}
+            onResume={handleResumeSession}
+            isInProgress={inProgressFromStore || todayData.state === 'in_progress'}
+          />
+        ) : null}
       </View>
 
-      <View className="gap-2">
-        <AppText variant="caption" muted>PROGRESSION</AppText>
-        <EmptyState title="Pas encore de données" description="Ton programme apparaîtra ici une fois généré." />
-      </View>
-
-      <View className="gap-2">
-        <AppText variant="caption" muted>ACCÈS RAPIDE</AppText>
-        <Button
-          label="Créer un programme"
-          onPress={() => router.push('/(app)/programs/generate' as Parameters<typeof router.push>[0])}
-          variant="secondary"
-          testID="generate-program-button"
-        />
-        <Button
-          label="Bibliothèque d'exercices"
-          // TODO: supprimer quand expo-router régénère les types pour la route dynamique /exercise/[id]
-          onPress={() => router.push('/(app)/library' as Parameters<typeof router.push>[0])}
-          variant="secondary"
-          testID="library-nav-button"
-        />
-      </View>
+      {todayData && todayData.state !== 'no_program' ? (
+        <View className="gap-3">
+          <AppText variant="caption" muted>PROGRESSION</AppText>
+          <MiniSummary
+            lastSession={
+              todayData.state === 'rest_day'
+                ? todayData.lastCompletedSession
+                : todayData.data.lastCompletedSession
+            }
+            streak={
+              todayData.state === 'rest_day'
+                ? todayData.streak
+                : todayData.data.streak
+            }
+          />
+        </View>
+      ) : null}
 
       {__DEV__ ? (
         <View className="gap-2">
@@ -70,6 +280,11 @@ export default function HomeScreen() {
             onPress={handleSeedTestData}
             variant="secondary"
             testID="seed-test-button"
+          />
+          <Button
+            label="Nettoyer DB (suppr. programmes inactifs)"
+            onPress={handleResetDB}
+            variant="secondary"
           />
         </View>
       ) : null}

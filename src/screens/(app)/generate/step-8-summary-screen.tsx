@@ -1,7 +1,18 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, ScrollView, View } from 'react-native';
 import { useGenerationStore } from '@/stores/generation-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { useActiveProgramStore } from '@/stores/active-program-store';
+import { useDB } from '@/hooks/use-db';
+import { generateProgram } from '@/services/program-generation';
+import { searchExercises } from '@/services/exercises';
+import { deactivateAllProgramsForUser, getProgramsByUserId, insertProgram } from '@/services/programs';
+import { insertBlock } from '@/services/blocks';
+import { insertWorkoutDay } from '@/services/workout-days';
+import { insertPlannedExercise } from '@/services/planned-exercises';
 import { AppText, Button, Card, StepLayout } from '@/components/ui';
+import type { WorkoutDay } from '@/types/workout-day';
 
 const GOAL_LABELS: Record<string, string> = {
   hypertrophy: 'Hypertrophie',
@@ -49,21 +60,60 @@ export default function Step8SummaryScreen() {
   const router = useRouter();
   const answers = useGenerationStore((s) => s.answers);
   const reset = useGenerationStore((s) => s.reset);
+  const user = useAuthStore((s) => s.user);
+  const db = useDB();
+  const setProgram = useActiveProgramStore((s) => s.setProgram);
+  const setActiveBlock = useActiveProgramStore((s) => s.setActiveBlock);
+  const setWorkoutDays = useActiveProgramStore((s) => s.setWorkoutDays);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  function handleGenerate() {
-    Alert.alert(
-      'Génération du programme',
-      "La génération du programme n'est pas encore disponible. Elle sera implémentée dans un prochain ticket.",
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.replace('/(app)');
-            reset();
-          },
-        },
-      ]
-    );
+  async function handleGenerate() {
+    if (!user) {
+      Alert.alert('Erreur', 'Utilisateur non connecté. Reconnecte-toi et réessaie.');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const catalogue = await searchExercises(db, '');
+      const result = await generateProgram({
+        userId: user.id,
+        answers,
+        catalogue,
+      });
+
+      await deactivateAllProgramsForUser(db, user.id);
+      const savedProgram = await insertProgram(db, result.program);
+      const savedBlock = await insertBlock(db, result.block);
+      const savedDays: WorkoutDay[] = [];
+      for (const { day, plannedExercises } of result.days) {
+        const savedDay = await insertWorkoutDay(db, day);
+        savedDays.push(savedDay);
+        for (const pe of plannedExercises) {
+          await insertPlannedExercise(db, pe);
+        }
+      }
+
+      const allPrograms = await getProgramsByUserId(db, user.id);
+      Alert.alert(
+        'DEBUG — État base',
+        `Programmes en base : ${allPrograms.length}\n` +
+        allPrograms.map(p => `• ${p.id.slice(0, 8)} isActive=${p.isActive}`).join('\n') +
+        `\n\nsavedProgram: ${savedProgram?.id?.slice(0, 8) ?? 'NULL'}\nsavedBlock: ${savedBlock?.id?.slice(0, 8) ?? 'NULL'}\nsavedDays: ${savedDays.length}`,
+        [{ text: 'OK', onPress: () => {
+          setProgram(savedProgram);
+          setActiveBlock(savedBlock);
+          setWorkoutDays(savedDays);
+          reset();
+          router.replace('/(app)');
+        }}]
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Une erreur inattendue est survenue.';
+      Alert.alert('Erreur de génération', message);
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   function handleBack() {
@@ -180,12 +230,15 @@ export default function Step8SummaryScreen() {
           label="Générer mon programme"
           onPress={handleGenerate}
           size="lg"
+          loading={isGenerating}
+          disabled={isGenerating}
           testID="generate-submit-button"
         />
         <Button
           label="Retour"
           onPress={handleBack}
           variant="ghost"
+          disabled={isGenerating}
         />
       </View>
     </View>
