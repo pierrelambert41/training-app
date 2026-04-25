@@ -25,6 +25,7 @@ import { AppText } from '@/components/ui';
 import { RestTimer } from '@/components/session/RestTimer';
 import { ExerciseDots } from '@/components/session/ExerciseDots';
 import { ExercisePager } from '@/components/session/ExercisePager';
+import { SetNoteBottomSheet, SessionNotesBottomSheet } from '@/components/session/NoteBottomSheet';
 import { colors } from '@/theme/tokens';
 import type { Exercise, ExerciseCategory, PlannedExercise, SetLog } from '@/types';
 import type { ProgressionType } from '@/types/planned-exercise';
@@ -83,6 +84,7 @@ type SetRowProps = {
   isCurrent: boolean;
   isEditing: boolean;
   onTap: () => void;
+  onNoteTap: () => void;
 };
 
 function SetRow({
@@ -94,6 +96,7 @@ function SetRow({
   isCurrent,
   isEditing,
   onTap,
+  onNoteTap,
 }: SetRowProps) {
   const isLogged = log !== null && log.completed;
 
@@ -132,6 +135,8 @@ function SetRow({
   const repColor = isLogged
     ? repsColor(log?.reps ?? null, targetReps)
     : colors.contentSecondary;
+
+  const hasNote = isLogged && (log?.notes ?? '').length > 0;
 
   const rowContent = (
     <View
@@ -184,6 +189,25 @@ function SetRow({
         </AppText>
         <AppText className="text-caption text-content-muted">RIR</AppText>
       </View>
+
+      {isLogged ? (
+        <Pressable
+          onPress={onNoteTap}
+          style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel={`Note du set ${setNumber}`}
+          accessibilityRole="button"
+          testID={`set-note-button-${setNumber}`}
+          hitSlop={4}
+        >
+          <AppText
+            style={{ fontSize: 18, color: hasNote ? colors.accent : colors.contentMuted }}
+          >
+            {hasNote ? '💬' : '○'}
+          </AppText>
+        </Pressable>
+      ) : (
+        <View style={{ minWidth: 44 }} />
+      )}
     </View>
   );
 
@@ -985,7 +1009,9 @@ type SessionHeaderProps = {
   elapsed: string;
   exerciseIndex: number;
   exerciseCount: number;
+  hasSessionNotes: boolean;
   onAddExercise: () => void;
+  onSessionNotes: () => void;
 };
 
 function SessionHeader({
@@ -993,7 +1019,9 @@ function SessionHeader({
   elapsed,
   exerciseIndex,
   exerciseCount,
+  hasSessionNotes,
   onAddExercise,
+  onSessionNotes,
 }: SessionHeaderProps) {
   return (
     <View className="flex-row items-center justify-between px-4 py-3 bg-background-surface border-b border-border">
@@ -1001,13 +1029,26 @@ function SessionHeader({
         {sessionName}
       </AppText>
 
-      <View className="flex-row items-center gap-3">
+      <View className="flex-row items-center gap-1">
         <AppText className="text-label font-semibold text-accent">
           {exerciseIndex + 1}/{exerciseCount}
         </AppText>
-        <AppText className="text-label font-mono text-content-secondary">
+        <AppText className="text-label font-mono text-content-secondary ml-2">
           {elapsed}
         </AppText>
+        <Pressable
+          onPress={onSessionNotes}
+          style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel="Notes de séance"
+          accessibilityRole="button"
+          testID="session-notes-button"
+        >
+          <AppText
+            style={{ fontSize: 18, color: hasSessionNotes ? colors.accent : colors.contentMuted }}
+          >
+            {hasSessionNotes ? '📝' : '📝'}
+          </AppText>
+        </Pressable>
         <Pressable
           onPress={onAddExercise}
           style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
@@ -1053,6 +1094,7 @@ function ExercisePage({
   const startRestTimer = useSessionStore((s) => s.startRestTimer);
 
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
+  const [noteSetId, setNoteSetId] = useState<string | null>(null);
 
   const exerciseMeta = exercisesById.get(plannedExercise.exerciseId) ?? null;
   const exerciseName =
@@ -1197,6 +1239,9 @@ function ExercisePage({
                     setEditingSetId(isEditing ? null : log.id);
                   }
                 }}
+                onNoteTap={() => {
+                  if (log) setNoteSetId(log.id);
+                }}
               />
               {isEditing && log ? (
                 <InlineSetEditor
@@ -1210,6 +1255,20 @@ function ExercisePage({
             </View>
           );
         })}
+
+        {(() => {
+          const noteLog = noteSetId ? exerciseSetLogs.find((sl) => sl.id === noteSetId) ?? null : null;
+          return (
+            <SetNoteBottomSheet
+              visible={noteSetId !== null}
+              initialNote={noteLog?.notes ?? ''}
+              onSave={(note) => {
+                if (noteSetId) editSet(db, noteSetId, { notes: note || null });
+              }}
+              onClose={() => setNoteSetId(null)}
+            />
+          );
+        })()}
       </View>
 
       {!allSetsLogged ? (
@@ -1265,9 +1324,11 @@ export default function SessionLiveScreen() {
   const skipExercise = useSessionStore((s) => s.skipExercise);
   const completeSession = useSessionStore((s) => s.completeSession);
   const addUnplannedExercise = useSessionStore((s) => s.addUnplannedExercise);
+  const updateSessionNotes = useSessionStore((s) => s.updateSessionNotes);
 
   const [pickerVisible, setPickerVisible] = useState(false);
   const [configExercise, setConfigExercise] = useState<Exercise | null>(null);
+  const [sessionNotesVisible, setSessionNotesVisible] = useState(false);
 
   const elapsed = useElapsedTime(session?.startedAt ?? null);
 
@@ -1359,6 +1420,9 @@ export default function SessionLiveScreen() {
   }
 
   const sessionName = workoutDay?.title ?? 'Séance';
+  const hasSessionNotes =
+    (session.preSessionNotes ?? '').length > 0 ||
+    (session.postSessionNotes ?? '').length > 0;
 
   const sharedModals = (
     <>
@@ -1374,6 +1438,15 @@ export default function SessionLiveScreen() {
         onBack={() => { setConfigExercise(null); setPickerVisible(true); }}
         onClose={() => setConfigExercise(null)}
       />
+      <SessionNotesBottomSheet
+        visible={sessionNotesVisible}
+        initialPreNotes={session.preSessionNotes ?? ''}
+        initialPostNotes={session.postSessionNotes ?? ''}
+        onSave={(preNotes, postNotes) => {
+          updateSessionNotes(db, preNotes || null, postNotes || null);
+        }}
+        onClose={() => setSessionNotesVisible(false)}
+      />
     </>
   );
 
@@ -1385,7 +1458,9 @@ export default function SessionLiveScreen() {
           elapsed={elapsed}
           exerciseIndex={0}
           exerciseCount={1}
+          hasSessionNotes={hasSessionNotes}
           onAddExercise={() => setPickerVisible(true)}
+          onSessionNotes={() => setSessionNotesVisible(true)}
         />
         <RestTimer />
         <View className="flex-1 items-center justify-center py-12 gap-3">
@@ -1420,7 +1495,9 @@ export default function SessionLiveScreen() {
         elapsed={elapsed}
         exerciseIndex={currentExerciseIndex}
         exerciseCount={plannedExercises.length}
+        hasSessionNotes={hasSessionNotes}
         onAddExercise={() => setPickerVisible(true)}
+        onSessionNotes={() => setSessionNotesVisible(true)}
       />
       <RestTimer />
 
