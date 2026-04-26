@@ -336,6 +336,24 @@ Colonne `is_unplanned INTEGER NOT NULL DEFAULT 0` sur `planned_exercises` (migra
 
 ---
 
+## ADR-018 : `feature-lib` comme zone boundaries et imports intra-feature autorisés
+
+**Statut** : Accepté  
+**Date** : 2026-04-26
+
+### Contexte
+En migrant `live.tsx` (TA-98), deux lacunes de la config ESLint boundaries (ADR-017) ont émergé : (1) les helpers purs d'une feature (`lib/`) n'avaient pas de zone dédiée — ils auraient pu aller dans `domain/`, mais la sémantique est différente (`domain/` = règles métier, `lib/` = transformations techniques sans règle métier) ; (2) les imports entre composants d'une même feature (`feature-components → feature-components`) n'étaient pas autorisés, rendant impossible la décomposition en sous-composants.
+
+### Décision
+Ajouter `feature-lib` (`src/features/*/lib/**/*`) comme zone boundaries distincte. Autoriser `feature-components → feature-components` (même featureName), `feature-components → feature-domain`, `feature-components → feature-lib`. Autoriser `feature-hooks → feature-lib` et `feature-index → feature-lib`.
+
+### Conséquences
+- `lib/` d'une feature contient les transformations pures sans règle métier (ex: `build-virtual-rows`, `reps-color`). `domain/` reste réservé aux règles métier (ex: `defaults-for-category`).
+- Les imports intra-`components/` restent contraints à la même feature (pas de cross-feature).
+- Cette distinction `lib` vs `domain` doit être respectée dans toutes les features à migrer.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  
