@@ -47,6 +47,16 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-98 — Refacto `live.tsx` selon architecture Bulletproof React
+**Livré** : `app/(app)/session/live.tsx` réduit à 3 lignes (re-export thin). 14 composants extraits dans `src/features/session/components/` (set-row, inline-set-editor, rir-selector, exercise-picker-modal, add-unplanned-config-modal, log-set-form, exercise-header, session-header, exercise-page, live-session-screen + 3 extraits supplémentaires pour rester sous 250L : session-footer-actions, shared-session-modals, set-row-list, log-set-fields, inline-set-editor-fields). 2 hooks extraits dans `hooks/` (use-elapsed-time, use-exercise-page-prefill). 2 helpers dans `lib/` (reps-color, build-virtual-rows). 1 logique domaine dans `domain/` (defaults-for-category). Types partagés dans `types/session-ui.ts`. Public API dans `index.ts`.  
+**Config ESLint mise à jour** : ajout du type `feature-lib` (manquant en TA-97), permissions `feature-components → feature-components` (intra-feature), `feature-components → feature-domain`, `feature-components → feature-lib`, `feature-hooks → feature-lib`.  
+**S'appuie sur** : TA-97 (architecture Bulletproof React, ESLint boundaries). Zéro changement de comportement — refacto pur.  
+**Ouvre** : TA-99 = redesign UX de l'écran live (peut maintenant modifier `live-session-screen.tsx` sans risquer un god-object).  
+**Stubs laissés** : aucun ajouté. `handleExercisePress` (TA-15) toujours stub dans `exercise-header.tsx`.  
+**Test pré-existant échouant** : `session-live-screen.test.tsx:325` (mockPush) — identique à avant TA-98, non introduit par ce refacto.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

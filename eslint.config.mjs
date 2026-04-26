@@ -51,6 +51,13 @@ const boundariesElements = [
     mode: 'full',
     capture: ['featureName'],
   },
+  // Helpers/utilitaires propres à une feature (transformations pures, sans métier)
+  {
+    type: 'feature-lib',
+    pattern: 'src/features/*/lib/**/*',
+    mode: 'full',
+    capture: ['featureName'],
+  },
   // Types propres à une feature
   {
     type: 'feature-types',
@@ -127,8 +134,11 @@ const dependenciesRules = [
   {
     from: { type: 'feature-components' },
     allow: [
+      { to: { type: 'feature-components', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-hooks', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-stores', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'feature-lib', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-index', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'shared-components' } },
@@ -140,13 +150,14 @@ const dependenciesRules = [
       { to: { type: 'shared-stores' } },
     ],
   },
-  // R2 : hooks d'une feature → uniquement ses propres api/domain/stores
+  // R2 : hooks d'une feature → uniquement ses propres api/domain/lib/stores
   {
     from: { type: 'feature-hooks' },
     allow: [
       { to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-stores', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'feature-lib', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-index', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'shared-hooks' } },
@@ -190,6 +201,16 @@ const dependenciesRules = [
       { to: { type: 'shared-config' } },
     ],
   },
+  // feature-lib : helpers/transformations pures d'une feature
+  {
+    from: { type: 'feature-lib' },
+    allow: [
+      { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'shared-types' } },
+      { to: { type: 'shared-config' } },
+      { to: { type: 'shared-lib' } },
+    ],
+  },
   // feature-index ré-exporte depuis les internals de la même feature uniquement
   {
     from: { type: 'feature-index' },
@@ -199,6 +220,7 @@ const dependenciesRules = [
       { to: { type: 'feature-hooks', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-stores', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'feature-lib', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
     ],
   },

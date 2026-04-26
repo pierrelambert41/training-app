@@ -7,10 +7,10 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 ## Pièges techniques connus
 
 ### ARCH-01 — Fichier de route god-object (anti-pattern `live.tsx`)
-**Symptôme** : `app/(app)/session/live.tsx` a atteint 2001 lignes et contient 14 composants colocalisés dans un seul fichier de route. Viole R1 (route non-thin), R3 (pas de public API par feature), R6 (> 400 lignes = refacto obligatoire).  
-**Fix** : extraire chaque composant dans `src/features/session/components/`, la logique métier dans `src/features/session/domain/`, les I/O (SQLite, timers) dans `src/features/session/api/`, et ne garder dans `app/(app)/session/live.tsx` qu'un ré-export ≤ 30 lignes.  
-**Ticket** : TA-98  
-**Détecté** : TA-97 / 2026-04-25
+**Symptôme** : `app/(app)/session/live.tsx` avait atteint 2001 lignes et contenait 14 composants colocalisés dans un seul fichier de route. Violait R1 (route non-thin), R3 (pas de public API par feature), R6 (> 400 lignes = refacto obligatoire).  
+**Résolu dans TA-98** : `app/(app)/session/live.tsx` réduit à 3 lignes (import + re-export). 14 composants extraits dans `src/features/session/components/`, 2 hooks dans `hooks/`, 2 helpers dans `lib/`, 1 fonction domaine dans `domain/`, types partagés dans `types/`, public API dans `index.ts`. Tous les fichiers ≤ 250 lignes. ESLint 0 erreur.  
+**Pattern de refacto documenté** : pour un god-object similaire, extraire dans l'ordre : types → helpers purs → domain → hooks → composants feuilles → composants composites → orchestrateur → route thin → index.ts. La config ESLint boundaries a nécessité l'ajout du type `feature-lib` (non prévu en TA-97) et des permissions `feature-components → feature-components` (intra-feature).  
+**Détecté** : TA-97 / 2026-04-25 — **Résolu** : TA-98 / 2026-04-26
 
 ### RN-01 — `crypto.randomUUID()` non disponible sur Hermes
 **Symptôme** : `TypeError: crypto.randomUUID is not a function` au runtime.  
