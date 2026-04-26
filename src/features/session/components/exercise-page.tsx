@@ -8,8 +8,9 @@ import type { EditSetPayload } from '@/stores/session-store';
 import { buildVirtualRows } from '../lib/build-virtual-rows';
 import { useExercisePagePrefill } from '../hooks/use-exercise-page-prefill';
 import { ExerciseHeader } from './exercise-header';
-import { LogSetForm } from './log-set-form';
 import { SetRowList } from './set-row-list';
+import { RestTimerAdjuster } from './rest-timer-adjuster';
+import type { InlineLogValues } from './set-row-inline-form';
 import type { Exercise, LogType, PlannedExercise, SetLog, SetLogSide } from '@/types';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
@@ -36,6 +37,7 @@ export function ExercisePage({
   const editSet = useSessionStore((s) => s.editSet);
   const deleteSet = useSessionStore((s) => s.deleteSet);
   const startRestTimer = useSessionStore((s) => s.startRestTimer);
+  const updateExerciseRestSeconds = useSessionStore((s) => s.updateExerciseRestSeconds);
 
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [noteSetId, setNoteSetId] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export function ExercisePage({
   const currentSide = nextVirtual?.side ?? null;
   const currentSetNumber = nextVirtual?.setNumber ?? plannedExercise.sets + 1;
 
-  const { prefillLoad, prefillReps, prefillRir, prefillDuration, prefillDistance, previousSetLog } =
+  const { prefillLoad, prefillReps, prefillRir, prefillDuration, prefillDistance } =
     useExercisePagePrefill({
       exerciseSetLogs,
       editingSetId,
@@ -89,22 +91,15 @@ export function ExercisePage({
       targetRir: plannedExercise.targetRir ?? null,
     });
 
-  const handleLogSet = useCallback(
-    (values: {
-      load: number | null;
-      reps: number | null;
-      rir: number | null;
-      durationSeconds: number | null;
-      distanceMeters: number | null;
-      side: SetLogSide | null;
-    }) => {
+  const handleInlineLog = useCallback(
+    (values: InlineLogValues) => {
       logSet(db, {
         plannedExerciseId: plannedExercise.id,
         exerciseId: plannedExercise.exerciseId,
         setNumber: currentSetNumber,
         load: values.load,
         reps: values.reps,
-        rir: values.rir,
+        rir: values.rir ?? (plannedExercise.targetRir ?? null),
         durationSeconds: values.durationSeconds,
         distanceMeters: values.distanceMeters,
         completed: true,
@@ -129,6 +124,13 @@ export function ExercisePage({
       setEditingSetId(null);
     },
     [db, deleteSet]
+  );
+
+  const handleRestAdjust = useCallback(
+    (newRestSeconds: number) => {
+      updateExerciseRestSeconds(db, plannedExercise.id, newRestSeconds);
+    },
+    [db, plannedExercise.id, updateExerciseRestSeconds]
   );
 
   function handleSkipPress() {
@@ -174,6 +176,9 @@ export function ExercisePage({
         prefillLoad={prefillLoad}
         targetReps={plannedExercise.repRangeMin}
         targetRir={plannedExercise.targetRir}
+        prefillReps={prefillReps}
+        prefillDuration={prefillDuration}
+        prefillDistance={prefillDistance}
         editingSetId={editingSetId}
         noteSetId={noteSetId}
         exerciseSetLogs={exerciseSetLogs}
@@ -187,23 +192,15 @@ export function ExercisePage({
         onNoteSave={(note) => {
           if (noteSetId) editSet(db, noteSetId, { notes: note || null });
         }}
+        onInlineLog={handleInlineLog}
       />
 
-      {!allSetsLogged ? (
-        <LogSetForm
-          logType={logType}
-          side={currentSide}
-          plannedExercise={plannedExercise}
-          prefillLoad={prefillLoad}
-          prefillReps={prefillReps}
-          prefillRir={prefillRir}
-          prefillDuration={prefillDuration}
-          prefillDistance={prefillDistance}
-          previousSetLog={previousSetLog}
-          onLog={handleLogSet}
-          disabled={false}
-        />
-      ) : (
+      <RestTimerAdjuster
+        currentRestSeconds={plannedExercise.restSeconds ?? 90}
+        onAdjust={handleRestAdjust}
+      />
+
+      {allSetsLogged ? (
         <View className="bg-background-elevated rounded-card px-4 py-4 items-center gap-2">
           <AppText className="text-status-success text-heading font-bold">
             Tous les sets terminés
@@ -212,7 +209,7 @@ export function ExercisePage({
             Swipe pour passer à l'exercice suivant.
           </AppText>
         </View>
-      )}
+      ) : null}
 
       <Pressable
         onPress={handleSkipPress}

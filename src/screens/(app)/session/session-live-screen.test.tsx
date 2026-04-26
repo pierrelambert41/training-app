@@ -19,6 +19,10 @@ jest.mock('@/hooks/use-last-set-for-exercise', () => ({
   useLastSetForExercise: () => ({ lastSet: null, loading: false }),
 }));
 
+jest.mock('@/hooks/use-last-set-for-exercise-side', () => ({
+  useLastSetForExerciseSide: () => ({ lastSetLeft: null, lastSetRight: null, loading: false }),
+}));
+
 jest.mock('@/hooks/use-session-exercises', () => ({
   useSessionExercises: () => ({
     data: {
@@ -78,7 +82,13 @@ jest.mock('expo-notifications', () => ({
 }));
 
 jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'Light',
+    Medium: 'Medium',
+    Heavy: 'Heavy',
+  },
   NotificationFeedbackType: {
     Success: 'Success',
   },
@@ -124,6 +134,7 @@ const mockEditSet = jest.fn();
 const mockDeleteSet = jest.fn();
 const mockAddUnplannedExercise = jest.fn();
 const mockUpdateSessionNotes = jest.fn();
+const mockUpdateExerciseRestSeconds = jest.fn();
 
 const fakeSession: Session = {
   id: 'session-1',
@@ -189,6 +200,7 @@ function setupStore(
     deleteSet: mockDeleteSet,
     addUnplannedExercise: mockAddUnplannedExercise,
     updateSessionNotes: mockUpdateSessionNotes,
+    updateExerciseRestSeconds: mockUpdateExerciseRestSeconds,
     ...partial,
   } as ReturnType<typeof useSessionStore.getState>);
 }
@@ -201,6 +213,7 @@ beforeEach(() => {
   mockDeleteSet.mockReset();
   mockAddUnplannedExercise.mockReset();
   mockUpdateSessionNotes.mockReset();
+  mockUpdateExerciseRestSeconds.mockReset();
 });
 
 describe('SessionLiveScreen', () => {
@@ -233,39 +246,29 @@ describe('SessionLiveScreen', () => {
     });
   });
 
-  it('affiche le bouton Log Set', async () => {
+  it('affiche le bouton check inline sur la ligne courante', async () => {
     setupStore();
     render(<SessionLiveScreen />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('log-set-button')).toBeTruthy();
+      expect(screen.getByTestId('check-set-button')).toBeTruthy();
     });
   });
 
-  it('le bouton Log Set est désactivé si charge et reps vides', async () => {
+  it('appelle logSet avec les valeurs saisies via le bouton check inline', async () => {
     setupStore();
     render(<SessionLiveScreen />);
 
-    await waitFor(() => {
-      const btn = screen.getByTestId('log-set-button');
-      expect(btn.props.accessibilityState?.disabled).toBeTruthy();
-    });
-  });
+    await waitFor(() => screen.getByTestId('check-set-button'));
 
-  it('appelle logSet avec les valeurs saisies', async () => {
-    setupStore();
-    render(<SessionLiveScreen />);
+    const loadInput = screen.getByTestId('inline-load-input');
+    const repsInput = screen.getByTestId('inline-reps-input');
 
-    await waitFor(() => screen.getByTestId('log-set-button'));
-
-    const loadTextInput = screen.getByTestId('load-input');
-    const repsTextInput = screen.getByTestId('reps-input');
-
-    fireEvent.changeText(loadTextInput, '100');
-    fireEvent.changeText(repsTextInput, '8');
+    fireEvent.changeText(loadInput, '100');
+    fireEvent.changeText(repsInput, '8');
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('log-set-button'));
+      fireEvent.press(screen.getByTestId('check-set-button'));
     });
 
     expect(mockLogSet).toHaveBeenCalledWith(
@@ -276,7 +279,6 @@ describe('SessionLiveScreen', () => {
         setNumber: 1,
         load: 100,
         reps: 8,
-        rir: 2,
         completed: true,
       })
     );
@@ -322,7 +324,7 @@ describe('SessionLiveScreen', () => {
       fireEvent.press(screen.getByTestId('end-session-button'));
     });
 
-    expect(mockPush).toHaveBeenCalledWith('/(app)/session/end');
+    expect(mockReplace).toHaveBeenCalledWith('/(app)/session/end');
   });
 
   it('affiche un message si aucune session en cours', async () => {
@@ -338,82 +340,6 @@ describe('SessionLiveScreen', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Aucune séance en cours.')).toBeTruthy();
-    });
-  });
-
-  it('affiche le bouton "Repeat previous set" quand un set est déjà loggé', async () => {
-    const oneLoggedSet = {
-      id: 'sl-1',
-      sessionId: 'session-1',
-      exerciseId: 'ex-1',
-      plannedExerciseId: 'pe-1',
-      setNumber: 1,
-      targetLoad: null,
-      targetReps: null,
-      targetRir: null,
-      load: 80,
-      reps: 8,
-      rir: 2,
-      durationSeconds: null,
-      distanceMeters: null,
-      completed: true,
-      side: null,
-      notes: null,
-      createdAt: '2026-04-25T10:00:00Z',
-      updatedAt: '2026-04-25T10:00:00Z',
-    };
-
-    setupStore({ setLogs: [oneLoggedSet] });
-    render(<SessionLiveScreen />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('repeat-previous-button')).toBeTruthy();
-    });
-  });
-
-  it("n'affiche pas le bouton 'Repeat previous set' quand aucun set loggé", async () => {
-    setupStore({ setLogs: [] });
-    render(<SessionLiveScreen />);
-
-    await waitFor(() => screen.getByTestId('log-set-button'));
-
-    expect(screen.queryByTestId('repeat-previous-button')).toBeNull();
-  });
-
-  it('préremplit les champs via "Repeat previous set"', async () => {
-    const oneLoggedSet = {
-      id: 'sl-1',
-      sessionId: 'session-1',
-      exerciseId: 'ex-1',
-      plannedExerciseId: 'pe-1',
-      setNumber: 1,
-      targetLoad: null,
-      targetReps: null,
-      targetRir: null,
-      load: 95,
-      reps: 7,
-      rir: 1,
-      durationSeconds: null,
-      distanceMeters: null,
-      completed: true,
-      side: null,
-      notes: null,
-      createdAt: '2026-04-25T10:00:00Z',
-      updatedAt: '2026-04-25T10:00:00Z',
-    };
-
-    setupStore({ setLogs: [oneLoggedSet] });
-    render(<SessionLiveScreen />);
-
-    await waitFor(() => screen.getByTestId('repeat-previous-button'));
-
-    fireEvent.press(screen.getByTestId('repeat-previous-button'));
-
-    await waitFor(() => {
-      const loadInput = screen.getByTestId('load-input');
-      const repsInput = screen.getByTestId('reps-input');
-      expect(loadInput.props.value).toBe('95');
-      expect(repsInput.props.value).toBe('7');
     });
   });
 
@@ -774,6 +700,49 @@ describe('SessionLiveScreen', () => {
       expect.anything(),
       'sl-1',
       expect.objectContaining({ notes: 'Bonne série' })
+    );
+  });
+
+  it('affiche le rest timer adjuster pour l\'exercice courant', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-timer-adjuster-toggle')).toBeTruthy();
+    });
+  });
+
+  it('affiche les presets de rest timer après tap sur l\'ajusteur', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('rest-timer-adjuster-toggle'));
+    fireEvent.press(screen.getByTestId('rest-timer-adjuster-toggle'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rest-preset-60')).toBeTruthy();
+      expect(screen.getByTestId('rest-preset-90')).toBeTruthy();
+      expect(screen.getByTestId('rest-preset-120')).toBeTruthy();
+    });
+  });
+
+  it('appelle updateExerciseRestSeconds après sélection d\'un preset', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('rest-timer-adjuster-toggle'));
+    fireEvent.press(screen.getByTestId('rest-timer-adjuster-toggle'));
+
+    await waitFor(() => screen.getByTestId('rest-preset-60'));
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('rest-preset-60'));
+    });
+
+    expect(mockUpdateExerciseRestSeconds).toHaveBeenCalledWith(
+      expect.anything(),
+      'pe-1',
+      60
     );
   });
 });

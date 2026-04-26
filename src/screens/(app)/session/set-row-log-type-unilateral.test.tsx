@@ -1,5 +1,6 @@
 /**
- * Tests pour TA-82 : log_type adaptatif + exercices unilatéraux.
+ * Tests pour TA-82 / TA-99 : log_type adaptatif + exercices unilatéraux
+ * avec édition inline par ligne.
  *
  * Architecture : les mocks de `use-session-exercises` et des hooks de
  * last-set sont déclarés en haut avec jest.mock() (hoisté par Babel).
@@ -97,7 +98,13 @@ jest.mock('expo-notifications', () => ({
 }));
 
 jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
+  ImpactFeedbackStyle: {
+    Light: 'Light',
+    Medium: 'Medium',
+    Heavy: 'Heavy',
+  },
   NotificationFeedbackType: { Success: 'Success' },
 }));
 
@@ -264,6 +271,7 @@ function setupStore(exerciseId: string, sets = 3, setLogs: SetLog[] = []) {
     deleteSet: mockDeleteSet,
     addUnplannedExercise: jest.fn(),
     updateSessionNotes: jest.fn(),
+    updateExerciseRestSeconds: jest.fn(),
   } as ReturnType<typeof useSessionStore.getState>);
 }
 
@@ -283,35 +291,33 @@ describe('log_type = bodyweight_reps', () => {
     mockExercisesById = new Map([['ex-bw', BW_EXERCISE]]);
   });
 
-  it('affiche les champs Reps et Lest (pas "Charge (kg)") pour bodyweight_reps', async () => {
+  it('affiche les champs inline Reps et Lest pour bodyweight_reps', async () => {
     setupStore('ex-bw', 3);
     render(<SessionLiveScreen />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('reps-input')).toBeTruthy();
-      expect(screen.getByTestId('load-input')).toBeTruthy();
+      expect(screen.getByTestId('inline-reps-input')).toBeTruthy();
     });
   });
 
-  it('le bouton LOG SET est activé quand reps est pré-rempli (repRangeMin)', async () => {
+  it('affiche le bouton check sur la ligne courante', async () => {
     setupStore('ex-bw', 3);
     render(<SessionLiveScreen />);
 
-    await waitFor(() => screen.getByTestId('log-set-button'));
-
-    const btn = screen.getByTestId('log-set-button');
-    expect(btn.props.accessibilityState?.disabled).toBeFalsy();
+    await waitFor(() => {
+      expect(screen.getByTestId('check-set-button')).toBeTruthy();
+    });
   });
 
-  it('peut logger un set bodyweight_reps avec reps seulement (lest optionnel)', async () => {
+  it('peut logger un set bodyweight_reps avec reps via check inline', async () => {
     setupStore('ex-bw', 3);
     render(<SessionLiveScreen />);
 
-    await waitFor(() => screen.getByTestId('reps-input'));
-    fireEvent.changeText(screen.getByTestId('reps-input'), '10');
+    await waitFor(() => screen.getByTestId('inline-reps-input'));
+    fireEvent.changeText(screen.getByTestId('inline-reps-input'), '10');
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('log-set-button'));
+      fireEvent.press(screen.getByTestId('check-set-button'));
     });
 
     expect(mockLogSet).toHaveBeenCalledWith(
@@ -333,34 +339,24 @@ describe('log_type = duration', () => {
     mockExercisesById = new Map([['ex-dur', DURATION_EXERCISE]]);
   });
 
-  it('affiche le champ Durée pour duration', async () => {
+  it('affiche le champ Durée inline pour duration', async () => {
     setupStore('ex-dur', 3);
     render(<SessionLiveScreen />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('duration-input')).toBeTruthy();
+      expect(screen.getByTestId('inline-duration-input')).toBeTruthy();
     });
   });
 
-  it('le bouton LOG SET est désactivé si durée vide', async () => {
+  it('peut logger un set duration avec durationSeconds via check inline', async () => {
     setupStore('ex-dur', 3);
     render(<SessionLiveScreen />);
 
-    await waitFor(() => screen.getByTestId('log-set-button'));
-
-    const btn = screen.getByTestId('log-set-button');
-    expect(btn.props.accessibilityState?.disabled).toBeTruthy();
-  });
-
-  it('peut logger un set duration avec durationSeconds', async () => {
-    setupStore('ex-dur', 3);
-    render(<SessionLiveScreen />);
-
-    await waitFor(() => screen.getByTestId('duration-input'));
-    fireEvent.changeText(screen.getByTestId('duration-input'), '60');
+    await waitFor(() => screen.getByTestId('inline-duration-input'));
+    fireEvent.changeText(screen.getByTestId('inline-duration-input'), '60');
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('log-set-button'));
+      fireEvent.press(screen.getByTestId('check-set-button'));
     });
 
     expect(mockLogSet).toHaveBeenCalledWith(
@@ -384,36 +380,26 @@ describe('log_type = distance_duration', () => {
     mockExercisesById = new Map([['ex-dd', DISTANCE_DURATION_EXERCISE]]);
   });
 
-  it('affiche les champs Distance et Durée pour distance_duration', async () => {
+  it('affiche les champs Distance et Durée inline pour distance_duration', async () => {
     setupStore('ex-dd', 3);
     render(<SessionLiveScreen />);
 
     await waitFor(() => {
-      expect(screen.getByTestId('distance-input')).toBeTruthy();
-      expect(screen.getByTestId('duration-input')).toBeTruthy();
+      expect(screen.getByTestId('inline-distance-input')).toBeTruthy();
+      expect(screen.getByTestId('inline-duration-input')).toBeTruthy();
     });
   });
 
-  it('le bouton LOG SET est désactivé si distance ou durée vide', async () => {
+  it('peut logger un set distance_duration avec distance et durée via check inline', async () => {
     setupStore('ex-dd', 3);
     render(<SessionLiveScreen />);
 
-    await waitFor(() => screen.getByTestId('log-set-button'));
-
-    const btn = screen.getByTestId('log-set-button');
-    expect(btn.props.accessibilityState?.disabled).toBeTruthy();
-  });
-
-  it('peut logger un set distance_duration avec distance et durée', async () => {
-    setupStore('ex-dd', 3);
-    render(<SessionLiveScreen />);
-
-    await waitFor(() => screen.getByTestId('distance-input'));
-    fireEvent.changeText(screen.getByTestId('distance-input'), '20');
-    fireEvent.changeText(screen.getByTestId('duration-input'), '15');
+    await waitFor(() => screen.getByTestId('inline-distance-input'));
+    fireEvent.changeText(screen.getByTestId('inline-distance-input'), '20');
+    fireEvent.changeText(screen.getByTestId('inline-duration-input'), '15');
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('log-set-button'));
+      fireEvent.press(screen.getByTestId('check-set-button'));
     });
 
     expect(mockLogSet).toHaveBeenCalledWith(
@@ -450,25 +436,27 @@ describe('exercice unilatéral is_unilateral = true', () => {
     });
   });
 
-  it('le form initial porte le label GAUCHE', async () => {
+  it('la ligne courante (set 1 G) affiche les inputs inline', async () => {
     setupStore('ex-uni', 3);
     render(<SessionLiveScreen />);
 
     await waitFor(() => {
-      expect(screen.getByText('GAUCHE')).toBeTruthy();
+      expect(screen.getByTestId('inline-load-input')).toBeTruthy();
+      expect(screen.getByTestId('inline-reps-input')).toBeTruthy();
+      expect(screen.getByTestId('check-set-button')).toBeTruthy();
     });
   });
 
-  it('peut logger le set 1 gauche avec side = left', async () => {
+  it('peut logger le set 1 gauche avec side = left via check inline', async () => {
     setupStore('ex-uni', 3);
     render(<SessionLiveScreen />);
 
-    await waitFor(() => screen.getByTestId('load-input'));
-    fireEvent.changeText(screen.getByTestId('load-input'), '30');
-    fireEvent.changeText(screen.getByTestId('reps-input'), '10');
+    await waitFor(() => screen.getByTestId('inline-load-input'));
+    fireEvent.changeText(screen.getByTestId('inline-load-input'), '30');
+    fireEvent.changeText(screen.getByTestId('inline-reps-input'), '10');
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('log-set-button'));
+      fireEvent.press(screen.getByTestId('check-set-button'));
     });
 
     expect(mockLogSet).toHaveBeenCalledWith(
@@ -483,7 +471,7 @@ describe('exercice unilatéral is_unilateral = true', () => {
     );
   });
 
-  it('après set gauche loggé, le form passe à DROIT', async () => {
+  it('après set gauche loggé, la ligne courante devient le set 1 DROIT', async () => {
     const leftLog: SetLog = {
       id: 'sl-left-1',
       sessionId: 'session-1',
@@ -508,8 +496,11 @@ describe('exercice unilatéral is_unilateral = true', () => {
     setupStore('ex-uni', 3, [leftLog]);
     render(<SessionLiveScreen />);
 
+    // La ligne courante (set 1 D) affiche les inputs inline
     await waitFor(() => {
-      expect(screen.getByText('DROIT')).toBeTruthy();
+      expect(screen.getByTestId('check-set-button')).toBeTruthy();
+      // Le testID de la ligne courante est set-row-current-1-right
+      expect(screen.getByTestId('set-row-current-1-right')).toBeTruthy();
     });
   });
 
@@ -548,12 +539,9 @@ describe('exercice unilatéral is_unilateral = true', () => {
     });
   });
 
-  it('le repeat previous pour le côté droit copie le dernier set droit de la session', async () => {
-    // Situation : set 1 G et set 1 D déjà loggés, on est au set 2 G.
-    // On va forcer le form sur "droit set 1" → "droit set 2" ne peut pas
-    // avoir repeat. On teste à la place quand on a G1+D1 loggés, le form
-    // est au set 2 G — on vérifie que repeat previous utilise le dernier log
-    // gauche (G1) pour le set 2 G.
+  it('le prefill pour le côté gauche utilise le dernier log gauche', async () => {
+    // G1 et D1 loggés, on est au set 2 G
+    // Le prefill doit charger les valeurs de G1 (load=30, reps=10)
     const leftLog1: SetLog = {
       id: 'sl-left-1',
       sessionId: 'session-1',
@@ -599,23 +587,18 @@ describe('exercice unilatéral is_unilateral = true', () => {
     setupStore('ex-uni', 3, [leftLog1, rightLog1]);
     render(<SessionLiveScreen />);
 
-    // Après G1 + D1, le form est sur set 2 G — repeat previous doit montrer G1
-    await waitFor(() => screen.getByTestId('repeat-previous-button'));
-    fireEvent.press(screen.getByTestId('repeat-previous-button'));
+    // Après G1 + D1, la ligne courante est set 2 G — prefill doit montrer load=30, reps=10
+    await waitFor(() => screen.getByTestId('inline-load-input'));
 
-    await waitFor(() => {
-      const loadInput = screen.getByTestId('load-input');
-      const repsInput = screen.getByTestId('reps-input');
-      // Le repeat doit copier le dernier log du côté gauche (load=30, reps=10)
-      expect(loadInput.props.value).toBe('30');
-      expect(repsInput.props.value).toBe('10');
-    });
+    const loadInput = screen.getByTestId('inline-load-input');
+    const repsInput = screen.getByTestId('inline-reps-input');
+    expect(loadInput.props.value).toBe('30');
+    expect(repsInput.props.value).toBe('10');
   });
 
-  it('le repeat previous pour le côté droit copie le dernier set droit de la session', async () => {
-    // Situation : G1 (load=30, reps=10), D1 (load=28, reps=9) et G2 (load=32, reps=11) loggés.
-    // Le form est sur set 2 D — repeat previous doit copier D1 (load=28, reps=9),
-    // pas G2.
+  it('le prefill pour le côté droit utilise le dernier log droit, pas le gauche', async () => {
+    // G1 (load=30, reps=10), D1 (load=28, reps=9) et G2 (load=32, reps=11) loggés.
+    // La ligne courante est set 2 D — prefill doit montrer D1 (load=28, reps=9)
     const leftLog1: SetLog = {
       id: 'sl-left-1',
       sessionId: 'session-1',
@@ -682,16 +665,12 @@ describe('exercice unilatéral is_unilateral = true', () => {
     setupStore('ex-uni', 3, [leftLog1, rightLog1, leftLog2]);
     render(<SessionLiveScreen />);
 
-    // Après G1 + D1 + G2, le form est sur set 2 D — repeat previous doit copier D1
-    await waitFor(() => screen.getByTestId('repeat-previous-button'));
-    fireEvent.press(screen.getByTestId('repeat-previous-button'));
+    // Après G1 + D1 + G2, la ligne courante est set 2 D — prefill doit montrer D1 (load=28, reps=9)
+    await waitFor(() => screen.getByTestId('inline-load-input'));
 
-    await waitFor(() => {
-      const loadInput = screen.getByTestId('load-input');
-      const repsInput = screen.getByTestId('reps-input');
-      // Le repeat doit copier le dernier log du côté droit (load=28, reps=9), pas G2
-      expect(loadInput.props.value).toBe('28');
-      expect(repsInput.props.value).toBe('9');
-    });
+    const loadInput = screen.getByTestId('inline-load-input');
+    const repsInput = screen.getByTestId('inline-reps-input');
+    expect(loadInput.props.value).toBe('28');
+    expect(repsInput.props.value).toBe('9');
   });
 });

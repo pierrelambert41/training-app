@@ -57,6 +57,17 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-99 — Redesign UX écran live session : édition inline, check par ligne, rest timer ajustable
+**Livré** : édition inline charge/reps sur chaque ligne de set (composant `set-row-inline-form.tsx`), bouton check ✓ par ligne (remplace le bouton "Log Set" global en bas), rest timer ajustable par exercice (`rest-timer-adjuster.tsx`) avec presets 1min/1m30/2min/3min + saisie libre. La durée de repos est persistée en SQLite via `updateExerciseRestSeconds` (nouvelle action store + `updatePlannedExercise` service). Haptics `ImpactFeedbackStyle.Light` sur tap ✓.  
+**Fichiers modifiés** : `set-row.tsx` (3 variantes selon état : current+inline, pending, logged), `set-row-list.tsx` (passe prefills par ligne), `exercise-page.tsx` (supprime `LogSetForm` global, ajoute `RestTimerAdjuster`), `session-store.ts` (ajoute `updateExerciseRestSeconds`).  
+**Nouveaux fichiers** : `set-row-inline-form.tsx`, `rest-timer-adjuster.tsx`.  
+**Tests** : `session-live-screen.test.tsx` et `set-row-log-type-unilateral.test.tsx` réécrits pour le paradigme inline (test IDs : `check-set-button`, `inline-load-input`, `inline-reps-input`, etc.). Bug pre-existant corrigé : `mockPush` → `mockReplace` pour la navigation vers `session/end`.  
+**S'appuie sur** : TA-98 (structure Bulletproof), `updatePlannedExercise` déjà dans le service.  
+**Ouvre** : le RIR inline n'est pas encore éditable par set (utilise `prefillRir` = targetRir) — ticket de suivi si besoin.  
+**Stubs laissés** : RIR inline figé à `targetRir` de la PlannedExercise (pas de sélecteur RIR dans la ligne courante). Le sélecteur RIR reste dans `InlineSetEditor` pour l'édition post-log.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
