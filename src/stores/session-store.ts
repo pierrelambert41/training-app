@@ -15,6 +15,7 @@ import { insertSetLog, updateSetLog, deleteSetLog, getSetLogsBySessionId } from 
 import {
   getPlannedExercisesByWorkoutDayId,
   insertPlannedExercise,
+  updatePlannedExercise,
 } from '@/services/planned-exercises';
 import {
   scheduleRestEndNotification,
@@ -50,6 +51,7 @@ interface SessionActions {
   setCurrentExercise: (index: number) => void;
   skipExercise: (exerciseId: string) => void;
   addUnplannedExercise: (db: SQLiteDatabase, exercise: PlannedExercise) => void;
+  updateExerciseRestSeconds: (db: SQLiteDatabase, plannedExerciseId: string, restSeconds: number) => void;
   updateSessionNotes: (db: SQLiteDatabase, preSessionNotes: string | null, postSessionNotes: string | null) => void;
   completeSession: (db: SQLiteDatabase) => Promise<void>;
   abandonSession: (db: SQLiteDatabase) => Promise<void>;
@@ -262,6 +264,18 @@ export const useSessionStore = create<SessionState & SessionActions>((set, get) 
       isUnplanned: true,
     }).catch((e) =>
       console.error('[session-store] insertPlannedExercise (unplanned) failed', e)
+    );
+  },
+
+  updateExerciseRestSeconds: (db, plannedExerciseId, restSeconds) => {
+    set((state) => ({
+      plannedExercises: state.plannedExercises.map((pe) =>
+        pe.id === plannedExerciseId ? { ...pe, restSeconds } : pe
+      ),
+    }));
+
+    updatePlannedExercise(db, plannedExerciseId, { restSeconds }).catch((e) =>
+      console.error('[session-store] updateExerciseRestSeconds failed', e)
     );
   },
 

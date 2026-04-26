@@ -22,6 +22,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 **Fix** : placer les tests d'écrans dans `src/screens/<groupe>/` en miroir de `app/`.  
 **Détecté** : CLAUDE.md (convention établie)
 
+### RN-04 — `defaultValue` vs `value` pour tester les prefills dans RNTL
+**Symptôme** : un `TextInput` avec `defaultValue` ne reporte pas `props.value` dans le test RNTL — `screen.getByTestId('input').props.value` retourne `undefined`.  
+**Fix** : utiliser `value` + `useState` dans le composant pour que la valeur soit accessible dans les tests. Le coût de re-render est négligeable pour les inputs de set.  
+**Détecté** : TA-99 / 2026-04-26
+
+---
+
 ### RN-03 — `Alert.alert('Phase X', ...)` comme stub de navigation
 **Pattern à bannir** : utiliser une alerte comme placeholder pour une route non implémentée.  
 **Fix** : router.push vers la vraie route, ou laisser le bouton disabled avec un commentaire `// TODO TA-XX`.  

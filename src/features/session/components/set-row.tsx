@@ -2,6 +2,8 @@ import { Pressable, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { repsColor } from '../lib/reps-color';
+import { SetRowInlineForm } from './set-row-inline-form';
+import type { InlineLogValues } from './set-row-inline-form';
 import type { LogType, SetLog, SetLogSide } from '@/types';
 
 export type SetRowProps = {
@@ -14,8 +16,13 @@ export type SetRowProps = {
   targetRir: number | null;
   isCurrent: boolean;
   isEditing: boolean;
+  prefillLoad: string;
+  prefillReps: string;
+  prefillDuration: string;
+  prefillDistance: string;
   onTap: () => void;
   onNoteTap: () => void;
+  onInlineLog: (values: InlineLogValues) => void;
 };
 
 export function SetRow({
@@ -28,8 +35,13 @@ export function SetRow({
   targetRir,
   isCurrent,
   isEditing,
+  prefillLoad,
+  prefillReps,
+  prefillDuration,
+  prefillDistance,
   onTap,
   onNoteTap,
+  onInlineLog,
 }: SetRowProps) {
   const isLogged = log !== null && log.completed;
 
@@ -48,13 +60,11 @@ export function SetRow({
     ? (() => {
         if (logType === 'duration') return log.durationSeconds !== null ? String(log.durationSeconds) : '—';
         if (logType === 'distance_duration') return log.distanceMeters !== null ? String(log.distanceMeters) : '—';
-        if (logType === 'bodyweight_reps') return log.load !== null ? String(log.load) : '—';
         return log.load !== null ? String(log.load) : '—';
       })()
     : (() => {
         if (logType === 'duration') return '—';
         if (logType === 'distance_duration') return '—';
-        if (logType === 'bodyweight_reps') return '—';
         return targetLoad !== null ? String(targetLoad) : '—';
       })();
 
@@ -76,9 +86,7 @@ export function SetRow({
       })();
 
   const col2Label = logType === 'distance_duration' ? 's' : 'reps';
-
   const showCol2 = logType !== 'duration';
-
   const showRir = logType !== 'duration' && logType !== 'distance_duration';
 
   const rirDisplay = isLogged
@@ -93,51 +101,96 @@ export function SetRow({
     : colors.contentSecondary;
 
   const hasNote = isLogged && (log?.notes ?? '').length > 0;
-
   const testIdSuffix = side ? `${setNumber}-${side}` : `${setNumber}`;
 
-  const rowContent = (
-    <View
-      className={`flex-row items-center rounded-card px-4 py-3 mb-0 ${rowBg}`}
-    >
-      <View className="w-8 items-center">
-        {isLogged ? (
-          <AppText className="text-status-success text-body font-semibold">✓</AppText>
-        ) : sideLabel !== null ? (
-          <AppText
-            className="text-body font-bold"
-            style={{ color: isCurrent ? sideColor : colors.contentMuted }}
-          >
-            {sideLabel}
-          </AppText>
+  if (!isLogged && isCurrent) {
+    return (
+      <View
+        className={`flex-row items-center rounded-card px-3 py-2 mb-2 gap-2 ${rowBg}`}
+        testID={`set-row-current-${testIdSuffix}`}
+      >
+        <View className="w-8 items-center">
+          {sideLabel !== null ? (
+            <AppText className="text-body font-bold" style={{ color: sideColor }}>
+              {sideLabel}
+            </AppText>
+          ) : (
+            <AppText className="text-body font-semibold text-accent">{setNumber}</AppText>
+          )}
+        </View>
+        <SetRowInlineForm
+          logType={logType}
+          side={side}
+          prefillLoad={prefillLoad}
+          prefillReps={prefillReps}
+          prefillDuration={prefillDuration}
+          prefillDistance={prefillDistance}
+          prefillRir={targetRir}
+          onLog={onInlineLog}
+        />
+        <View className="w-8" />
+      </View>
+    );
+  }
+
+  if (!isLogged) {
+    return (
+      <View
+        className={`flex-row items-center rounded-card px-4 py-3 mb-2 ${rowBg}`}
+        testID={`set-row-pending-${testIdSuffix}`}
+      >
+        <View className="w-8 items-center">
+          {sideLabel !== null ? (
+            <AppText className="text-body font-bold" style={{ color: colors.contentMuted }}>
+              {sideLabel}
+            </AppText>
+          ) : (
+            <AppText className="text-body font-semibold text-content-muted">{setNumber}</AppText>
+          )}
+        </View>
+        <View className="flex-1 items-center">
+          <AppText className="text-logger font-semibold text-content-muted">{col1Display}</AppText>
+          <AppText className="text-caption text-content-muted">{col1Label}</AppText>
+        </View>
+        {showCol2 ? (
+          <View className="flex-1 items-center">
+            <AppText className="text-logger font-semibold text-content-muted">{col2Display}</AppText>
+            <AppText className="text-caption text-content-muted">{col2Label}</AppText>
+          </View>
         ) : (
-          <AppText
-            className={`text-body font-semibold ${
-              isCurrent ? 'text-accent' : 'text-content-muted'
-            }`}
-          >
-            {setNumber}
-          </AppText>
+          <View className="flex-1" />
         )}
+        {showRir ? (
+          <View className="w-12 items-center">
+            <AppText className="text-body font-medium text-content-muted">{rirDisplay}</AppText>
+            <AppText className="text-caption text-content-muted">RIR</AppText>
+          </View>
+        ) : (
+          <View className="w-12" />
+        )}
+        <View style={{ minWidth: 44 }} />
+      </View>
+    );
+  }
+
+  const accessibilityLabel = side
+    ? `Modifier le set ${setNumber} côté ${side === 'left' ? 'gauche' : 'droit'}`
+    : `Modifier le set ${setNumber}`;
+
+  const rowContent = (
+    <View className={`flex-row items-center rounded-card px-4 py-3 ${rowBg}`}>
+      <View className="w-8 items-center">
+        <AppText className="text-status-success text-body font-semibold">✓</AppText>
       </View>
 
       <View className="flex-1 items-center">
-        <AppText
-          className={`text-logger font-semibold ${
-            isLogged ? 'text-content-primary' : 'text-content-muted'
-          }`}
-        >
-          {col1Display}
-        </AppText>
+        <AppText className="text-logger font-semibold text-content-primary">{col1Display}</AppText>
         <AppText className="text-caption text-content-muted">{col1Label}</AppText>
       </View>
 
       {showCol2 ? (
         <View className="flex-1 items-center">
-          <AppText
-            className="text-logger font-semibold"
-            style={{ color: isLogged ? repColor : colors.contentMuted }}
-          >
+          <AppText className="text-logger font-semibold" style={{ color: isLogged ? repColor : colors.contentMuted }}>
             {col2Display}
           </AppText>
           <AppText className="text-caption text-content-muted">{col2Label}</AppText>
@@ -148,47 +201,27 @@ export function SetRow({
 
       {showRir ? (
         <View className="w-12 items-center">
-          <AppText
-            className={`text-body font-medium ${
-              isLogged ? 'text-content-secondary' : 'text-content-muted'
-            }`}
-          >
-            {rirDisplay}
-          </AppText>
+          <AppText className="text-body font-medium text-content-secondary">{rirDisplay}</AppText>
           <AppText className="text-caption text-content-muted">RIR</AppText>
         </View>
       ) : (
         <View className="w-12" />
       )}
 
-      {isLogged ? (
-        <Pressable
-          onPress={onNoteTap}
-          style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
-          accessibilityLabel={`Note du set ${testIdSuffix}`}
-          accessibilityRole="button"
-          testID={`set-note-button-${testIdSuffix}`}
-          hitSlop={4}
-        >
-          <AppText
-            style={{ fontSize: 18, color: hasNote ? colors.accent : colors.contentMuted }}
-          >
-            {hasNote ? '💬' : '○'}
-          </AppText>
-        </Pressable>
-      ) : (
-        <View style={{ minWidth: 44 }} />
-      )}
+      <Pressable
+        onPress={onNoteTap}
+        style={{ minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' }}
+        accessibilityLabel={`Note du set ${testIdSuffix}`}
+        accessibilityRole="button"
+        testID={`set-note-button-${testIdSuffix}`}
+        hitSlop={4}
+      >
+        <AppText style={{ fontSize: 18, color: hasNote ? colors.accent : colors.contentMuted }}>
+          {hasNote ? '💬' : '○'}
+        </AppText>
+      </Pressable>
     </View>
   );
-
-  const accessibilityLabel = side
-    ? `Modifier le set ${setNumber} côté ${side === 'left' ? 'gauche' : 'droit'}`
-    : `Modifier le set ${setNumber}`;
-
-  if (!isLogged) {
-    return <View className="mb-2">{rowContent}</View>;
-  }
 
   return (
     <Pressable

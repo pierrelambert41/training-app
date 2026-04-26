@@ -3,6 +3,7 @@ import { AppText } from '@/components/ui';
 import { SetNoteBottomSheet } from '@/components/session/NoteBottomSheet';
 import { SetRow } from './set-row';
 import { InlineSetEditor } from './inline-set-editor';
+import type { InlineLogValues } from './set-row-inline-form';
 import type { EditSetPayload } from '@/stores/session-store';
 import type { LogType, SetLog } from '@/types';
 import type { VirtualSetRow } from '../types/session-ui';
@@ -16,6 +17,9 @@ type SetRowListProps = {
   prefillLoad: number | null;
   targetReps: number | null;
   targetRir: number | null;
+  prefillReps: number | null;
+  prefillDuration: number | null;
+  prefillDistance: number | null;
   editingSetId: string | null;
   noteSetId: string | null;
   exerciseSetLogs: SetLog[];
@@ -27,6 +31,7 @@ type SetRowListProps = {
   onEditCancel: () => void;
   onNoteClose: () => void;
   onNoteSave: (note: string) => void;
+  onInlineLog: (values: InlineLogValues) => void;
 };
 
 const col1HeaderFor = (logType: LogType): string => {
@@ -49,6 +54,9 @@ export function SetRowList({
   prefillLoad,
   targetReps,
   targetRir,
+  prefillReps,
+  prefillDuration,
+  prefillDistance,
   editingSetId,
   noteSetId,
   exerciseSetLogs,
@@ -59,10 +67,16 @@ export function SetRowList({
   onEditCancel,
   onNoteClose,
   onNoteSave,
+  onInlineLog,
 }: SetRowListProps) {
   const col1Header = col1HeaderFor(logType);
   const col2Header = col2HeaderFor(logType);
   const noteLog = noteSetId ? exerciseSetLogs.find((sl) => sl.id === noteSetId) ?? null : null;
+
+  const prefillLoadStr = prefillLoad !== null ? String(prefillLoad) : '';
+  const prefillRepsStr = prefillReps !== null ? String(prefillReps) : '';
+  const prefillDurStr = prefillDuration !== null ? String(prefillDuration) : '';
+  const prefillDistStr = prefillDistance !== null ? String(prefillDistance) : '';
 
   return (
     <View className="gap-1">
@@ -101,12 +115,17 @@ export function SetRowList({
               targetRir={targetRir}
               isCurrent={isCurrent}
               isEditing={isEditing}
+              prefillLoad={prefillLoadStr}
+              prefillReps={prefillRepsStr}
+              prefillDuration={prefillDurStr}
+              prefillDistance={prefillDistStr}
               onTap={() => {
                 if (vr.log && vr.log.completed) onSetTap(vr.log, isEditing);
               }}
               onNoteTap={() => {
                 if (vr.log) onNoteTap(vr.log.id);
               }}
+              onInlineLog={onInlineLog}
             />
             {isEditing && vr.log ? (
               <InlineSetEditor
