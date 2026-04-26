@@ -230,6 +230,7 @@ export function SetRowInlineForm({
           justifyContent: 'center',
           borderRadius: 22,
           backgroundColor: colors.accent,
+          marginLeft: 12,
         }}
         accessibilityLabel="Valider le set"
         accessibilityRole="button"
