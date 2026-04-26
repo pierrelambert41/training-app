@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { useAuth } from './use-auth';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '../stores/auth-store';
 
 const mockSignIn = jest.fn();
 const mockSignUp = jest.fn();
 const mockSignOut = jest.fn();
 
-jest.mock('@/services/auth', () => ({
+jest.mock('../api/auth', () => ({
   signIn: (...args: unknown[]) => mockSignIn(...args),
   signUp: (...args: unknown[]) => mockSignUp(...args),
   signOut: (...args: unknown[]) => mockSignOut(...args),

@@ -32,11 +32,32 @@ Si la zone est ambiguë (limite du garde-fou), tranche dans le doute vers l'esca
 - `CLAUDE.md` — toujours respecté (stack, conventions, principes)
 - `docs/pitfalls.md` — **lis en début de story** : pièges à éviter + stubs ouverts à brancher
 - `docs/story-log.md` — **lis en début de story** : contexte des stories précédentes, ce qui s'imbrique
-- `docs/architecture.md` — structure technique
+- `docs/architecture.md` — structure technique. **§8 "Architecture frontend (Bulletproof React)" obligatoire** avant de toucher au front.
 - `docs/tech-stack.md` — libs autorisées
 - `docs/decisions.md` — ADRs (ne pas contredire sans mise à jour)
 - `docs/data-model.md` — schéma DB
 - `docs/program-generation.md` / `docs/ai-strategy.md` — pour features IA/moteur
+
+## Architecture frontend (Bulletproof React)
+
+Avant d'écrire la moindre ligne, réponds à : **"Où va ce code ?"** Si la réponse n'est pas évidente, c'est un signal qu'il faut découper.
+
+Couches autorisées :
+- `app/<route>.tsx` — Route Expo Router. **≤ 30 lignes**. Importe et ré-exporte une page. Rien d'autre.
+- `src/app/` — Providers, init (db, auth, theme).
+- `src/features/<feature>/{api,components,hooks,stores,domain,types}/` — UNE feature = UN dossier auto-suffisant. `index.ts` expose la public API.
+- `src/components/` — UI réutilisable cross-features (kit, presentational only).
+- `src/hooks/`, `src/lib/`, `src/config/`, `src/types/` — transverses.
+
+Les 6 règles :
+- **R1** Route ≤ 30 lignes
+- **R2** Hiérarchie d'imports (jamais horizontal entre features sauf via `src/components` partagé). Le lint `eslint-plugin-boundaries` doit passer avant de pousser.
+- **R3** `index.ts` par feature (public API)
+- **R4** Logique métier → `domain/`, jamais dans `components/` ou `hooks/` UI
+- **R5** I/O → `api/`, jamais dans `components/`
+- **R6** Composant > 150 lignes : signal de split. Fichier > 250 lignes : signal d'alerte (justification requise dans la PR). Fichier > 400 lignes : refacto obligatoire avant merge.
+
+**Avant d'éditer un fichier existant** : `wc -l <fichier>`. Si > 400 lignes, **refacto-first dans un commit séparé** avant d'ajouter ta feature dedans. Si entre 250 et 400, justifie dans la PR. Ne pas empiler.
 
 **Règle de lecture** : ne lis qu'à la demande. Grep ciblé > lecture complète. Si la spec PO référence déjà un fichier, lis celui-là en priorité.
 

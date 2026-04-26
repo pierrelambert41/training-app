@@ -52,3 +52,17 @@ Toute la documentation projet est dans `docs/` :
 - Fichiers : kebab-case
 - Tests : colocalisés avec le code (`*.test.ts`)
 - Tests d'écrans routés : **ne jamais mettre de `*.test.*` dans `app/`** — Expo Router file-based routing les enregistre comme routes, causant un crash runtime. Placer ces tests dans `src/screens/<groupe>/` en miroir de la structure `app/` (ex: `app/(app)/index.tsx` → `src/screens/(app)/home-screen.test.tsx`).
+
+## Architecture frontend
+
+Pattern : **Bulletproof React** adapté Expo Router. Voir `docs/architecture.md` §8 pour le détail complet.
+
+Règles non-négociables :
+- **R1** `app/**/*.tsx` ≤ 30 lignes — import + ré-export d'une page depuis `src/features/<feat>/components/`
+- **R2** Imports toujours descendants : `app/ → src/app/ → src/features/<feat>/ → src/components|hooks|lib`. Jamais horizontal entre features.
+- **R3** Chaque feature expose un `index.ts`. Les imports externes passent exclusivement par lui.
+- **R4** Logique métier → `src/features/<feat>/domain/` (fonctions pures, sans I/O).
+- **R5** I/O (SQLite, Supabase, AI) → `src/features/<feat>/api/`. Jamais dans `components/`.
+- **R6** Composant > 150 lignes : signal de split. Fichier > 250 lignes : signal d'alerte (justification requise dans la PR si dépassement assumé). Fichier > 400 lignes : refacto obligatoire avant merge.
+
+`eslint-plugin-boundaries` enforce R2 et R3 automatiquement. Lancer `npx eslint src/features/` avant chaque PR.

@@ -1,6 +1,5 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
-import { useAuthStore } from '@/stores/auth-store';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuthStore, useAuth } from '@/features/auth';
 import { colors } from '@/theme/tokens';
 
 export default function ProfileScreen() {

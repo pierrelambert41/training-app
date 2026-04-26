@@ -6,7 +6,7 @@ import { getBlocksByStatus } from '@/services/blocks';
 import { getWorkoutDaysByBlockId } from '@/services/workout-days';
 import { getSessionCountsByBlockId } from '@/services/sessions';
 import { useActiveProgramStore } from '@/stores/active-program-store';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 
 async function fetchActiveProgram(
   db: Parameters<typeof getActiveProgramForUser>[0],

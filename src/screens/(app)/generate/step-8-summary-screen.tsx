@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert, ScrollView, View } from 'react-native';
 import { useGenerationStore } from '@/stores/generation-store';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useDB } from '@/hooks/use-db';
 import { generateProgram } from '@/services/program-generation';

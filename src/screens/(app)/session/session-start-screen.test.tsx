@@ -1,9 +1,15 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import SessionStartScreen from '../../../../app/(app)/session/start';
 
 const mockReplace = jest.fn();
 const mockBack = jest.fn();
+
+// @/features/auth charge supabase.ts qui ne peut pas être parsé par jest.
+// On mocke le module entier et on expose le vrai useAuthStore depuis le chemin profond.
+jest.mock('@/features/auth', () => ({
+  useAuthStore: jest.requireActual('@/features/auth/stores/auth-store').useAuthStore,
+}));
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace, back: mockBack }),

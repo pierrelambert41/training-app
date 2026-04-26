@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useDB } from './use-db';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import {
   useSessionStore,
   lookupInProgressSessionForToday,

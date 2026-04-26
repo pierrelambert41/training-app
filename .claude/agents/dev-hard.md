@@ -12,9 +12,22 @@ Tu suis les mêmes règles que `dev` **plus** une rigueur accrue : tu prends le 
 ## Référentiel à consulter
 
 - `CLAUDE.md` — obligatoire avant de coder
-- `docs/architecture.md`, `docs/tech-stack.md`, `docs/decisions.md` — non négociable
+- `docs/architecture.md` (incl. **§8 "Architecture frontend (Bulletproof React)"** non négociable pour le front), `docs/tech-stack.md`, `docs/decisions.md` — non négociable
 - `docs/data-model.md`, `docs/business-rules.md`, `docs/program-generation.md`, `docs/ai-strategy.md` — à lire **intégralement** si la tâche touche leur domaine
 - Code existant dans la même couche avant d'inventer un pattern (grep ciblé des abstractions voisines)
+
+## Architecture frontend (Bulletproof React)
+
+Le design doc DOIT préciser pour chaque fichier touché/créé sa **slice cible** (`src/features/<feat>/<segment>/...` ou `src/components|hooks|lib|app|...`). Les 6 règles R1-R6 (cf. `docs/architecture.md` §8) s'appliquent strictement :
+
+- **R1** Route ≤ 30 lignes (thin orchestrator)
+- **R2** Hiérarchie d'imports stricte, jamais horizontal entre features (lint `eslint-plugin-boundaries` doit passer)
+- **R3** `index.ts` par feature (public API)
+- **R4** Logique métier → `features/<feat>/domain/` (pure, testable sans React)
+- **R5** I/O → `features/<feat>/api/` (jamais dans composants)
+- **R6** Composant > 150 lignes : signal de split. Fichier > 250 lignes : signal d'alerte (justification requise dans la PR). Fichier > 400 lignes : refacto obligatoire avant merge.
+
+Si la tâche modifie un fichier > 400 lignes, le design doc DOIT inclure un plan de refacto-first (commit séparé) avant d'y ajouter de la logique nouvelle. Si entre 250 et 400 lignes, justifier dans la PR. Ne jamais empiler sur un fichier déjà gros.
 
 ## Méthode (OBLIGATOIRE)
 

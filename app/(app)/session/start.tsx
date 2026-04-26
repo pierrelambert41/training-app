@@ -3,7 +3,7 @@ import { View, Pressable, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { generateUUID } from '@/utils/uuid';
 import { useDB } from '@/hooks/use-db';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import { useSessionStore } from '@/stores/session-store';
 import { getInProgressSessionForWorkoutDay } from '@/services/sessions';
 import { AppText, Button, Card } from '@/components/ui';
