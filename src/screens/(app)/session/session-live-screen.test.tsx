@@ -284,6 +284,36 @@ describe('SessionLiveScreen', () => {
     );
   });
 
+  it('affiche le champ RIR pré-rempli avec targetRir sur la ligne courante', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('inline-rir-input'));
+
+    const rirInput = screen.getByTestId('inline-rir-input');
+    expect(rirInput.props.value).toBe('2');
+  });
+
+  it('passe le RIR édité par l\'utilisateur à logSet', async () => {
+    setupStore();
+    render(<SessionLiveScreen />);
+
+    await waitFor(() => screen.getByTestId('check-set-button'));
+
+    fireEvent.changeText(screen.getByTestId('inline-load-input'), '100');
+    fireEvent.changeText(screen.getByTestId('inline-reps-input'), '8');
+    fireEvent.changeText(screen.getByTestId('inline-rir-input'), '3');
+
+    await act(async () => {
+      fireEvent.press(screen.getByTestId('check-set-button'));
+    });
+
+    expect(mockLogSet).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ rir: 3 })
+    );
+  });
+
   it('affiche un message "séance terminée" quand tous les sets sont loggés', async () => {
     const loggedSets = Array.from({ length: 3 }, (_, i) => ({
       id: `sl-${i + 1}`,

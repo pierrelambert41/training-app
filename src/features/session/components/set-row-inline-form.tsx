@@ -39,6 +39,12 @@ const inputBase = {
   paddingHorizontal: 8,
 };
 
+const rirInputStyle = {
+  ...inputBase,
+  minWidth: 44,
+  width: 44,
+};
+
 export function SetRowInlineForm({
   logType,
   side,
@@ -50,17 +56,20 @@ export function SetRowInlineForm({
   onLog,
 }: SetRowInlineFormProps) {
   const field2Ref = useRef<TextInput>(null);
+  const showRir = logType === 'weight_reps' || logType === 'bodyweight_reps';
 
   const [load, setLoad] = useState(prefillLoad);
   const [reps, setReps] = useState(prefillReps);
   const [duration, setDuration] = useState(prefillDuration);
   const [distance, setDistance] = useState(prefillDistance);
+  const [rir, setRir] = useState(prefillRir !== null ? String(prefillRir) : '');
 
   function buildAndLog() {
     const parsedLoad = load.length > 0 ? parseFloat(load) : null;
     const parsedReps = reps.length > 0 ? parseInt(reps, 10) : null;
     const parsedDuration = duration.length > 0 ? parseInt(duration, 10) : null;
     const parsedDistance = distance.length > 0 ? parseFloat(distance) : null;
+    const parsedRir = rir.length > 0 ? parseInt(rir, 10) : null;
 
     const canLog = (() => {
       if (logType === 'weight_reps') return parsedLoad !== null && !isNaN(parsedLoad) && parsedReps !== null && parsedReps > 0;
@@ -77,7 +86,7 @@ export function SetRowInlineForm({
     onLog({
       load: logType === 'weight_reps' ? parsedLoad : logType === 'bodyweight_reps' ? (parsedLoad ?? null) : null,
       reps: (logType === 'weight_reps' || logType === 'bodyweight_reps') ? parsedReps : null,
-      rir: prefillRir,
+      rir: showRir ? (parsedRir !== null && !isNaN(parsedRir) ? parsedRir : prefillRir) : null,
       durationSeconds: (logType === 'duration' || logType === 'distance_duration') ? parsedDuration : null,
       distanceMeters: logType === 'distance_duration' ? parsedDistance : null,
       side,
@@ -190,6 +199,26 @@ export function SetRowInlineForm({
           />
           <AppText className="text-caption text-content-muted">s</AppText>
         </>
+      )}
+
+      {showRir && (
+        <View className="items-center">
+          <TextInput
+            value={rir}
+            onChangeText={setRir}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            onSubmitEditing={buildAndLog}
+            selectTextOnFocus
+            maxLength={1}
+            style={rirInputStyle}
+            placeholderTextColor={colors.contentMuted}
+            placeholder="0"
+            accessibilityLabel="RIR (reps en réserve)"
+            testID="inline-rir-input"
+          />
+          <AppText className="text-caption text-content-muted">RIR</AppText>
+        </View>
       )}
 
       <Pressable
