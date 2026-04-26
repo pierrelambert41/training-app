@@ -109,13 +109,15 @@ export function SetRow({
         className={`flex-row items-center rounded-card px-3 py-2 mb-2 gap-2 ${rowBg}`}
         testID={`set-row-current-${testIdSuffix}`}
       >
-        {sideLabel !== null ? (
-          <AppText className="text-body font-bold" style={{ color: sideColor }}>
-            {sideLabel}
-          </AppText>
-        ) : (
-          <AppText className="text-body font-semibold text-accent">{setNumber}</AppText>
-        )}
+        <View className="w-8 items-center">
+          {sideLabel !== null ? (
+            <AppText className="text-body font-bold" style={{ color: sideColor }}>
+              {sideLabel}
+            </AppText>
+          ) : (
+            <AppText className="text-body font-semibold text-accent">{setNumber}</AppText>
+          )}
+        </View>
         <SetRowInlineForm
           logType={logType}
           side={side}
@@ -126,6 +128,7 @@ export function SetRow({
           prefillRir={targetRir}
           onLog={onInlineLog}
         />
+        <View className="w-8" />
       </View>
     );
   }
