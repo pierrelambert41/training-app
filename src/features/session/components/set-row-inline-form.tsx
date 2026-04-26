@@ -202,7 +202,7 @@ export function SetRowInlineForm({
       )}
 
       {showRir && (
-        <View className="items-center">
+        <>
           <TextInput
             value={rir}
             onChangeText={setRir}
@@ -218,7 +218,7 @@ export function SetRowInlineForm({
             testID="inline-rir-input"
           />
           <AppText className="text-caption text-content-muted">RIR</AppText>
-        </View>
+        </>
       )}
 
       <Pressable
@@ -230,7 +230,6 @@ export function SetRowInlineForm({
           justifyContent: 'center',
           borderRadius: 22,
           backgroundColor: colors.accent,
-          marginLeft: 12,
         }}
         accessibilityLabel="Valider le set"
         accessibilityRole="button"
