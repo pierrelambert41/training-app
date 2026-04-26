@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useDB } from './use-db';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { getPlannedExercisesByWorkoutDayId } from '@/services/planned-exercises';
 import { getExercisesByIds } from '@/services/exercises';

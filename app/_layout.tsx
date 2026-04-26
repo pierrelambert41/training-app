@@ -4,7 +4,7 @@ import { colorScheme } from 'nativewind';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import { checkSupabaseHealth, supabase } from '@/services/supabase';
 import { DBProvider } from '@/components/db-provider';
 

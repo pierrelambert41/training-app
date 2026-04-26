@@ -165,3 +165,60 @@ Si l'IA ne répond pas, l'app continue avec les règles seules. Les recommandati
 - Last-write-wins basé sur `updatedAt`
 - Les suppressions sont des soft deletes (`deletedAt`)
 - Log de sync pour debugging
+
+---
+
+## 8. Architecture frontend (Bulletproof React)
+
+L'architecture frontend suit le pattern **Bulletproof React** adapté à Expo Router. Le principe central : chaque fichier a une responsabilité unique et une place précise dans la hiérarchie.
+
+### Layout cible
+
+```
+app/                          # Routes Expo Router (THIN, ≤ 30 lignes)
+src/
+  app/                        # Providers et init globaux (DBProvider, SessionHydrator, AuthGuard)
+  features/<feature>/
+    api/                      # I/O : repositories SQLite, fetchers Supabase, appels AI
+    components/               # UI propre à la feature (screens, modals, widgets)
+    hooks/                    # Hooks propres à la feature
+    stores/                   # Zustand slices de la feature
+    domain/                   # Logique métier pure (fonctions sans I/O, testables en isolation)
+    types/                    # Types propres à la feature
+    index.ts                  # Public API — seul point d'entrée autorisé de l'extérieur
+  components/                 # UI réutilisable cross-features (design system, presentational)
+  hooks/                      # Hooks transverses (use-db, use-debounce)
+  lib/                        # Helpers techniques (uuid, supabase client, AI provider)
+  config/                     # Constantes applicatives, tokens de thème
+  types/                      # Types partagés entre features
+```
+
+Features identifiées : `auth`, `session`, `program`, `exercise`, `sync`, `ai`.
+
+### Les 6 règles (R1–R6)
+
+**R1 — Routes thin**
+Chaque fichier `app/**/*.tsx` fait au maximum 30 lignes. Il importe une page depuis `src/features/<feat>/components/` (ou `src/app/`) et la ré-exporte comme default. Pas de JSX de business logic dans les routes.
+
+**R2 — Hiérarchie d'imports stricte**
+Le sens des imports est toujours descendant :
+`app/route → src/app → src/features/<feat>/<segment> → src/components|hooks|lib|config`
+Jamais l'inverse. Jamais horizontal entre features (un fichier de `features/session` n'importe pas directement dans `features/program`). Les dépendances cross-features transitent par `src/components` (UI partagée) ou `src/lib` (utilitaires).
+
+**R3 — Public API via index.ts**
+Chaque feature expose un `index.ts` qui liste explicitement ce qui est public. Tout import depuis l'extérieur de la feature passe par ce fichier. Les chemins profonds (`features/auth/stores/auth-store`) sont interdits depuis l'extérieur.
+
+**R4 — Logique métier dans domain/**
+Calculs, règles, scoring, progression, validations métier → `src/features/<feat>/domain/`. Ces fonctions sont pures (pas de I/O), testables sans React ni SQLite. Interdites dans `components/` ou `hooks/` UI.
+
+**R5 — I/O dans api/**
+Accès SQLite, appels Supabase, appels AI, notifications → `src/features/<feat>/api/`. Interdit dans `components/`. Consommé via `hooks/` (TanStack Query) ou `stores/` (Zustand actions).
+
+**R6 — Taille des fichiers**
+- Composant > 150 lignes → signal de split (non-bloquant, à examiner)
+- Fichier > 250 lignes → alerte, justification requise dans la PR
+- Fichier > 400 lignes → refacto obligatoire avant merge (bloquant strict)
+
+### Anti-pattern de référence
+
+`app/(app)/session/live.tsx` a atteint 2001 lignes avec 14 composants colocalisés. Voir `docs/pitfalls.md` §ARCH-01 pour le plan de migration (TA-98).

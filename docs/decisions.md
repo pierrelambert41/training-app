@@ -313,6 +313,29 @@ Colonne `is_unplanned INTEGER NOT NULL DEFAULT 0` sur `planned_exercises` (migra
 
 ---
 
+## ADR-017 : eslint-plugin-boundaries pour enforcer l'architecture Bulletproof React
+
+**Statut** : Accepté
+**Date** : 2026-04-25
+
+### Contexte
+`app/(app)/session/live.tsx` a atteint 2001 lignes et 14 composants colocalisés — violation flagrante de R1, R3, R6. On adopte Bulletproof React comme architecture frontend cible (docs/architecture.md §8). Les règles d'import (R2 hiérarchie, R3 public API via index.ts) doivent être enforçables mécaniquement pour éviter toute régression future.
+
+### Décision
+`eslint-plugin-boundaries@6` comme outil d'enforcement statique de R2 et R3. Config flat config ESLint v9 dans `eslint.config.mjs`. Zones définies : `app-route`, `feature-{api,components,hooks,stores,domain,types,index}`, `shared-{components,hooks,services,lib,config,types,stores,screens}`. Scope initial : feature pilote `auth/` (TA-97). Extension aux autres features dans leurs tickets dédiés.
+
+### Alternatives rejetées
+- **eslint-plugin-import** : no-cycle seulement, pas de hiérarchie entre zones.
+- **Monorepo (Nx/Turborepo)** : trop lourd pour un projet solo mobile-first.
+
+### Conséquences
+- Les violations R2/R3 sont détectées au lint-time. Lancer `npx eslint src/features/` avant chaque PR.
+- La config boundaries doit être mise à jour à chaque nouvelle feature ajoutée dans `src/features/`.
+- Les tests (`*.test.ts`) sont exclus du scope boundaries pour éviter les faux positifs sur les mocks.
+- Syntaxe objet v6 adoptée (mode `full`, captures `featureName`, templates Handlebars). Migration complète.
+
+---
+
 ## ADR-007 : Claude API comme provider IA initial
 
 **Statut** : Accepté  

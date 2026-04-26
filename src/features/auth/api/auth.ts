@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../../../services/supabase';
 import type { User } from '@/types/user';
 
 export type AuthError =

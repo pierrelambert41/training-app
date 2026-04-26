@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
-import { useAuthStore } from '@/stores/auth-store';
-import { signIn, signOut, signUp, AUTH_ERROR_MESSAGES } from '@/services/auth';
-import type { AuthError } from '@/services/auth';
+import { useAuthStore } from '../stores/auth-store';
+import { signIn, signOut, signUp, AUTH_ERROR_MESSAGES } from '../api/auth';
+import type { AuthError } from '../api/auth';
 
 interface UseAuthReturn {
   isLoading: boolean;

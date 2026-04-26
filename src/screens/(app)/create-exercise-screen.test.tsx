@@ -2,8 +2,13 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CreateExerciseScreen from './create-exercise-screen';
 import { DBContext } from '@/hooks/use-db';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import type { SQLiteDatabase } from 'expo-sqlite';
+
+// @/features/auth charge supabase.ts qui ne peut pas être parsé par jest.
+jest.mock('@/features/auth', () => ({
+  useAuthStore: jest.requireActual('@/features/auth/stores/auth-store').useAuthStore,
+}));
 
 const mockBack = jest.fn();
 const mockPush = jest.fn();

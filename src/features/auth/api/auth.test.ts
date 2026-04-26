@@ -5,7 +5,7 @@ const mockSignInWithPassword = jest.fn();
 const mockSignOut = jest.fn();
 const mockGetSession = jest.fn();
 
-jest.mock('./supabase', () => ({
+jest.mock('../../../services/supabase', () => ({
   supabase: {
     auth: {
       signUp: (...args: unknown[]) => mockSignUp(...args),

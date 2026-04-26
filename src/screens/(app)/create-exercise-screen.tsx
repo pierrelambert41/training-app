@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { v4 as uuidv4 } from 'uuid';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth';
 import { useCreateExercise } from '@/hooks/use-create-exercise';
 import { Button, Input, MultiSelect } from '@/components/ui';
 import { EQUIPMENT_OPTIONS, MOVEMENT_PATTERN_OPTIONS, MUSCLE_OPTIONS } from '@/constants/exercise-options';

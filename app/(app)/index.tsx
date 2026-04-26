@@ -1,8 +1,7 @@
 import { View, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore, useAuth } from '@/features/auth';
 import { useActiveProgramStore } from '@/stores/active-program-store';
-import { useAuth } from '@/hooks/use-auth';
 import { useDB } from '@/hooks/use-db';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveSession } from '@/hooks/use-active-session';

@@ -1,16 +1,17 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
-import { useAuthStore } from '@/stores/auth-store';
+import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import HomeScreen from '../../../app/(app)/index';
 
 const mockLogout = jest.fn();
 const mockPush = jest.fn();
 
-jest.mock('@/hooks/use-auth', () => ({
+jest.mock('@/features/auth', () => ({
   useAuth: () => ({
     logout: mockLogout,
     isLoading: false,
   }),
+  useAuthStore: jest.requireActual('@/features/auth/stores/auth-store').useAuthStore,
 }));
 
 jest.mock('@/hooks/use-db', () => ({

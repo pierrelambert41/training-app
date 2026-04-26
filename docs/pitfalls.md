@@ -6,6 +6,12 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ## Pièges techniques connus
 
+### ARCH-01 — Fichier de route god-object (anti-pattern `live.tsx`)
+**Symptôme** : `app/(app)/session/live.tsx` a atteint 2001 lignes et contient 14 composants colocalisés dans un seul fichier de route. Viole R1 (route non-thin), R3 (pas de public API par feature), R6 (> 400 lignes = refacto obligatoire).  
+**Fix** : extraire chaque composant dans `src/features/session/components/`, la logique métier dans `src/features/session/domain/`, les I/O (SQLite, timers) dans `src/features/session/api/`, et ne garder dans `app/(app)/session/live.tsx` qu'un ré-export ≤ 30 lignes.  
+**Ticket** : TA-98  
+**Détecté** : TA-97 / 2026-04-25
+
 ### RN-01 — `crypto.randomUUID()` non disponible sur Hermes
 **Symptôme** : `TypeError: crypto.randomUUID is not a function` au runtime.  
 **Fix** : utiliser `generateUUID()` depuis `@/utils/uuid`.  
