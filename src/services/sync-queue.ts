@@ -10,6 +10,7 @@ export type SyncAction = 'insert' | 'update' | 'delete';
  * Phase 2 : exercises, exercise_favorites
  * Phase 3 : programs, blocks, workout_days, planned_exercises
  * Phase 4 : sessions, set_logs (TA-72)
+ * Phase 5 : recommendations (TA-103)
  */
 export type SyncTableName =
   | 'exercises'
@@ -19,7 +20,8 @@ export type SyncTableName =
   | 'workout_days'
   | 'planned_exercises'
   | 'sessions'
-  | 'set_logs';
+  | 'set_logs'
+  | 'recommendations';
 
 export type SyncQueueRecord = {
   id: number;

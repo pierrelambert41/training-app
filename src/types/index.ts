@@ -6,5 +6,6 @@ export type * from './workout-day';
 export type * from './planned-exercise';
 export type * from './session';
 export type * from './set-log';
+export type * from './recommendation';
 export type { Database, Json } from './supabase';
 export type * from './generation';

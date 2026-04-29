@@ -121,7 +121,7 @@ describe('getDatabase', () => {
 });
 
 describe('schema completeness', () => {
-  it('creates all 8 required tables', async () => {
+  it('creates all 9 required tables', async () => {
     await openDatabase();
     const execCalls = ExpoSQLite.__db.execAsync.mock.calls.map(
       (c: unknown[]) => c[0] as string
@@ -136,6 +136,7 @@ describe('schema completeness', () => {
       'sessions',
       'set_logs',
       'sync_queue',
+      'recommendations',
     ];
     for (const table of expectedTables) {
       expect(fullSql).toContain(`CREATE TABLE IF NOT EXISTS ${table}`);
@@ -172,5 +173,19 @@ describe('schema completeness', () => {
     expect(fullSql).toContain('idx_set_logs_planned_exercise');
     expect(fullSql).toContain('CREATE TABLE IF NOT EXISTS app_meta');
     expect(fullSql).toContain('PRAGMA user_version = 5');
+  });
+
+  // TA-103 : vérifie la table recommendations + ses indexes en v8
+  it('creates recommendations table and indexes (v8)', async () => {
+    await openDatabase();
+    const execCalls = ExpoSQLite.__db.execAsync.mock.calls.map(
+      (c: unknown[]) => c[0] as string
+    );
+    const fullSql = execCalls.join('\n');
+    expect(fullSql).toContain('CREATE TABLE IF NOT EXISTS recommendations');
+    expect(fullSql).toContain('idx_recommendations_session');
+    expect(fullSql).toContain('idx_recommendations_exercise');
+    expect(fullSql).toContain('idx_recommendations_type');
+    expect(fullSql).toContain('PRAGMA user_version = 8');
   });
 });

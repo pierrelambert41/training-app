@@ -68,6 +68,14 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-103 — Modèle de données Phase 5 — table Recommendation et indexes
+**Livré** : table `recommendations` en SQLite (migration v8 dans `db.ts`), types TS (`RecommendationType`, `RecommendationAction`, `RecommendationSource`, `Recommendation`, `NewRecommendationInput`, `UpdateRecommendationInput`) dans `src/types/recommendation.ts` + export via `src/types/index.ts`, service CRUD `src/services/recommendations.ts` (`saveRecommendation`, `getRecommendationById`, `getRecommendationsBySession`, `updateRecommendation`, `deleteRecommendation`, `clearRecommendationsForSession`), `SyncTableName` étendu avec `'recommendations'`, migration Supabase `20260429000000_recommendations_indexes.sql` (indexes `idx_recommendations_exercise` et `idx_recommendations_type`), 14 tests d'intégration.  
+**S'appuie sur** : TA-72 (tables `sessions`, `set_logs`), `safeEnqueue`/`sync-helpers`, pattern de service CRUD établi (sessions.ts, set-logs.ts). La table `recommendations` + RLS existaient déjà dans `20260423000000_initial_schema.sql`.  
+**Ouvre** : le moteur de progression (tickets Phase 5 suivants) peut écrire des recommandations via `saveRecommendation` dès maintenant. `clearRecommendationsForSession` est prêt pour le recalcul post-séance.  
+**Stubs laissés** : aucun. Les recommandations sont stockables mais aucune logique de calcul n'est branchée (hors scope de ce ticket).
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
