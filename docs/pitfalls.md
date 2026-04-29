@@ -57,6 +57,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-02 — `RecoveryLog` et `CardioSession` sans type TS ni saisie UI (Phase 4 incomplète)
+**Symptôme** : `computeFatigueScore` utilise des types locaux `RecoveryLogSnapshot` et `CardioSessionSnapshot` définis dans `fatigue-score.ts` car la saisie UI et les types globaux de ces entités n'ont pas été implémentés en Phase 4.
+**Fix attendu** : quand les types globaux `RecoveryLog` et `CardioSession` seront définis dans `src/types/`, migrer `RecoveryLogSnapshot` et `CardioSessionSnapshot` vers ces types (ou les aligner). La dégradation gracieuse existante (champs optionnels) reste valide.
+**Détecté** : TA-105 / 2026-04-29 — stub dans `fatigue-score.ts` (types locaux).
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
