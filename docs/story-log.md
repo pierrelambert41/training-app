@@ -97,6 +97,29 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-105 — Domaine : calcul du fatigue score composite
+**Livré** : fonction pure `computeFatigueScore(inputs: FatigueInputs) → FatigueScore` avec 7 indicateurs pondérés et dégradation gracieuse complète.  
+**Fichiers créés** :
+- `src/features/progression/domain/fatigue-score.ts` — types locaux (`RecoveryLogSnapshot`, `CardioSessionSnapshot`, `PreSessionReadiness`, `FatigueInputs`, `FatigueScore`, `FatigueLevel`), 7 fonctions d'indicateurs privées, dispatcher `computeFatigueScore`
+- `src/features/progression/domain/fatigue-score.test.ts` — 18 tests, 100% verts (fraîcheur, watchful, deload, dégradation gracieuse, e1RM, paliers)
+**Fichiers modifiés** :
+- `src/features/progression/index.ts` — export public API R3 (`computeFatigueScore` + types)
+**Indicateurs implémentés** (§3.1 business-rules.md) :
+1. Performance en baisse via e1RM Epley (poids Fort = 3) — comparaison 2 séances minimum
+2. RIR systématiquement 0-1 (poids Fort = 3) — ratio sur toutes les séries récentes
+3. Sommeil < 6h ou énergie < 4/10 dans RecoveryLogs (poids Moyen = 2)
+4. Courbatures > 7/10 dans RecoveryLogs (poids Moyen = 2)
+5. Readiness pré-séance < 4/10 (poids Moyen = 2) — moyenne readiness/energy/motivation/sleepQuality
+6. Cardio à impact élevé (poids Faible-Moyen = 1.5) — rpe/legImpact/fatiguePost
+7. Assiduité irrégulière < 75% du plan (poids Faible = 1)
+**Dégradation gracieuse** : `RecoveryLog` et `CardioSession` sans type global TS ni saisie UI en Phase 4 → types locaux snapshot définis dans `fatigue-score.ts`. Tous les inputs sont optionnels, score normalisé sur les données disponibles.  
+**Tests** : 18 tests, TypeScript 0 erreur, ESLint boundaries 0 erreur. Total feature : 71 tests, 7 suites.  
+**S'appuie sur** : TA-104 (feature `progression/` + domaine), TA-103 (types `SetLog`, `Session`).  
+**Ouvre** : le statut de séance (ticket suivant Phase 5) peut appeler `computeFatigueScore` pour déterminer le statut (`progression`/`maintien`/`allegee`/`deload`). La persistance du fatigue_score dans `sessions` est hors scope de TA-105.  
+**Stubs laissés** : `RecoveryLogSnapshot` et `CardioSessionSnapshot` sont des types locaux à migrer quand les types globaux seront disponibles (voir pitfalls PROG-02).
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
