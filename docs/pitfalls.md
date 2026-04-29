@@ -36,6 +36,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### DB-01 — Migration remote orpheline bloque `supabase db push`
+**Symptôme** : `supabase db push` échoue avec "Remote migration versions not found in local migrations directory". Une migration existe sur remote mais pas en local (appliée manuellement ou via MCP sur l'UI Supabase).  
+**Fix** : `supabase migration repair --status reverted <version>` pour marquer la migration remote comme révoquée côté historique, puis `supabase db push` fonctionne normalement.  
+**Détecté** : TA-103 / 2026-04-29
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

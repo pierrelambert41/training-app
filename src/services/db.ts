@@ -283,6 +283,37 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       ALTER TABLE planned_exercises ADD COLUMN is_unplanned INTEGER NOT NULL DEFAULT 0;
     `,
   },
+  // TA-103 — Phase 5 : table recommendations (moteur de progression).
+  // Table définie dans 20260423000000_initial_schema.sql côté Supabase.
+  // La migration 20260429000000_recommendations_indexes.sql ajoute 2 indexes additionnels côté remote.
+  // metadata stocké en TEXT (JSON sérialisé) car SQLite ne supporte pas JSONB.
+  // exercise_id nullable : permet les recommandations de niveau séance (deload global).
+  {
+    version: 8,
+    sql: `
+      CREATE TABLE IF NOT EXISTS recommendations (
+        id TEXT PRIMARY KEY NOT NULL,
+        session_id TEXT NOT NULL,
+        exercise_id TEXT,
+        source TEXT NOT NULL CHECK (source IN ('rules_engine', 'ai')),
+        type TEXT NOT NULL CHECK (type IN ('load_change', 'deload', 'plateau', 'fatigue_alert', 'summary')),
+        message TEXT NOT NULL,
+        next_load REAL,
+        next_rep_target INTEGER,
+        next_rir_target INTEGER,
+        action TEXT CHECK (action IN ('increase', 'maintain', 'decrease', 'deload', 'replace')),
+        confidence REAL,
+        metadata TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (session_id) REFERENCES sessions(id),
+        FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_recommendations_session ON recommendations(session_id);
+      CREATE INDEX IF NOT EXISTS idx_recommendations_exercise ON recommendations(exercise_id);
+      CREATE INDEX IF NOT EXISTS idx_recommendations_type ON recommendations(type);
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;
