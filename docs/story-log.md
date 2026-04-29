@@ -76,6 +76,27 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-104 — Domaine : implémentation des 6 types de progression
+**Livré** : 6 fonctions pures de progression (zéro I/O, zéro store) + dispatcher `computeProgressionDecision` + feature `progression/` complète.  
+**Fichiers créés** :
+- `src/features/progression/types/progression-decision.ts` — types `ProgressionDecision`, `ProgressionAction`, `ComputeProgressionDecisionArgs`
+- `src/features/progression/domain/progression-types/strength-fixed.ts` + `.test.ts`
+- `src/features/progression/domain/progression-types/double-progression.ts` + `.test.ts`
+- `src/features/progression/domain/progression-types/accessory-linear.ts` + `.test.ts`
+- `src/features/progression/domain/progression-types/bodyweight-progression.ts` + `.test.ts`
+- `src/features/progression/domain/progression-types/duration-progression.ts` + `.test.ts`
+- `src/features/progression/domain/progression-types/distance-duration.ts` + `.test.ts`
+- `src/features/progression/domain/compute-progression-decision.ts` — dispatcher typesafe switch/case
+- `src/features/progression/index.ts` — public API R3
+- `eslint.config.mjs` — ajout permission `feature-domain → feature-domain` (même feature)  
+**Tests** : 52 tests, 6 suites — 100% verts. TypeScript 0 erreur. ESLint boundaries 0 erreur.  
+**S'appuie sur** : TA-103 (types `SetLog`, `PlannedExercise`, `ProgressionType`, `ProgressionConfig` déjà définis dans `src/types/`), TA-97 (boundaries config).  
+**Ouvre** : le moteur peut maintenant être branché sur le flow post-séance pour générer des `Recommendation` via `saveRecommendation` (TA-103). `computeProgressionDecision` est la seule fonction publique exposée — les consommateurs l'appellent avec le type discriminant et la config typée.  
+**Stubs laissés** : les types `ProgressionInput<T>` sont définis mais non utilisés par le dispatcher (pensés pour futurs hooks). `DistanceDurationConfig` utilise des constantes internes pour les increments (non configurables via `progressionConfig`) — à exposer si besoin.  
+**Décision produit** : pour `distance_duration`, la progression par distance utilise `next_load` pour stocker la distance cible (en mètres), et la progression par durée utilise `next_rep_target` pour stocker la durée cible (en secondes). Convention documentée dans le code source.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

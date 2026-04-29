@@ -193,9 +193,11 @@ const dependenciesRules = [
     ],
   },
   // R4 : feature-domain est pur — pas d'I/O, uniquement types + config
+  // Les sous-modules domain peuvent s'importer entre eux (même feature, ex: dispatcher → sous-modules)
   {
     from: { type: 'feature-domain' },
     allow: [
+      { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'shared-types' } },
       { to: { type: 'shared-config' } },

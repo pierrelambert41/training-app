@@ -36,10 +36,24 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-02 — `feature-domain` ne peut pas importer ses propres sous-modules par défaut
+**Symptôme** : ESLint `boundaries/dependencies` bloque les imports entre fichiers du même dossier `domain/` d'une feature (ex: `compute-progression-decision.ts` → `./progression-types/strength-fixed.ts`). La règle `feature-domain` dans `eslint.config.mjs` n'autorisait que les imports vers `feature-types` et `shared-types`.  
+**Fix** : ajouter `{ to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } }` dans la section `from: { type: 'feature-domain' }` de `eslint.config.mjs`. Même pattern que pour `feature-components → feature-components` (TA-98).  
+**Détecté** : TA-104 / 2026-04-29
+
+---
+
 ### DB-01 — Migration remote orpheline bloque `supabase db push`
 **Symptôme** : `supabase db push` échoue avec "Remote migration versions not found in local migrations directory". Une migration existe sur remote mais pas en local (appliée manuellement ou via MCP sur l'UI Supabase).  
 **Fix** : `supabase migration repair --status reverted <version>` pour marquer la migration remote comme révoquée côté historique, puis `supabase db push` fonctionne normalement.  
 **Détecté** : TA-103 / 2026-04-29
+
+---
+
+### PROG-01 — `increment_upper_kg` sans discrimination upper/lower dans `strength_fixed`
+**Symptôme** : `computeStrengthFixed` utilise toujours `increment_upper_kg` pour calculer l'augmentation, sans tenir compte de si l'exercice est upper ou lower body. `SetLog` ne contient pas `bodyPart`.
+**Fix attendu** : quand `bodyPart` sera disponible dans `SetLog` (ou via contexte exercice), choisir entre `increment_upper_kg` et `increment_lower_kg` selon la valeur.
+**Détecté** : TA-104 / 2026-04-29 — stub dans `strength-fixed.ts` ligne increment.
 
 ---
 
