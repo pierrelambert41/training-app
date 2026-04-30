@@ -71,6 +71,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-04 — Apostrophes typographiques dans les strings TS/TSX (encoding macOS)
+**Symptôme** : Babel parser échoue avec `SyntaxError: Unexpected token, expected ","` quand un string de test contient une apostrophe typographique (`'` au lieu de `'`). macOS convertit parfois `'` en `'` dans les strings copiés depuis des outils externes.  
+**Fix** : utiliser des guillemets doubles `"..."` pour tout string de test contenant une apostrophe, ou vérifier avec `grep -P "[\x{2018}\x{2019}]"` avant commit.  
+**Détecté** : TA-107 / 2026-04-29
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
