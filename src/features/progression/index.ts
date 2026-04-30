@@ -19,3 +19,11 @@ export type {
   SessionPlanInputs,
   RecoveryContext,
 } from './domain/session-plan';
+
+export { detectPlateau } from './domain/plateau-detection';
+export type {
+  ExerciseSession,
+  PlateauAnalysis,
+  PlateauRecommendation,
+  PlateauRecommendationType,
+} from './domain/plateau-detection';

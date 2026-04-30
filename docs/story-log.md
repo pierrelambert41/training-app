@@ -144,6 +144,24 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-107 — Domaine : détection de plateau
+**Livré** : fonction pure `detectPlateau(exerciseHistory: ExerciseSession[]) → PlateauAnalysis | null` avec type `ExerciseSession` (SetLogs groupés par session + fatigueScore), détection des 4 conditions de plateau (charge identique, reps identiques, RIR >= 2, fatigueScore < 6), recommandations ordonnées selon §6 business-rules.md, seuil de remplacement à 6+ séances.  
+**Fichiers créés** :
+- `src/features/progression/domain/plateau-detection.ts` — types `ExerciseSession`, `PlateauAnalysis`, `PlateauRecommendation`, `PlateauRecommendationType` + implémentation
+- `src/features/progression/domain/plateau-detection.test.ts` — 24 tests, 100% verts
+**Fichiers modifiés** :
+- `src/features/progression/index.ts` — export public API R3 (`detectPlateau` + types)
+**Recommandations (ordre §6)** : `check_technique` → `suggest_variant` → `adjust_rep_range` → `modify_tempo` → `replace` (si 6+ séances).  
+**Tolérance de charge** : arrondi au step de 0.25 kg via médiane des SetLogs. Deux charges sont "identiques" si elles ont le même cran après arrondi à 0.25 (80.0 et 80.1 = même cran, 80.0 et 80.25 = crans distincts = progression).  
+**Comptage sessionsInPlateau** : remonte depuis la dernière session jusqu'à la première rupture de plateau (charge ou reps différents) pour capter les 6+ séances déclenchant `replace`.  
+**Tests** : 24 tests, 9 suites feature, 118 total — 100% verts. TypeScript 0 erreur. ESLint boundaries 0 erreur.  
+**S'appuie sur** : TA-104 (types `SetLog`, feature `progression/`), TA-103 (type `Recommendation` disponible pour persistance future).  
+**Ouvre** : le service de recommandations peut appeler `detectPlateau` post-séance et persister via `saveRecommendation` (type `plateau`, source `rules_engine`). L'affichage IA du plateau est Phase 7 (hors scope).  
+**R6** : `plateau-detection.ts` à 268 lignes (> 250) — densité documentaire (JSDoc ~60 lignes), fonctions pures cohésives non splitables sans overhead inutile. Sous le seuil critique de 400.  
+**Stubs laissés** : aucun (le code mort `?? ''` a été supprimé — l'invariant setLogs non-vide est garanti par les guards loads/reps en amont).
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

@@ -370,3 +370,20 @@ Claude API derrière une abstraction `AIProvider` pour pouvoir changer de provid
 - Abstraction permet de migrer sans refactor
 - Prompt caching pour optimiser les coûts
 - Fallback obligatoire (l'app fonctionne sans IA)
+
+---
+
+## ADR-019 : Seuil FATIGUE_THRESHOLD = 6 pour la détection de plateau
+
+**Statut** : Accepté  
+**Date** : 2026-04-29
+
+### Contexte
+`business-rules.md` §6 précise "pas de facteur fatigue évident" comme condition de plateau, sans chiffrer le seuil. `computeFatigueScore` (TA-105) produit un score 0–10.
+
+### Décision
+Seuil `fatigueScore < 6` : une session avec score 5.x est compatible avec la détection de plateau ; score 6+ la bloque. Aligné sur le découpage TA-105 où 6–7 = "fatigue modérée" (statut `maintien`).
+
+### Conséquences
+- La constante `FATIGUE_THRESHOLD = 6` dans `plateau-detection.ts` est la source de vérité.
+- Si le découpage des tranches de fatigue change dans TA-105, ce seuil doit être réévalué.
