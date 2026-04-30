@@ -10,3 +10,12 @@ export type {
   CardioSessionSnapshot,
   PreSessionReadiness,
 } from './domain/fatigue-score';
+
+export { computeNextSessionPlan } from './domain/session-plan';
+export type {
+  SessionStatus,
+  SessionPlan,
+  ExercisePlan,
+  SessionPlanInputs,
+  RecoveryContext,
+} from './domain/session-plan';

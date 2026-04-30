@@ -120,6 +120,30 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-106 — Domaine : calcul du statut de séance et charges cibles (SessionPlan)
+**Livré** : fonction pure `computeNextSessionPlan(inputs: SessionPlanInputs) → SessionPlan` qui orchestre `computeFatigueScore` (TA-105) et `computeProgressionDecision` (TA-104) pour produire un statut global de séance + des charges cibles par exercice.  
+**Fichiers créés** :
+- `src/features/progression/domain/session-plan.ts` — types `SessionStatus`, `SessionPlan`, `ExercisePlan`, `SessionPlanInputs`, `RecoveryContext` + implémentation des 6 statuts + surcharges fatigue
+- `src/features/progression/domain/session-plan.test.ts` — 23 tests, 100% verts (6 statuts + cas limites)
+**Fichiers modifiés** :
+- `src/features/progression/index.ts` — export public API R3 (`computeNextSessionPlan` + types)
+**6 statuts implémentés** (§4 business-rules.md) :
+- `progression` : fatigue 0-3, pas de longue pause, pas assez de séances consécutives pour aggressive
+- `maintien` : fatigue 4-6
+- `allegee` : fatigue 7-8 → charges * 0.9, -1 série (min 1), arrondi au 0.25 kg (spec §3.3)
+- `prudente` : longue pause > 14j → charges * 0.8, prime sur tous les autres statuts sauf deload
+- `aggressive` : fatigue ≤ 1 + 3+ séances consécutives en increase → statut sans modification de charge (signal uniquement)
+- `deload` : fatigue ≥ 9 → charges * 0.65, reps = repRangeMin, RIR cible = 4. **Prime sur prudente** (longue pause + fatigue >= 9 → deload, pas prudente)
+**Architecture** : la surcharge fatigue s'applique post-décision du moteur de progression. La décision logique (`action`) est toujours préservée pour traçabilité. La clé des dictionnaires `setLogsByExercise` et `progressionHistoryByExercise` est l'ID du `PlannedExercise` (pas de l'exercice).  
+**Champ `next_sets`** : `ExercisePlan` expose `next_sets: number | null`. `null` = non modifié, nombre = override (utilisé par `allegee` pour -1 série). `deload` ne réduit pas les séries via ce champ (volume réduit délégué à la stratégie de deload — hors scope TA-106).  
+**`countConsecutiveProgressions`** : prend le min sur tous les exercices — un exercice sans 3 progressions consécutives bloque le statut `aggressive`.  
+**Tests** : 23 tests. Total feature progression : 94 tests, 8 suites — 100% verts. TypeScript 0 erreur.  
+**S'appuie sur** : TA-104 (`computeProgressionDecision`), TA-105 (`computeFatigueScore`), types `PlannedExercise`, `Session`, `SetLog` (src/types/).  
+**Ouvre** : le service de séance peut appeler `computeNextSessionPlan` avant chaque séance pour afficher le statut et les charges cibles. Les résultats peuvent alimenter `saveRecommendation` (TA-103).  
+**Stubs laissés** : le statut `aggressive` est un signal — aucune modification de charge n'est forcée (conform à la spec "push supplémentaire possible, non forcé"). La réduction de volume en `deload` (-1 à -2 séries selon §3.4) n'est pas implémentée via `next_sets` — seule la charge est ajustée à ce stade.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

@@ -64,6 +64,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-03 — Clés de `setLogsByExercise` et `progressionHistoryByExercise` par ID de PlannedExercise
+**Symptôme** : les dictionnaires d'inputs de `computeNextSessionPlan` sont indexés par `PlannedExercise.id` (ex: `pe-1`), pas par `Exercise.id` (`ex-1`). Le code fait `setLogsByExercise[exercise.id]` où `exercise` est un `PlannedExercise`.  
+**Fix** : toujours indexer ces dictionnaires par l'ID du PlannedExercise lors de l'appel (le même exercice peut apparaître plusieurs fois dans un programme avec des configs différentes).  
+**Détecté** : TA-106 / 2026-04-29
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
