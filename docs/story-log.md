@@ -406,6 +406,45 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-116 — Tab bar navigation (4 onglets : Aujourd'hui, Programme, Bibliothèque, Profil)
+**Livré** : navigation par onglets avec groupe `(tabs)` imbriqué dans le Stack `(app)`. 4 onglets, tab bar sombre cohérente, tab active en bleu accent, sessions et modals restent dans le Stack parent sans tab bar.
+
+**Fichiers créés** :
+- `app/(app)/(tabs)/_layout.tsx` — layout Tabs (4 screens, icônes emoji Unicode, couleurs dark)
+- `app/(app)/(tabs)/index.tsx` — re-export TodayScreen (déplacé depuis `/(app)/index.tsx`)
+- `app/(app)/(tabs)/program.tsx` — re-export ProgramTabScreen
+- `app/(app)/(tabs)/library.tsx` — re-export LibraryScreen depuis `src/screens/`
+- `app/(app)/(tabs)/profile.tsx` — re-export ProfileScreen depuis `src/screens/`
+- `src/features/program/components/program-tab-screen.tsx` — wrapper Programme : loading state + no-program state + ActiveBlockScreen
+- `src/features/program/index.ts` — public API R3 de la feature program
+- `src/screens/(app)/profile-screen.tsx` — ProfileScreen extrait de l'ancienne route `/(app)/profile.tsx`
+
+**Fichiers modifiés** :
+- `app/(app)/_layout.tsx` — Stack `(app)` : `name="index"` remplacé par `name="(tabs)"`, headerShown false
+- `app/index.tsx` — `Redirect href="/(app)"` → `"/(app)/(tabs)"`
+- `app/_layout.tsx` — AuthGuard : `router.replace('/(app)')` → `'/(app)/(tabs)'`
+- `app/(app)/design-system.tsx` — `Redirect href="/(app)"` → `"/(app)/(tabs)"`
+- `src/features/session/components/end-session-screen.tsx` — `router.replace('/(app)')` → `'/(app)/(tabs)'` (2 occurrences)
+- `src/features/session/components/live-session-screen.tsx` — `router.replace('/(app)')` → `'/(app)/(tabs)'`
+- `src/screens/(app)/generate/step-8-summary-screen.tsx` — `router.replace('/(app)')` → `'/(app)/(tabs)'`
+- `src/screens/(app)/home-screen.test.tsx` — import mis à jour vers `app/(app)/(tabs)/index`
+- `eslint.config.mjs` — ajout `feature-components → shared-screens` (migration vers features en cours)
+
+**Fichiers supprimés** :
+- `app/(app)/index.tsx` — déplacé dans `(tabs)/`
+- `app/(app)/library.tsx` — déplacé dans `(tabs)/`
+- `app/(app)/profile.tsx` — déplacé dans `(tabs)/`
+
+**S'appuie sur** : TA-115 (structure Stack `(app)` fonctionnelle), architecture Bulletproof React (TA-97), `ActiveBlockScreen` dans `src/screens/(app)/programs/` (non migré).
+
+**Ouvre** : les onglets sont en place — les futures features pourront y ajouter des écrans. `ProgramTabScreen` peut accueillir une migration complète de `ActiveBlockScreen` vers `src/features/program/components/`.
+
+**Bugs découverts** : Expo Router génère des types stricts par structure de fichiers — toutes les navigations vers `/(app)` (route racine désormais remplacée par `(tabs)`) déclenchaient des erreurs TS. Correction systématique vers `/(app)/(tabs)`.
+
+**Stubs laissés** : icônes tab bar en emoji Unicode (approche cohérente avec le reste du projet qui n'a pas `@expo/vector-icons`). À remplacer par des icônes SVG si la lib est installée plus tard.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

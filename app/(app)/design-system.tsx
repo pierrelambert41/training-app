@@ -9,7 +9,7 @@ import { useState } from 'react';
 
 export default function DesignSystemScreen() {
   if (!__DEV__) {
-    return <Redirect href="/(app)" />;
+    return <Redirect href="/(app)/(tabs)" />;
   }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

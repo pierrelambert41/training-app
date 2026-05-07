@@ -105,7 +105,7 @@ export default function Step8SummaryScreen() {
           setActiveBlock(savedBlock);
           setWorkoutDays(savedDays);
           reset();
-          router.replace('/(app)');
+          router.replace('/(app)/(tabs)');
         }}]
       );
     } catch (err) {

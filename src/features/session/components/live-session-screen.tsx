@@ -92,7 +92,7 @@ export function LiveSessionScreen() {
           style: 'destructive',
           onPress: async () => {
             await abandonSession(db);
-            router.replace('/(app)' as Parameters<typeof router.replace>[0]);
+            router.replace('/(app)/(tabs)' as Parameters<typeof router.replace>[0]);
             resetSession();
           },
         },

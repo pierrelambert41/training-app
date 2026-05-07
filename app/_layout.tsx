@@ -24,7 +24,7 @@ function AuthGuard() {
     if (!isAuthenticated && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (isAuthenticated && inAuthGroup) {
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
     }
   }, [isAuthenticated, isHydrated, segments, router]);
 

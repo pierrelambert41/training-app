@@ -148,6 +148,8 @@ const dependenciesRules = [
       { to: { type: 'shared-config' } },
       { to: { type: 'shared-types' } },
       { to: { type: 'shared-stores' } },
+      // pendant la migration des screens vers les features (shared-screens → feature-components)
+      { to: { type: 'shared-screens' } },
     ],
   },
   // R2 : hooks d'une feature → uniquement ses propres api/domain/lib/stores
