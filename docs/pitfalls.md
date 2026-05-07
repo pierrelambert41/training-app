@@ -127,6 +127,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### NAV-02 — `router.replace('/(app)')` casse TypeScript après ajout d'un groupe `(tabs)`
+**Symptôme** : quand `app/(app)/index.tsx` est déplacé dans `app/(app)/(tabs)/index.tsx`, Expo Router régénère ses types et `/(app)` n'est plus une route feuille valide. Toutes les navigations `router.replace('/(app)')` / `<Redirect href="/(app)" />` lèvent TS2345.
+**Fix** : remplacer `/(app)` par `/(app)/(tabs)` dans tous les `router.replace`, `router.push` et `<Redirect href>`. Grep sur `/(app)'` et `/(app)"` avant de shipper. Aussi mettre à jour le `AuthGuard` dans `app/_layout.tsx`.
+**Détecté** : TA-116 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

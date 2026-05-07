@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuthStore } from '@/features/auth/stores/auth-store';
 import { useActiveProgramStore } from '@/stores/active-program-store';
-import HomeScreen from '../../../app/(app)/index';
+import HomeScreen from '../../../app/(app)/(tabs)/index';
 
 const mockLogout = jest.fn();
 const mockPush = jest.fn();

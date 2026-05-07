@@ -92,7 +92,7 @@ export function EndSessionScreen() {
 
   useEffect(() => {
     if (!session && completionState === 'idle') {
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
     }
   }, [session, completionState, router]);
 
@@ -123,7 +123,7 @@ export function EndSessionScreen() {
 
   const handleGoHome = useCallback(() => {
     reset();
-    router.replace('/(app)');
+    router.replace('/(app)/(tabs)');
   }, [reset, router]);
 
   if (!session && completionState === 'idle') return null;
