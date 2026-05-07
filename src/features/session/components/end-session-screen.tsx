@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSessionStore } from '@/stores/session-store';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
@@ -142,8 +143,9 @@ export function EndSessionScreen() {
             : '#ef4444';
 
   return (
+    <SafeAreaView edges={['top']} className="flex-1 bg-background">
     <KeyboardAvoidingView
-      className="flex-1 bg-background"
+      className="flex-1"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -287,5 +289,6 @@ export function EndSessionScreen() {
         )}
       </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
