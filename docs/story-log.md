@@ -445,6 +445,28 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-117 — État `completed_today` : séance du jour déjà terminée
+**Livré** : nouvel état `completed_today` dans `TodayScreenData` + composant `CompletedTodayCard` + invalidation automatique au retour sur l'écran Aujourd'hui après complétion de séance.
+
+**Fichiers créés** :
+- `src/features/today/components/completed-today-card.tsx` — card "Séance du jour — Terminée" avec durée et score de complétion
+
+**Fichiers modifiés** :
+- `src/hooks/use-today-workout.ts` — `TodayScreenData` passe de 4 à 5 états. `fetchTodayData` interroge les sessions : si une session `completed` existe pour `todayDay.id` à la date du jour → retourne `{ state: 'completed_today', data }` avant de chercher une session `in_progress`. Type `CompletedTodayData` exporté.
+- `src/features/today/components/today-screen.tsx` — branche l'état `completed_today` sur `CompletedTodayCard`. Extrait `lastSession` et `streak` depuis le nouvel état. Le bouton "Démarrer" n'est pas affiché (la WorkoutCard n'est pas rendue).
+- `src/features/session/hooks/use-complete-session.ts` — invalide `today-workout` et `today-recommendations` en `Promise.all` après `runRulesEngine` pour mise à jour immédiate au retour sur Aujourd'hui.
+- `src/features/today/index.ts` — exporte `CompletedTodayCard`.
+
+**S'appuie sur** : TA-116 (onglet Aujourd'hui), TA-111 (feature `today/`, composants existants), TA-112 (`use-complete-session`).
+
+**Ouvre** : la `CompletedTodayCard` pourrait afficher les recommandations du moteur (charges prochaine séance) pour un aperçu rapide sans quitter l'onglet Aujourd'hui.
+
+**Bugs découverts** : pitfall QUERY-01 — `today-workout` n'était pas invalidée après complétion, empêchant la mise à jour automatique de l'écran.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
