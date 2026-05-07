@@ -696,6 +696,44 @@ describe('generateProgram — invariants', () => {
     }
   });
 
+  it('TA-92 — toutes les séances respectent maxSessionDurationMin (accessoires seuls suffisent)', async () => {
+    const result = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'medium' }),
+    }));
+    for (const d of result.days) {
+      expect(d.day.estimatedDurationMin).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it('TA-92 — toutes les séances respectent maxSessionDurationMin même quand les accessoires ne suffisent pas (élaguage secondary)', async () => {
+    const result = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'high' }),
+    }));
+    for (const d of result.days) {
+      expect(d.day.estimatedDurationMin).toBeLessThanOrEqual(60);
+    }
+  });
+
+  it('TA-92 — exercise_order linéaire après élaguage accessoires ET secondary', async () => {
+    const result = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'high' }),
+    }));
+    for (const d of result.days) {
+      const orders = d.plannedExercises.map((pe) => pe.exerciseOrder);
+      expect(orders).toEqual(orders.map((_, i) => i));
+    }
+  });
+
+  it('TA-92 — les exercices main ne sont jamais retirés quelle que soit la contrainte de durée', async () => {
+    const result = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: 1, volumeTolerance: 'high' }),
+    }));
+    for (const d of result.days) {
+      const roles = d.plannedExercises.map((pe) => pe.role);
+      expect(roles.every((r) => r === 'main')).toBe(true);
+    }
+  });
+
   it('exclut les machines en équipement minimal', async () => {
     const catalogue = buildMinimalCatalogue();
     const result = await generateProgram(defaultInput({

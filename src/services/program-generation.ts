@@ -900,18 +900,22 @@ export async function generateProgram(
       };
     });
 
-    // Contrainte durée max : si dépassement, on tronque les accessoires en fin de séance
+    // Contrainte durée max : élaguer d'abord les accessoires, puis les secondary si nécessaire.
+    // Les exercices main ne sont jamais retirés.
     if (input.answers.maxSessionDurationMin !== null) {
-      while (
-        estimatedMin > input.answers.maxSessionDurationMin &&
-        plannedExercises.length > 0
-      ) {
-        const last = plannedExercises[plannedExercises.length - 1];
-        if (last.role !== 'accessory') break;
-        plannedExercises.pop();
-        estimatedMin -= last.sets * 3;
+      const minPerSetByRole: Record<'accessory' | 'secondary', number> = { accessory: 3, secondary: 4 };
+      for (const roleToTrim of ['accessory', 'secondary'] as const) {
+        while (
+          estimatedMin > input.answers.maxSessionDurationMin &&
+          plannedExercises.length > 0
+        ) {
+          const last = plannedExercises[plannedExercises.length - 1];
+          if (last.role !== roleToTrim) break;
+          plannedExercises.pop();
+          estimatedMin -= last.sets * minPerSetByRole[roleToTrim];
+        }
+        if (estimatedMin <= input.answers.maxSessionDurationMin) break;
       }
-      // Ré-indexation après pop
       plannedExercises.forEach((pe, i) => {
         pe.exerciseOrder = i;
       });

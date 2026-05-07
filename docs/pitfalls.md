@@ -150,6 +150,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-06 — Boucle de troncage `maxSessionDurationMin` : `break` prématuré bloque l'élaguage secondary
+**Symptôme** : la boucle while qui élimine les accessoires s'arrêtait dès que le dernier élément de `plannedExercises` n'était pas un `accessory`. Si tous les accessoires étaient supprimés mais `estimatedMin` restait > `maxSessionDurationMin`, la contrainte n'était pas respectée (ex: 72 min pour un max de 60 après `volumeTolerance: 'high'`).  
+**Fix** : deux passes séquentielles avec `for (const roleToTrim of ['accessory', 'secondary'])` — d'abord supprimer tous les accessoires, puis, si encore au-dessus, supprimer les secondary. Les exercices main ne sont jamais retirés.  
+**Détecté** : TA-92 / 2026-05-07
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
