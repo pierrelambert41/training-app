@@ -132,9 +132,23 @@ describe('HomeScreen', () => {
         state: 'rest_day',
         lastCompletedSession: null,
         streak: 2,
+        nextWorkoutDay: null,
       },
     });
     render(<HomeScreen />);
     expect(screen.getByText('Jour de repos')).toBeTruthy();
+  });
+
+  it("affiche la prochaine séance sur un jour de repos", () => {
+    mockUseTodayWorkout.mockReturnValue({
+      data: {
+        state: 'rest_day',
+        lastCompletedSession: null,
+        streak: 2,
+        nextWorkoutDay: { title: 'Upper 1', dayOrder: 4 },
+      },
+    });
+    render(<HomeScreen />);
+    expect(screen.getByText('Prochaine séance : Upper 1 \u2014 jeudi')).toBeTruthy();
   });
 });

@@ -6,6 +6,29 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-95 — Prochaine séance affichée sur le jour de repos
+**Livré** : quand l'écran Aujourd'hui est en état `rest_day`, affichage de "Prochaine seance : [titre] — [jour]" sous "Jour de repos".
+
+**Fichiers créés** :
+- `src/features/today/domain/next-workout-day.ts` — fonctions pures `getNextWorkoutDay(workoutDays, todayDayOrder)` et `dayOrderToFrenchName(dayOrder)`. Cyclic sur 7 : cherche le prochain `dayOrder > today`, wrap around si aucun trouvé.
+
+**Fichiers modifiés** :
+- `src/hooks/use-today-workout.ts` — type `TodayScreenData` (`rest_day`) enrichi avec `nextWorkoutDay: NextWorkoutDay | null`. Calcul de `todayDayOrder` (inverse de `dayOrderToJsDay`) + appel `getNextWorkoutDay` dans la branche `!todayDay`. Import `CompletedTodayData` et `NextWorkoutDay` consolidés via `@/features/today` (index).
+- `src/features/today/components/rest-day-card.tsx` — nouveau prop `nextWorkoutDay`. Affiche "Prochaine seance : [titre] — [jour]" si présent, fallback texte générique sinon.
+- `src/features/today/components/today-screen.tsx` — passe `nextWorkoutDay={todayData.nextWorkoutDay}` à `RestDayCard`.
+- `src/features/today/index.ts` — exporte `getNextWorkoutDay`, `dayOrderToFrenchName`, `NextWorkoutDay`.
+- `src/screens/(app)/home-screen.test.tsx` — mock `rest_day` mis à jour avec `nextWorkoutDay: null` + nouveau test `nextWorkoutDay` présent.
+
+**S'appuie sur** : TA-117 (état `rest_day` existant dans `use-today-workout`), TA-111 (feature `today/`, `RestDayCard`).
+
+**Ouvre** : rien — feature self-contained.
+
+**Bugs découverts** : l'import `CompletedTodayData` dans `use-today-workout.ts` contournait le feature index (`@/features/today/types/...` directement) — corrigé au passage.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-94 — Bug : calendrier programme affiche N-1 séances pour programmes legacy
 **Livré** : correction de `buildWeekCells` dans `WeekCalendar`. Les programmes générés avant TA-91 stockaient `dayOrder` en 0-based (0,1,2,3 pour 4 jours). Le calendrier lookupait `i+1` (1-based), donc `dayOrder=0` ne matchait jamais → 1 séance invisible.
 
