@@ -44,6 +44,10 @@ jest.mock('@/hooks/use-active-session', () => ({
   useActiveSession: jest.fn(),
 }));
 
+jest.mock('@/features/today/hooks/use-today-recommendations', () => ({
+  useTodayRecommendations: jest.fn(() => ({ data: null })),
+}));
+
 const fakeUser = { id: 'u1', email: 'test@example.com', createdAt: '2026-04-23T10:00:00Z' };
 
 beforeEach(() => {
