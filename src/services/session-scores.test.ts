@@ -176,15 +176,12 @@ describe('computeSessionScores', () => {
     });
   });
 
-  describe('progressionVsPrevious placeholder', () => {
-    it('uses neutral contribution (0.5) when no cross-session history is available', () => {
-      // Phase 4 stub: progressionVsPrevious is hardcoded to 0.5.
+  describe('progressionVsPrevious parameter', () => {
+    it('uses neutral contribution (0.5) when not provided (default)', () => {
+      // Default: progressionVsPrevious = 0.5 (Phase 4 behavior).
       // With perfect completion (1.0), perfect RIR (1.0) and target achievement normalized
       // at 1.0/1.2 ≈ 0.833:
       //   raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.5*0.2 = 0.85 → score = 8.5
-      // If progressionVsPrevious were 1.0:
-      //   raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 1.0*0.2 = 0.95 → score = 9.5
-      // The 1.0-point gap confirms the placeholder contributes 0.5, not 1.0.
       const session = makeSession({ readiness: 8 });
       const pe = makePe({ sets: 1 });
       const setLogs: SetLog[] = [
@@ -195,6 +192,33 @@ describe('computeSessionScores', () => {
 
       expect(result.performance_score).toBeCloseTo(8.5, 1);
       expect(result.performance_score).toBeLessThan(9.5);
+    });
+
+    it('honors a real progressionVsPrevious value (TA-109)', () => {
+      // Same inputs but progressionVsPrevious = 1.0:
+      //   raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 1.0*0.2 = 0.95 → score = 9.5
+      const session = makeSession({ readiness: 8 });
+      const pe = makePe({ sets: 1 });
+      const setLogs: SetLog[] = [
+        makeSetLog({ id: 'sl-1', setNumber: 1, targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
+      ];
+
+      const result = computeSessionScores(session, setLogs, [pe], 1.0);
+
+      expect(result.performance_score).toBeCloseTo(9.5, 1);
+    });
+
+    it('lowers performance_score when progressionVsPrevious indicates regression', () => {
+      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0*0.2 = 0.75 → score = 7.5
+      const session = makeSession({ readiness: 8 });
+      const pe = makePe({ sets: 1 });
+      const setLogs: SetLog[] = [
+        makeSetLog({ id: 'sl-1', setNumber: 1, targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
+      ];
+
+      const result = computeSessionScores(session, setLogs, [pe], 0);
+
+      expect(result.performance_score).toBeCloseTo(7.5, 1);
     });
   });
 

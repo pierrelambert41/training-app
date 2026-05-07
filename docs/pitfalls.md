@@ -43,6 +43,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-03 — `feature-api` ne peut pas importer son propre `feature-domain` par défaut
+**Symptôme** : ESLint `boundaries/dependencies` bloquait `src/features/<feat>/api/*.ts` → `../domain/*.ts` (même feature). Or un service api d'orchestration a besoin d'appeler les fonctions pures de son domain.
+**Fix** : ajouter `{ to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } }` dans la section `from: { type: 'feature-api' }` de `eslint.config.mjs`. Reste interdit : api → autre feature, api → components/hooks/stores.
+**Détecté** : TA-109 / 2026-05-06
+
+---
+
 ### DB-01 — Migration remote orpheline bloque `supabase db push`
 **Symptôme** : `supabase db push` échoue avec "Remote migration versions not found in local migrations directory". Une migration existe sur remote mais pas en local (appliée manuellement ou via MCP sur l'UI Supabase).  
 **Fix** : `supabase migration repair --status reverted <version>` pour marquer la migration remote comme révoquée côté historique, puis `supabase db push` fonctionne normalement.  

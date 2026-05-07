@@ -109,19 +109,26 @@ function computeFatigueScore(readiness: number | null): number {
 // Public API
 // ---------------------------------------------------------------------------
 
+/**
+ * Calcule les 3 scores post-séance (completion, performance, fatigue).
+ *
+ * @param progressionVsPrevious - Composante 4 du performance score (§5
+ *   business-rules.md). Plage 0..1.
+ *   - Phase 4 (TA-83) : default 0.5 (neutre, pas d'historique cross-session).
+ *   - Phase 5+ (TA-109) : valeur réelle calculée par le rules engine via
+ *     `computeProgressionVsPrevious` (e1RM séance courante vs précédente).
+ *   Voir docs/business-rules.md §5.
+ */
 export function computeSessionScores(
   session: Session,
   setLogs: SetLog[],
-  plannedExercises: PlannedExercise[]
+  plannedExercises: PlannedExercise[],
+  progressionVsPrevious: number = 0.5
 ): SessionScores {
   const completion_score = computeCompletionScore(setLogs, plannedExercises);
 
   const targetAchievement = computeTargetAchievement(setLogs, plannedExercises);
   const rirAccuracy = computeRirAccuracy(setLogs);
-  // Phase 4 stub — cross-session history not available until Phase 5.
-  // Neutral contribution (0.5) until progressionVsPrevious is computed from real history.
-  const PROGRESSION_PLACEHOLDER = 0.5;
-  const progressionVsPrevious = PROGRESSION_PLACEHOLDER;
 
   const normalizedTargetAchievement = clamp(targetAchievement / 1.2, 0, 1);
   const rirContribution = rirAccuracy ?? 0.5;

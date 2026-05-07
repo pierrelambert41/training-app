@@ -387,3 +387,22 @@ Seuil `fatigueScore < 6` : une session avec score 5.x est compatible avec la dé
 ### Conséquences
 - La constante `FATIGUE_THRESHOLD = 6` dans `plateau-detection.ts` est la source de vérité.
 - Si le découpage des tranches de fatigue change dans TA-105, ce seuil doit être réévalué.
+
+---
+
+## ADR-020 : Idempotence du moteur de règles via clear + recreate
+
+**Statut** : Accepté  
+**Date** : 2026-05-06
+
+### Contexte
+TA-109 introduit `runRulesEngine(sessionId)` qui persiste des `Recommendation` post-séance. La séance peut être complétée plusieurs fois (re-run manuel, sync conflit, reprise après crash). Le moteur doit converger vers le même état sémantique sans dupliquer.
+
+### Décision
+Chaque appel commence par `clearRecommendationsForSession(sessionId)` (suppression locale + enqueue delete sync), puis recrée toutes les recommandations en s'appuyant sur les setLogs réels. La mutation `block.status active → deloaded` est gardée idempotente : on ne flippe que depuis `active`, jamais depuis `deloaded` / `completed` / `planned`. `deloadTriggered=true` reflète la décision du moteur, pas l'écriture (idempotente).
+
+### Conséquences
+- Le rejeu offline → online ne corrompt pas les recommandations : à chaque re-run, le contenu sémantique converge.
+- Coût : la `sync_queue` enregistre N delete + N insert par re-run. Acceptable car re-run reste explicite (déclenché à completion).
+- Les IDs de `Recommendation` ne sont pas stables entre runs (UUID frais à chaque insert) — l'identité repose sur (session_id, exercise_id, type), pas sur l'id.
+- `block.status` n'est jamais régressé : si le user a manuellement changé le statut, le moteur ne le ré-écrase pas (sauf si `active` puis condition deload toujours vraie).

@@ -181,10 +181,13 @@ const dependenciesRules = [
       { to: { type: 'shared-types' } },
     ],
   },
-  // R5 : feature-api → uniquement infra partagée et ses propres types
+  // R5 : feature-api → ses propres domain/types (orchestration), infra partagée et types
+  // L'api d'une feature peut orchestrer son propre domain (TA-109 / pitfall ARCH-03).
+  // Reste interdit : feature-api → autre feature, feature-api → feature-components/hooks/stores.
   {
     from: { type: 'feature-api' },
     allow: [
+      { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'shared-services' } },
       { to: { type: 'shared-lib' } },
