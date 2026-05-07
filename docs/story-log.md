@@ -327,6 +327,35 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-113 — Fiche détail exercice depuis workout-day-detail-screen
+**Livré** : stub `handleExercisePress` dans `workout-day-detail-screen.tsx` branché sur la vraie navigation `/(app)/exercise/[id]`. L'écran `ExerciseDetailScreen` enrichi avec section Historique (5 dernières séances, meilleur set par session) et badges de recommandation (progression ↑↔↓, plateau rouge discret si < 14 jours).
+
+**Fichiers créés** :
+- `src/features/exercise/api/exercise-history.ts` — `getExerciseHistory`, `getLatestLoadRecommendation`, `getLatestPlateauRecommendation` (SQLite, lecture seule)
+- `src/features/exercise/api/exercise-history.test.ts` — 10 tests, 100% verts
+- `src/features/exercise/types/exercise-history.ts` — type `ExerciseSessionHistory` (dans `types/` pour respecter boundaries : `feature-components` ne peut pas importer `feature-api`)
+- `src/features/exercise/hooks/use-exercise-history.ts` — hook TanStack Query (`staleTime: 30s`), charge history + 2 recommendations en parallèle
+- `src/features/exercise/components/exercise-history-section.tsx` — section historique avec état vide "Pas encore logué"
+- `src/features/exercise/components/exercise-recommendation-badges.tsx` — badge progression (action → icône ↑↔↓) + badge plateau (fenêtre 14 jours)
+- `src/features/exercise/index.ts` — public API R3
+
+**Fichiers modifiés** :
+- `src/screens/(app)/exercise-detail-screen.tsx` — +1 hook `useExerciseHistory`, +badges dans l'en-tête, +section Historique (257 lignes, signal d'alerte justifié : orchestration de 3 hooks)
+- `src/screens/(app)/programs/workout-day-detail-screen.tsx` — `handleExercisePress` branché sur `router.push` vers `/(app)/exercise/[id]`
+- `docs/pitfalls.md` — stub `handleExercisePress` supprimé, ARCH-05 ajouté
+
+**Route** : `app/(app)/exercise/[id].tsx` existait déjà (Phase 2, TA-12, 7 lignes — R1 ok). Non modifiée.
+
+**S'appuie sur** : TA-12 (`ExerciseDetailScreen` Phase 2, route existante), TA-103 (table `recommendations` SQLite + types), TA-112 (pattern badges de recommandation dans end-session-screen)
+
+**Ouvre** : les badges de recommandation utilisent `createdAt` de la Recommendation — quand `currentLoad` sera persisté (stub UX-01), les lignes `Xkg → Ykg` de l'écran fin de séance seront aussi utilisables ici. La fiche exercice pourrait afficher un graphe e1RM (Phase 7 IA).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** : aucun nouveau.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

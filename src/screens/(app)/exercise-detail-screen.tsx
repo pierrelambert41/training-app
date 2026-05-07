@@ -5,6 +5,7 @@ import { useFavorite } from '@/hooks/use-favorite';
 import { AppText, Card } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { Exercise } from '@/types';
+import { useExerciseHistory, ExerciseHistorySection, ExerciseRecommendationBadges } from '@/features/exercise';
 
 type Props = {
   exerciseId: string;
@@ -121,6 +122,7 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
   const router = useRouter();
   const { data, isLoading } = useExerciseDetail(exerciseId);
   const { isFavorite, toggle, isPending } = useFavorite(exerciseId);
+  const { data: historyData } = useExerciseHistory(exerciseId);
 
   const handleAlternativePress = (exercise: Exercise) => {
     const href: Href = { pathname: '/(app)/exercise/[id]', params: { id: exercise.id } };
@@ -153,7 +155,7 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
       testID="exercise-detail-screen"
     >
       <View className="flex-row items-start justify-between mb-4" testID="exercise-detail-header">
-        <View className="flex-1 mr-3">
+        <View className="flex-1 mr-3 gap-2">
           <AppText variant="heading" testID="exercise-detail-name">
             {displayName}
           </AppText>
@@ -161,6 +163,12 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
             <AppText variant="caption" muted className="mt-0.5">
               {exercise.name}
             </AppText>
+          )}
+          {historyData && (
+            <ExerciseRecommendationBadges
+              latestLoadReco={historyData.latestLoadReco}
+              latestPlateauReco={historyData.latestPlateauReco}
+            />
           )}
         </View>
 
@@ -214,6 +222,10 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
           />
         </SectionCard>
       )}
+
+      <SectionCard title="Historique (5 dernières séances)">
+        <ExerciseHistorySection history={historyData?.history ?? []} />
+      </SectionCard>
 
       {exercise.coachingNotes && (
         <SectionCard title="Notes de coaching">
