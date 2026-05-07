@@ -1,4 +1,5 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore, useAuth } from '@/features/auth';
 import { colors } from '@/theme/tokens';
 
@@ -7,7 +8,8 @@ export default function ProfileScreen() {
   const { logout, isLoading } = useAuth();
 
   return (
-    <View className="flex-1 bg-background p-6 gap-6">
+    <SafeAreaView edges={['top']} className="flex-1 bg-background">
+    <View className="flex-1 p-6 gap-6">
       <Text className="text-heading text-content-primary">Profil</Text>
       {user && (
         <Text className="text-body text-content-secondary">{user.email}</Text>
@@ -24,5 +26,6 @@ export default function ProfileScreen() {
         )}
       </Pressable>
     </View>
+    </SafeAreaView>
   );
 }

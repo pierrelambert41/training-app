@@ -1,4 +1,5 @@
 import { View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore, useAuth } from '@/features/auth';
 import { useActiveProgramStore } from '@/stores/active-program-store';
@@ -7,6 +8,7 @@ import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveSession } from '@/hooks/use-active-session';
 import { useTodayWorkout } from '@/hooks/use-today-workout';
 import { useSessionStore } from '@/stores/session-store';
+import { resetUserData } from '../api/reset-user-data';
 import { AppText, Button } from '@/components/ui';
 import { useTodayRecommendations } from '../hooks/use-today-recommendations';
 import { WorkoutCard } from './workout-card';
@@ -65,6 +67,28 @@ export function TodayScreen() {
     Alert.alert('DB nettoyee', `${inactivePrograms.length} programmes inactifs supprimes.`);
   }
 
+  async function handleFullReset() {
+    const userId = user?.id;
+    if (!userId) return;
+    Alert.alert(
+      'Reset total',
+      'Efface tous les programmes, séances et historique. Irréversible.',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Effacer tout',
+          style: 'destructive',
+          onPress: async () => {
+            await resetUserData(db, userId);
+            useActiveProgramStore.getState().reset();
+            useSessionStore.getState().reset();
+            Alert.alert('Reset OK', 'App remise à zéro — relance le processus de génération.');
+          },
+        },
+      ]
+    );
+  }
+
   function handleStartSession() {
     const workoutDayId =
       todayData?.state === 'workout' || todayData?.state === 'in_progress'
@@ -116,8 +140,9 @@ export function TodayScreen() {
           : 0;
 
   return (
+    <SafeAreaView edges={['top']} className="flex-1 bg-background">
     <ScrollView
-      className="flex-1 bg-background"
+      className="flex-1"
       contentContainerClassName="p-4 gap-6 pb-12"
       testID="home-screen"
     >
@@ -203,6 +228,11 @@ export function TodayScreen() {
             onPress={handleResetDB}
             variant="secondary"
           />
+          <Button
+            label="Reset total (tout effacer)"
+            onPress={handleFullReset}
+            variant="secondary"
+          />
         </View>
       ) : null}
 
@@ -216,5 +246,6 @@ export function TodayScreen() {
         />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }

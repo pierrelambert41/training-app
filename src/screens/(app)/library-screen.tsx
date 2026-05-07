@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, FlatList, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useExercises } from '@/hooks/use-exercises';
@@ -26,7 +27,7 @@ export default function LibraryScreen() {
   }, [router]);
 
   return (
-    <View className="flex-1 bg-background" testID="library-screen">
+    <SafeAreaView edges={['top']} className="flex-1 bg-background" testID="library-screen">
       <View className="px-4 pt-4 pb-2">
         <Input
           placeholder="Rechercher un exercice…"
@@ -78,6 +79,6 @@ export default function LibraryScreen() {
       >
         <Text className="text-content-on-accent text-display leading-none" style={{ marginTop: -2 }}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
