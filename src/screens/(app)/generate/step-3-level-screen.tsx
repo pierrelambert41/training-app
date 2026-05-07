@@ -34,7 +34,7 @@ export default function Step3LevelScreen() {
   }
 
   function handleBack() {
-    router.back();
+    router.push('/(app)/programs/generate/step-2b-days');
   }
 
   return (

@@ -43,6 +43,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### GEN-01 — `preferredDays` obsolète si l'utilisateur change la fréquence après la sélection des jours
+**Symptôme** : l'utilisateur choisit 4 jours en step-2b, retourne en step-2 et sélectionne 3 jours. `preferredDays` contient encore 4 entrées. `spreadDayOrders` ignore silencieusement la préférence (fallback sur le pattern hardcodé) mais l'UI de step-2b affiche 4 jours pré-sélectionnés alors que `required = 3`.  
+**Fix** : `setFrequency` dans le store remet `preferredDays: null` à chaque appel. Ajout du `useEffect` guard dans step-2b-days-screen (router.back() si `frequencyDays` null).  
+**Détecté** : TA-96 / 2026-05-07
+
+---
+
 ### ARCH-03 — `feature-api` ne peut pas importer son propre `feature-domain` par défaut
 **Symptôme** : ESLint `boundaries/dependencies` bloquait `src/features/<feat>/api/*.ts` → `../domain/*.ts` (même feature). Or un service api d'orchestration a besoin d'appeler les fonctions pures de son domain.
 **Fix** : ajouter `{ to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } }` dans la section `from: { type: 'feature-api' }` de `eslint.config.mjs`. Reste interdit : api → autre feature, api → components/hooks/stores.

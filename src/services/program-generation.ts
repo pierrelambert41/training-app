@@ -363,7 +363,10 @@ export function orderDays(days: DayTemplate[]): DayTemplate[] {
  * en intercalant au moins 1 jour de repos entre deux séances consécutives
  * quand c'est possible.
  */
-export function spreadDayOrders(frequency: 3 | 4 | 5 | 6): number[] {
+export function spreadDayOrders(frequency: 3 | 4 | 5 | 6, preferredDays?: number[] | null): number[] {
+  if (preferredDays && preferredDays.length === frequency) {
+    return [...preferredDays].sort((a, b) => a - b);
+  }
   const patterns: Record<number, number[]> = {
     3: [1, 3, 5],           // Lun / Mer / Ven
     4: [1, 2, 4, 5],        // Lun / Mar / Jeu / Ven  (repos mer + sam/dim)
@@ -371,6 +374,20 @@ export function spreadDayOrders(frequency: 3 | 4 | 5 | 6): number[] {
     6: [1, 2, 3, 4, 5, 6],  // Lun-Sam (seule option viable à 6j)
   };
   return patterns[frequency];
+}
+
+export function hasConsecutiveDays(days: number[]): boolean {
+  const sorted = [...days].sort((a, b) => a - b);
+  let streak = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === sorted[i - 1]! + 1) {
+      streak += 1;
+      if (streak >= 3) return true;
+    } else {
+      streak = 1;
+    }
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -847,7 +864,7 @@ export async function generateProgram(
     deloadStrategy: level === 'advanced' ? 'scheduled' : 'fatigue_triggered',
   };
 
-  const dayOrderSlots = spreadDayOrders(frequency);
+  const dayOrderSlots = spreadDayOrders(frequency, input.answers.preferredDays);
   const days: GenerationDayDraft[] = [];
   orderedTemplates.forEach((dayTemplate, dayIdx) => {
     const dayId = uuidv4();
