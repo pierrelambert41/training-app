@@ -162,6 +162,38 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-108 — Domaine : règles et application du deload
+**Livré** : 2 fonctions pures.
+- `shouldTriggerDeload(inputs) → DeloadDecision | null` : décide si un deload doit être déclenché à partir de `block.deloadStrategy`, `recentSessions`, `fatigueHistory`, `attendanceRate?`, `forceDeload?`. Couvre les 3 modes (`scheduled` / `fatigue_triggered` / `none`) + override manuel.
+- `applyDeloadModifiers(exercisePlan, decision, plannedSets) → ExercisePlan` : applique le format deload (charges -35 % arrondies à 0.5 kg, séries -1 min 1, RIR cible 4).
+
+**Fichiers créés** :
+- `src/features/progression/domain/deload-rules.ts` — types `DeloadMode`, `DeloadDecision`, `RecentSessionSnapshot`, `FatigueHistoryEntry`, `ShouldTriggerDeloadInputs` + 2 fonctions exposées
+- `src/features/progression/domain/deload-rules.test.ts` — 29 tests, 100 % verts (3 conditions fatigue, scheduled, none, forceDeload, applyDeloadModifiers)
+
+**Fichiers modifiés** :
+- `src/features/progression/index.ts` — export public API R3 (`shouldTriggerDeload`, `applyDeloadModifiers` + types)
+
+**Conditions fatigue_triggered** (§3.4) : (1) fatigueScore >= 9 deux jours calendaires consécutifs ; (2) 3 séances consécutives avec `performanceScore` strictement décroissant (séances sans score ignorées) ; (3) latest fatigue >= 7 ET `attendanceRate` < 0.75 (input optionnel, condition 3 inactivable si non fourni).
+
+**Semaine deload scheduled** : `durationWeeks <= 5 → semaine 5` ; `> 5 → semaine 7`. Déclenche dès `block.weekNumber >= semaine deload`.
+
+**Sémantique `weekNumber` du DeloadDecision** : pour mode `scheduled` (et forceDeload mode `scheduled`), retourne la semaine deload programmée. Pour `fatigue_triggered` et forceDeload (mode hérité non-scheduled), retourne la semaine actuelle du bloc — c'est la semaine où le deload commence.
+
+**ForceDeload + mode `none`** : fallback sur mode `scheduled` per spec, `weekNumber` = semaine actuelle, reason = `'manual'`.
+
+**S'appuie sur** : TA-103 (type `Block.deloadStrategy`), TA-105 (`fatigueScore` produit en amont), TA-106 (type `ExercisePlan`).
+
+**Ouvre** : un service applicatif Phase 5 pourra orchestrer `shouldTriggerDeload` + bascule `block.status` vers `'deloaded'` (cf. ADR-011) et appeler `applyDeloadModifiers` sur les `exercisePlans` produits par `computeNextSessionPlan` quand un deload est actif. La persistance d'une `Recommendation` (type `deload`) à partir de la `DeloadDecision` reste à câbler.
+
+**Tests** : 29 tests deload-rules + 147 total feature progression, 100 % verts. TypeScript 0 erreur. ESLint boundaries 0 erreur.
+
+**R6** : `deload-rules.ts` à 343 lignes (entre 250 et 400) — densité documentaire (JSDoc + comments WHY) + 3 conditions fatigue indépendantes + format deload partagé. Splitter `shouldTriggerDeload` et `applyDeloadModifiers` séparerait deux fonctions étroitement liées (constantes `DELOAD_*` partagées).
+
+**Stubs laissés** : aucun. Note d'intégration : la condition 3 (assiduité) requiert `attendanceRate` calculé en amont par l'orchestrateur (le calcul plan vs réalisé sur 2 semaines dépend du planning hors scope domaine pur).
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
