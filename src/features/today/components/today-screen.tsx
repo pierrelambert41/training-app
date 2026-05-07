@@ -16,6 +16,7 @@ import { DeloadCard } from './deload-card';
 import { MiniSummary } from './mini-summary';
 import { RestDayCard } from './rest-day-card';
 import { NoProgramCard } from './no-program-card';
+import { CompletedTodayCard } from './completed-today-card';
 
 export function TodayScreen() {
   const router = useRouter();
@@ -101,14 +102,18 @@ export function TodayScreen() {
       ? todayData.lastCompletedSession
       : todayData?.state === 'workout' || todayData?.state === 'in_progress'
         ? todayData.data.lastCompletedSession
-        : null;
+        : todayData?.state === 'completed_today'
+          ? todayData.data.completedSession
+          : null;
 
   const streak =
     todayData?.state === 'rest_day'
       ? todayData.streak
       : todayData?.state === 'workout' || todayData?.state === 'in_progress'
         ? todayData.data.streak
-        : 0;
+        : todayData?.state === 'completed_today'
+          ? todayData.data.streak
+          : 0;
 
   return (
     <ScrollView
@@ -156,6 +161,8 @@ export function TodayScreen() {
           <NoProgramCard onGenerate={handleGenerateProgram} />
         ) : todayData.state === 'rest_day' ? (
           <RestDayCard onViewProgram={handleViewProgram} />
+        ) : todayData.state === 'completed_today' ? (
+          <CompletedTodayCard data={todayData.data} />
         ) : todayData.state === 'workout' || todayData.state === 'in_progress' ? (
           <WorkoutCard
             data={todayData.data}

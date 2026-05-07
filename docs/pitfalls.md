@@ -134,6 +134,15 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+---
+
+### QUERY-01 — Invalidation `today-workout` manquante après complétion de séance
+**Symptôme** : après retour depuis `end-session-screen`, l'écran Aujourd'hui affichait encore l'état `workout` (ou `in_progress`) au lieu de `completed_today`. La query `today-workout` avait un `staleTime: 60s` et n'était pas invalidée.
+**Fix** : dans `use-complete-session.ts`, invalider `today-workout` et `today-recommendations` en plus de `session-recommendations` après `runRulesEngine`. L'invalidation en parallèle via `Promise.all` évite un délai additionnel.
+**Détecté** : TA-117 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

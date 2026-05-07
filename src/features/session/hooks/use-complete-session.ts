@@ -28,9 +28,11 @@ export function useCompleteSession() {
         try {
           const result = await runRulesEngine(db, sessionId);
           setRulesResult(result);
-          await queryClient.invalidateQueries({
-            queryKey: ['session-recommendations', sessionId],
-          });
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['session-recommendations', sessionId] }),
+            queryClient.invalidateQueries({ queryKey: ['today-workout'] }),
+            queryClient.invalidateQueries({ queryKey: ['today-recommendations'] }),
+          ]);
         } catch (e) {
           console.error('[session/end] runRulesEngine failed', e);
           setRulesResult(null);

@@ -9,6 +9,7 @@ import type { WorkoutDay } from '@/types/workout-day';
 import type { Session } from '@/types/session';
 import type { PlannedExerciseWithExercise } from './use-workout-day-detail';
 import type { DisplaySessionStatus } from '@/components/ui';
+import type { CompletedTodayData } from '@/features/today/types/completed-today-data';
 
 /**
  * Mappe dayOrder (1=lundi … 7=dimanche) sur JS getDay() (0=dim, 1=lun … 6=sam).
@@ -59,11 +60,14 @@ export type TodayWorkoutData = {
   streak: number;
 };
 
+export type { CompletedTodayData };
+
 export type TodayScreenData =
   | { state: 'no_program' }
   | { state: 'rest_day'; lastCompletedSession: Session | null; streak: number }
   | { state: 'workout'; data: TodayWorkoutData }
-  | { state: 'in_progress'; data: TodayWorkoutData };
+  | { state: 'in_progress'; data: TodayWorkoutData }
+  | { state: 'completed_today'; data: CompletedTodayData };
 
 async function fetchTodayData(
   db: Parameters<typeof getSessionsByUserId>[0],
@@ -83,10 +87,26 @@ async function fetchTodayData(
     return { state: 'rest_day', lastCompletedSession, streak };
   }
 
+  const todayDate = new Date().toISOString().slice(0, 10);
+
+  const completedToday = sessions.find(
+    (s) =>
+      s.status === 'completed' &&
+      s.date === todayDate &&
+      s.workoutDayId === todayDay.id
+  ) ?? null;
+
+  if (completedToday) {
+    return {
+      state: 'completed_today',
+      data: { workoutDay: todayDay, completedSession: completedToday, streak },
+    };
+  }
+
   const inProgressToday = sessions.find(
     (s) =>
       s.status === 'in_progress' &&
-      s.date === new Date().toISOString().slice(0, 10) &&
+      s.date === todayDate &&
       s.workoutDayId === todayDay.id
   ) ?? null;
 
