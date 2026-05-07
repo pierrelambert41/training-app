@@ -85,6 +85,20 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### TEST-01 — Mock de hook TanStack Query dans les tests d'écrans
+**Symptôme** : un nouveau hook `useQuery` ajouté dans un composant d'écran fait crasher les tests existants avec `No QueryClient set, use QueryClientProvider to set one`.
+**Fix** : mocker le hook au niveau du fichier qui le contient (chemin absolu `@/features/<feat>/hooks/use-<hook>`) — pas au niveau de l'index de la feature. Le mock de l'index n'est pas résolu si le composant importe directement le hook interne.
+**Détecté** : TA-111 / 2026-05-06
+
+---
+
+### ARCH-04 — `feature-types` ne peut pas importer `shared-components`
+**Symptôme** : ESLint `boundaries/dependencies` bloque `src/features/<feat>/types/*.ts` → `src/components/**/*` (shared-components). La règle implicite `default: 'disallow'` s'applique.
+**Fix** : si un type feature a besoin d'un type défini dans shared-components (ex: `DisplaySessionStatus`), redéfinir localement l'union de strings dans le fichier de types feature. Éviter les imports ascendants (types → UI components).
+**Détecté** : TA-111 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

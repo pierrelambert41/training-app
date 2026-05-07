@@ -259,6 +259,46 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-111 — Écran Aujourd'hui : consommation des vraies recommandations
+**Livré** : feature `src/features/today/` complète avec api, hook, composants et index. Route `app/(app)/index.tsx` réduite à 3 lignes (re-export thin, R1). Badge `SessionStatusBadge` étendu à 6 statuts (`progression`, `maintien`, `allegee`, `deload`, `prudente`, `aggressive`). Nouveau type `DisplaySessionStatus` exporté depuis `@/components/ui`.
+
+**Fichiers créés** :
+- `src/features/today/api/get-today-recommendations.ts` — query SQLite : charge la dernière session complétée, extrait les 4 types de Recommendation
+- `src/features/today/api/get-today-recommendations.test.ts` — 7 tests (vide, metadata, fallback fatigueScore, mapping 0-3/4-6/7-8/9-10)
+- `src/features/today/hooks/use-today-recommendations.ts` — hook TanStack Query wrappant l'API
+- `src/features/today/types/today-recommendations.ts` — `TodaySessionStatus` + `TodayRecommendations` (redéfinit l'union localement pour éviter l'import shared-components depuis feature-types — pitfall ARCH-04)
+- `src/features/today/components/today-screen.tsx` — orchestrateur (213 lignes, sous R6)
+- `src/features/today/components/workout-card.tsx` — card séance avec charges cibles par exercice
+- `src/features/today/components/exercise-load-row.tsx` — ligne compacte "Exercice → NNkg [+/-]"
+- `src/features/today/components/fatigue-card.tsx` — card si fatigueScore >= 4
+- `src/features/today/components/plateau-card.tsx` — card compacte si exercice(s) en plateau
+- `src/features/today/components/deload-card.tsx` — card proéminente deload
+- `src/features/today/components/mini-summary.tsx` — résumé derniere séance + streak
+- `src/features/today/components/rest-day-card.tsx` — card jour de repos
+- `src/features/today/components/no-program-card.tsx` — card sans programme
+- `src/features/today/index.ts` — public API R3
+
+**Fichiers modifiés** :
+- `app/(app)/index.tsx` — route thin (3 lignes)
+- `src/components/ui/session-status-badge.tsx` — 6 statuts + `DisplaySessionStatus` exporté + `status: null` accepté (affiche `maintien`)
+- `src/components/ui/index.ts` — export `DisplaySessionStatus`
+- `src/hooks/use-today-workout.ts` — suppression du stub `computeSessionStatus`, utilise `DisplaySessionStatus` directement
+- `src/screens/(app)/home-screen.test.tsx` — mock ajouté pour `useTodayRecommendations`
+
+**Stratégie sessionStatus** : la Recommendation `load_change` persiste `metadata.sessionStatus` (string) lors du run rules engine (TA-109). L'UI lit ce champ en priorité. Fallback : `fatigueScore` de la session → mapping 0-3=progression, 4-6=maintien, 7-8=allegee, 9-10=deload.
+
+**S'appuie sur** : TA-109 (persistance des Recommendation avec metadata.sessionStatus), TA-103 (getRecommendationsBySession), TA-98 (architecture Bulletproof React).
+
+**Ouvre** : Phase 7 (IA) peut enrichir les Recommendation avec des messages naturels affichables dans les cards. La card deload affiche déjà le message brut du moteur.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** :
+- Le stub `computeSessionStatus` dans `src/utils/session-status.ts` est conservé (fichier existant, non supprimé) — plus utilisé dans le flow principal, peut être supprimé en cleanup Phase 6.
+- La card deload affiche le message brut du moteur (ex: "Deload recommandé (fatigue_triggered) : ...") — formulation à polir en Phase 7 IA.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

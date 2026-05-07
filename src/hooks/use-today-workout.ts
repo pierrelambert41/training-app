@@ -8,8 +8,7 @@ import { getSessionsByUserId } from '@/services/sessions';
 import type { WorkoutDay } from '@/types/workout-day';
 import type { Session } from '@/types/session';
 import type { PlannedExerciseWithExercise } from './use-workout-day-detail';
-import { computeSessionStatus } from '@/utils/session-status';
-import type { SessionStatus } from '@/utils/session-status';
+import type { DisplaySessionStatus } from '@/components/ui';
 
 /**
  * Mappe dayOrder (1=lundi … 7=dimanche) sur JS getDay() (0=dim, 1=lun … 6=sam).
@@ -55,7 +54,7 @@ function computeStreak(sessions: Session[], workoutDays: WorkoutDay[]): number {
 export type TodayWorkoutData = {
   workoutDay: WorkoutDay;
   plannedExercises: PlannedExerciseWithExercise[];
-  sessionStatus: SessionStatus;
+  sessionStatus: DisplaySessionStatus;
   lastCompletedSession: Session | null;
   streak: number;
 };
@@ -102,7 +101,7 @@ async function fetchTodayData(
     return [{ ...pe, exercise }];
   });
 
-  const sessionStatus = computeSessionStatus(lastCompletedSession !== null);
+  const sessionStatus: DisplaySessionStatus = lastCompletedSession !== null ? 'progression' : 'maintien';
 
   const data: TodayWorkoutData = {
     workoutDay: todayDay,
