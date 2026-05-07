@@ -157,6 +157,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-07 — Boucle de troncage sans plancher minimum : séances trop courtes violent les règles métier
+**Symptôme** : avec `maxSessionDurationMin: 75` (valeur par défaut), la boucle de troncage pouvait supprimer tous les accessoires et tous les secondaires, laissant seulement 2-3 exercices par séance. `docs/program-generation.md §5.2` impose 2-4 accessoires et 1-3 secondaires par séance (minimum 4 exercices au total).  
+**Fix** : introduire `MIN_ACCESSORY = 2` et `MIN_SECONDARY = 1` dans la boucle while. La condition de sortie teste maintenant `countOfRole <= minCount` avant de supprimer. La contrainte de durée est donc "best effort" : elle ne peut pas violer le plancher métier. Si la durée cible est irréalisable avec le plancher, elle est dépassée silencieusement.  
+**Détecté** : TA-93 / 2026-05-07
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

@@ -902,13 +902,16 @@ export async function generateProgram(
 
     // Contrainte durée max : élaguer d'abord les accessoires, puis les secondary si nécessaire.
     // Les exercices main ne sont jamais retirés.
+    // Plancher métier (docs §5.2) : min 2 accessoires et min 1 secondary doivent rester.
+    const MIN_ACCESSORY = 2;
+    const MIN_SECONDARY = 1;
     if (input.answers.maxSessionDurationMin !== null) {
       const minPerSetByRole: Record<'accessory' | 'secondary', number> = { accessory: 3, secondary: 4 };
       for (const roleToTrim of ['accessory', 'secondary'] as const) {
-        while (
-          estimatedMin > input.answers.maxSessionDurationMin &&
-          plannedExercises.length > 0
-        ) {
+        const minCount = roleToTrim === 'accessory' ? MIN_ACCESSORY : MIN_SECONDARY;
+        while (estimatedMin > input.answers.maxSessionDurationMin) {
+          const countOfRole = plannedExercises.filter((pe) => pe.role === roleToTrim).length;
+          if (countOfRole <= minCount) break;
           const last = plannedExercises[plannedExercises.length - 1];
           if (last.role !== roleToTrim) break;
           plannedExercises.pop();

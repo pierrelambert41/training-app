@@ -445,6 +445,23 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-93 — Bug : séances avec seulement 3 exercices (plancher métier non respecté)
+**Livré** : ajout d'un plancher minimum dans la boucle de troncage de `generateProgram`. `MIN_ACCESSORY = 2` et `MIN_SECONDARY = 1` empêchent maintenant la boucle de supprimer des exercices en-dessous des minimums métier (docs §5.2 : 2-4 accessoires, 1-3 secondaires). La contrainte `maxSessionDurationMin` devient "best effort" : si le plancher rend la durée cible irréalisable, la durée est dépassée silencieusement plutôt que de violer les règles métier.
+
+**Fichiers modifiés** :
+- `src/services/program-generation.ts` — boucle while avec condition `countOfRole <= minCount` avant suppression
+- `src/services/program-generation.test.ts` — ajout 2 tests TA-93 + mise à jour des 4 tests TA-92 (durée cible 60→90 min, assertions adaptées au comportement best-effort, test "main never removed" corrigé)
+
+**S'appuie sur** : TA-92 (même boucle de troncage dans `program-generation.ts`).
+
+**Ouvre** : rien — fix isolé.
+
+**Bugs découverts** : voir pitfall PROG-07.
+
+**Stubs laissés** : aucun. Note dette : `program-generation.ts` à 946 lignes (R6 = 400). Dette pré-existante à décomposer dans une story dédiée.
+
+---
+
 ## TA-92 — Bug : contrainte `maxSessionDurationMin` non respectée
 **Livré** : correction de la boucle de troncage dans `generateProgram`. La logique précédente ne supprimait que les accessoires et s'arrêtait (break) quand le dernier élément était un secondary, laissant la durée estimée > `maxSessionDurationMin`. La nouvelle implémentation fait deux passes séquentielles : d'abord les accessoires, puis les secondary si nécessaire. Les exercices main ne sont jamais retirés.
 
