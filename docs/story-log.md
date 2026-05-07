@@ -356,6 +356,40 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-114 — Tests d'intégration moteur de progression end-to-end
+**Livré** : 6 tests E2E qui valident la chaîne complète "séance loggée → runRulesEngine → recommandations persistées → SessionPlan correct" sur base SQLite in-memory. Helpers partagés extraits pour éviter la duplication avec les tests TA-109.
+
+**Fichiers créés** :
+- `src/features/progression/api/__tests__/rules-engine-integration.test.ts` — 6 tests E2E TA-114 (356 lignes)
+- `src/features/progression/api/rules-engine-in-memory-db.ts` — mock SQLite in-memory (297 lignes), extrait depuis `rules-engine-service.test.ts` pour partage
+- `src/features/progression/api/rules-engine-test-helpers.ts` — factory functions partagées : `makeSession`, `makeSetLog`, `makeBlock`, etc. (140 lignes)
+
+**Fichiers modifiés** :
+- `src/features/progression/api/rules-engine-service.test.ts` — refactorisé pour utiliser les helpers partagés (728 → 356 lignes), sémantique des 13 tests TA-109 préservée
+- `eslint.config.mjs` — ARCH-06 : autorisation `feature-api → feature-api` intra-feature (même featureName capturé), pour permettre aux helpers d'être importés dans les tests du même module
+- `docs/pitfalls.md` — ARCH-06 documenté
+- `docs/decisions.md` — ADR-021 : helpers test hors `__tests__/` (jest-expo collecterait tout `__tests__/**` comme tests)
+
+**Scénarios couverts** :
+1. `strength_fixed` — 3 séances RIR ≥ 2 → `increase`, `next_load = charge + increment`
+2. `fatigueScore ≥ 7` → statut `allegee`, charges -10%
+3. Plateau — 3 séances identiques (charge + reps stables, RIR ≥ 2, fatigue < 6) → Recommendation type `plateau`
+4. Deload `fatigue_triggered` — 2+ sessions consécutives fatigueScore ≥ 9 → type `deload`, `block.status = deloaded`
+5. Deload `scheduled` — `deload_strategy = scheduled`, semaine ≥ 5 → deload indépendamment du fatigue
+6. Première séance sans historique → recommandations de maintien, aucune erreur
+
+**Note architecture** : helpers `rules-engine-test-helpers.ts` et `rules-engine-in-memory-db.ts` placés dans `api/` (pas `__tests__/`) pour éviter qu'ils soient collectés comme tests par jest-expo. Détail dans ADR-021.
+
+**S'appuie sur** : TA-109 (`runRulesEngine`, `rules-engine-service.ts`), TA-103 (types `SetLog`, `Session`, `Block`, `Recommendation`), TA-104 à TA-108 (domain pur).
+
+**Ouvre** : la suite de tests E2E peut être étendue pour les scénarios Phase 6 (sync Supabase) ou Phase 7 (IA) sans recréer l'infrastructure in-memory.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

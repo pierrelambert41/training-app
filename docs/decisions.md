@@ -406,3 +406,28 @@ Chaque appel commence par `clearRecommendationsForSession(sessionId)` (suppressi
 - Coût : la `sync_queue` enregistre N delete + N insert par re-run. Acceptable car re-run reste explicite (déclenché à completion).
 - Les IDs de `Recommendation` ne sont pas stables entre runs (UUID frais à chaque insert) — l'identité repose sur (session_id, exercise_id, type), pas sur l'id.
 - `block.status` n'est jamais régressé : si le user a manuellement changé le statut, le moteur ne le ré-écrase pas (sauf si `active` puis condition deload toujours vraie).
+
+---
+
+## ADR-021 : Infrastructure de tests partagée colocalisée à la feature (suffixe `*-test-helpers.ts`)
+
+**Statut** : Accepté  
+**Date** : 2026-05-06
+
+### Contexte
+TA-114 ajoute des tests d'intégration E2E du rules engine, qui réutilisent le mock SQLite in-memory et les factories de seeds déjà présents dans `rules-engine-service.test.ts` (TA-109). Sans extraction, chaque fichier de test redéploie ~300 lignes d'infrastructure (violation R6 : `> 400 lignes`). Avec ≥ 2 callers réels, l'extraction est justifiée.
+
+Deux contraintes :
+- Jest-expo collecte tout fichier `.ts` placé dans `__tests__/` comme suite de tests → un helper dans ce dossier échoue avec "Test suite must contain at least one test".
+- ESLint `boundaries/dependencies` interdisait par défaut `feature-api → feature-api` intra-feature, ce qui bloquait `helpers.ts → in-memory-db.ts` dans `src/features/<feat>/api/`.
+
+### Décision
+- L'infrastructure de tests partagée est colocalisée **dans le dossier de la couche concernée** (ex: `src/features/<feat>/api/`), avec un suffixe explicite `*-test-helpers.ts` ou `*-in-memory-db.ts` (pas dans `__tests__/`).
+- Les fichiers de test (`*.test.ts`) eux-mêmes peuvent être dans `__tests__/` (cas E2E TA-114) ou colocalisés (cas TA-109) — au choix.
+- ESLint boundaries autorise désormais `feature-api → feature-api` intra-feature pour permettre l'auto-référence (`helpers.ts → in-memory-db.ts`). Même pattern que ARCH-02 (`feature-domain → feature-domain`) et TA-98 (`feature-components → feature-components`).
+
+### Conséquences
+- Un fichier `*-test-helpers.ts` est linté comme un fichier de production (pas exclu via `**/*.test.ts`) : il doit respecter les règles boundaries. Bénéfice : impossible d'introduire un import horizontal interdit caché derrière un helper de test.
+- Le helper dépend de `jest` (typage global via `@types/jest`) — il ne sera jamais bundlé en prod car non importé depuis du code non-test.
+- Si une 3e feature a besoin de mutualiser une infra de tests (rare), on déplacera vers `src/lib/test/` (shared-lib) — point de bascule explicite, pas par défaut.
+- Pitfall ARCH-06 documenté pour la règle ESLint étendue.
