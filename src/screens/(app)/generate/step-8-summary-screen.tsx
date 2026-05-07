@@ -14,6 +14,16 @@ import { insertPlannedExercise } from '@/services/planned-exercises';
 import { AppText, Button, Card, StepLayout } from '@/components/ui';
 import type { WorkoutDay } from '@/types/workout-day';
 
+const DAY_LABELS: Record<number, string> = {
+  1: 'Lun',
+  2: 'Mar',
+  3: 'Mer',
+  4: 'Jeu',
+  5: 'Ven',
+  6: 'Sam',
+  7: 'Dim',
+};
+
 const GOAL_LABELS: Record<string, string> = {
   hypertrophy: 'Hypertrophie',
   strength: 'Force',
@@ -149,6 +159,15 @@ export default function Step8SummaryScreen() {
             ) : null}
             {answers.frequencyDays ? (
               <SummaryRow label="Fréquence" value={`${answers.frequencyDays} jours / semaine`} />
+            ) : null}
+            {answers.preferredDays && answers.preferredDays.length > 0 ? (
+              <SummaryRow
+                label="Jours d'entraînement"
+                value={[...answers.preferredDays]
+                  .sort((a, b) => a - b)
+                  .map((d) => DAY_LABELS[d] ?? String(d))
+                  .join(', ')}
+              />
             ) : null}
             {answers.level ? (
               <SummaryRow label="Niveau" value={LEVEL_LABELS[answers.level] ?? answers.level} />

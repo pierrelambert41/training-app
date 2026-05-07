@@ -6,6 +6,7 @@ interface GenerationState {
   result: GenerationResult | null;
   setGoal: (goal: GenerationAnswers['goal']) => void;
   setFrequency: (days: GenerationAnswers['frequencyDays']) => void;
+  setPreferredDays: (days: number[]) => void;
   setLevel: (level: GenerationAnswers['level']) => void;
   setEquipment: (equipment: GenerationAnswers['equipment']) => void;
   setInjuries: (injuries: string) => void;
@@ -27,6 +28,7 @@ interface GenerationState {
 const defaultAnswers: GenerationAnswers = {
   goal: null,
   frequencyDays: null,
+  preferredDays: null,
   level: null,
   equipment: null,
   injuries: '',
@@ -47,7 +49,8 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   answers: { ...defaultAnswers },
   result: null,
   setGoal: (goal) => set((s) => ({ answers: { ...s.answers, goal } })),
-  setFrequency: (frequencyDays) => set((s) => ({ answers: { ...s.answers, frequencyDays } })),
+  setFrequency: (frequencyDays) => set((s) => ({ answers: { ...s.answers, frequencyDays, preferredDays: null } })),
+  setPreferredDays: (preferredDays) => set((s) => ({ answers: { ...s.answers, preferredDays } })),
   setLevel: (level) => set((s) => ({ answers: { ...s.answers, level } })),
   setEquipment: (equipment) => set((s) => ({ answers: { ...s.answers, equipment } })),
   setInjuries: (injuries) => set((s) => ({ answers: { ...s.answers, injuries } })),

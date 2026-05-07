@@ -6,6 +6,32 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-96 — Sélection des jours d'entraînement dans le questionnaire de génération
+**Livré** : nouvelle étape 2b dans le flow de génération de programme. L'utilisateur sélectionne exactement N jours de la semaine (N = fréquence choisie à l'étape 2). Le moteur de génération utilise ces jours pour assigner les `dayOrder` via `spreadDayOrders`. Avertissement affiché si 3 jours consécutifs ou plus sont sélectionnés.
+
+**Fichiers créés** :
+- `app/(app)/programs/generate/step-2b-days.tsx` — route thin (5 lignes)
+- `src/screens/(app)/generate/step-2b-days-screen.tsx` — écran de sélection avec `hasConsecutiveDays` exportée
+
+**Fichiers modifiés** :
+- `src/types/generation.ts` — ajout `preferredDays: number[] | null` dans `GenerationAnswers`
+- `src/stores/generation-store.ts` — ajout `setPreferredDays` + `preferredDays: null` dans l'état initial
+- `src/screens/(app)/generate/step-2-frequency-screen.tsx` — navigation vers `step-2b-days` au lieu de `step-3-level`
+- `src/screens/(app)/generate/step-3-level-screen.tsx` — bouton Retour vers `step-2b-days`
+- `src/services/program-generation.ts` — `spreadDayOrders` accepte `preferredDays?` optionnel, utilisé en priorité si la longueur correspond à la fréquence
+- `src/screens/(app)/generate/step-8-summary-screen.tsx` — affiche les jours sélectionnés en format court (Lun, Mar, …)
+- `src/services/program-generation.test.ts` — `defaultAnswers` complété avec `preferredDays: null`
+
+**S'appuie sur** : TA-91 (`spreadDayOrders`), questionnaire de génération existant (TA-8x).
+
+**Ouvre** : possible amélioration UX si l'utilisateur change la fréquence après avoir choisi les jours (la sélection en store reste mais peut être incohérente). Pas bloquant — `spreadDayOrders` vérifie la longueur avant d'utiliser `preferredDays`.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-94 — Bug : calendrier programme affiche N-1 séances pour programmes legacy
 **Livré** : correction de `buildWeekCells` dans `WeekCalendar`. Les programmes générés avant TA-91 stockaient `dayOrder` en 0-based (0,1,2,3 pour 4 jours). Le calendrier lookupait `i+1` (1-based), donc `dayOrder=0` ne matchait jamais → 1 séance invisible.
 

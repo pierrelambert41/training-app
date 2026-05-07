@@ -13,6 +13,7 @@ export type MixedPriority = 'strength' | 'look';
 export interface GenerationAnswers {
   goal: ProgramGoal | null;
   frequencyDays: 3 | 4 | 5 | 6 | null;
+  preferredDays: number[] | null;
   level: TrainingLevel | null;
   equipment: EquipmentType | null;
   injuries: string;

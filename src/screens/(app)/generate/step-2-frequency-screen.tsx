@@ -38,7 +38,7 @@ export default function Step2FrequencyScreen() {
   const setFrequency = useGenerationStore((s) => s.setFrequency);
 
   function handleNext() {
-    router.push('/(app)/programs/generate/step-3-level');
+    router.push('/(app)/programs/generate/step-2b-days');
   }
 
   function handleBack() {

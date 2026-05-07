@@ -292,6 +292,7 @@ function defaultAnswers(overrides: Partial<GenerationAnswers> = {}): GenerationA
   return {
     goal: 'hypertrophy',
     frequencyDays: 4,
+    preferredDays: null,
     level: 'intermediate',
     equipment: 'full_gym',
     injuries: '',
