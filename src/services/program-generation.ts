@@ -358,6 +358,21 @@ export function orderDays(days: DayTemplate[]): DayTemplate[] {
   return [...days];
 }
 
+/**
+ * Retourne les slots de jour de semaine (1=Lun…7=Dim) pour N séances,
+ * en intercalant au moins 1 jour de repos entre deux séances consécutives
+ * quand c'est possible.
+ */
+export function spreadDayOrders(frequency: 3 | 4 | 5 | 6): number[] {
+  const patterns: Record<number, number[]> = {
+    3: [1, 3, 5],           // Lun / Mer / Ven
+    4: [1, 2, 4, 5],        // Lun / Mar / Jeu / Ven  (repos mer + sam/dim)
+    5: [1, 2, 3, 5, 6],     // Lun-Mer + Ven-Sam (repos jeu + dim)
+    6: [1, 2, 3, 4, 5, 6],  // Lun-Sam (seule option viable à 6j)
+  };
+  return patterns[frequency];
+}
+
 // ---------------------------------------------------------------------------
 // Couche 3 — Sélection des exercices
 // ---------------------------------------------------------------------------
@@ -832,6 +847,7 @@ export async function generateProgram(
     deloadStrategy: level === 'advanced' ? 'scheduled' : 'fatigue_triggered',
   };
 
+  const dayOrderSlots = spreadDayOrders(frequency);
   const days: GenerationDayDraft[] = [];
   orderedTemplates.forEach((dayTemplate, dayIdx) => {
     const dayId = uuidv4();
@@ -905,7 +921,7 @@ export async function generateProgram(
       id: dayId,
       blockId,
       title: dayTemplate.title,
-      dayOrder: dayIdx,
+      dayOrder: dayOrderSlots[dayIdx],
       splitType: dayTemplate.splitType,
       estimatedDurationMin: estimatedMin,
     };

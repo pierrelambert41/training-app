@@ -445,6 +445,23 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-91 — Bug : jours d'entraînement consécutifs sans repos
+**Livré** : correction de `generateProgram` — `dayOrder` n'est plus l'index brut de boucle mais un slot hebdomadaire espacé via `spreadDayOrders(frequency)`.
+
+**Fichiers modifiés** :
+- `src/services/program-generation.ts` — ajout de `export function spreadDayOrders(frequency: 3 | 4 | 5 | 6): number[]` + remplacement de `dayOrder: dayIdx` par `dayOrder: dayOrderSlots[dayIdx]` dans `generateProgram`
+- `src/services/program-generation.test.ts` — import de `spreadDayOrders` + describe `spreadDayOrders` (6 cas dont intégration `generateProgram`)
+
+**S'appuie sur** : TA-21 (moteur génération Phase 3).
+
+**Ouvre** : rien — fix isolé, pas de nouveau stub.
+
+**Bugs découverts** : apostrophes typographiques (U+2019) introduites par le tool d'édition comme délimiteurs de string — voir pitfall PROG-04.
+
+**Note dette** : `program-generation.ts` atteint 939 lignes (limite R6 : 400). Dette pré-existante (923 lignes avant ce diff). À décomposer dans une story dédiée.
+
+---
+
 ## TA-117 — État `completed_today` : séance du jour déjà terminée
 **Livré** : nouvel état `completed_today` dans `TodayScreenData` + composant `CompletedTodayCard` + invalidation automatique au retour sur l'écran Aujourd'hui après complétion de séance.
 
