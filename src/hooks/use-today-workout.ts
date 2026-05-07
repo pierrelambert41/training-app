@@ -5,11 +5,13 @@ import { useActiveProgramStore } from '@/stores/active-program-store';
 import { getPlannedExercisesByWorkoutDayId } from '@/services/planned-exercises';
 import { getExercisesByIds } from '@/services/exercises';
 import { getSessionsByUserId } from '@/services/sessions';
+import { getNextWorkoutDay } from '@/features/today';
 import type { WorkoutDay } from '@/types/workout-day';
 import type { Session } from '@/types/session';
 import type { PlannedExerciseWithExercise } from './use-workout-day-detail';
 import type { DisplaySessionStatus } from '@/components/ui';
-import type { CompletedTodayData } from '@/features/today/types/completed-today-data';
+import type { CompletedTodayData } from '@/features/today';
+import type { NextWorkoutDay } from '@/features/today';
 
 /**
  * Mappe dayOrder (1=lundi … 7=dimanche) sur JS getDay() (0=dim, 1=lun … 6=sam).
@@ -64,7 +66,7 @@ export type { CompletedTodayData };
 
 export type TodayScreenData =
   | { state: 'no_program' }
-  | { state: 'rest_day'; lastCompletedSession: Session | null; streak: number }
+  | { state: 'rest_day'; lastCompletedSession: Session | null; streak: number; nextWorkoutDay: NextWorkoutDay | null }
   | { state: 'workout'; data: TodayWorkoutData }
   | { state: 'in_progress'; data: TodayWorkoutData }
   | { state: 'completed_today'; data: CompletedTodayData };
@@ -84,7 +86,10 @@ async function fetchTodayData(
   const todayDay = workoutDays.find(isTodayWorkoutDay) ?? null;
 
   if (!todayDay) {
-    return { state: 'rest_day', lastCompletedSession, streak };
+    const jsDay = new Date().getDay();
+    const todayDayOrder = jsDay === 0 ? 7 : jsDay;
+    const nextWorkoutDay = getNextWorkoutDay(workoutDays, todayDayOrder);
+    return { state: 'rest_day', lastCompletedSession, streak, nextWorkoutDay };
   }
 
   const todayDate = new Date().toISOString().slice(0, 10);

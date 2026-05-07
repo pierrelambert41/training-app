@@ -185,7 +185,7 @@ export function TodayScreen() {
         ) : !todayData || todayData.state === 'no_program' ? (
           <NoProgramCard onGenerate={handleGenerateProgram} />
         ) : todayData.state === 'rest_day' ? (
-          <RestDayCard onViewProgram={handleViewProgram} />
+          <RestDayCard onViewProgram={handleViewProgram} nextWorkoutDay={todayData.nextWorkoutDay} />
         ) : todayData.state === 'completed_today' ? (
           <CompletedTodayCard data={todayData.data} />
         ) : todayData.state === 'workout' || todayData.state === 'in_progress' ? (
