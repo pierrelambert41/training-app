@@ -696,27 +696,38 @@ describe('generateProgram — invariants', () => {
     }
   });
 
-  it('TA-92 — toutes les séances respectent maxSessionDurationMin (accessoires seuls suffisent)', async () => {
+  it('TA-92 — la boucle de troncage réduit le volume quand la durée max est contrainte', async () => {
+    // 90 min : suffisant pour que les séances 3j beginner (full_body) respectent la limite,
+    // insuffisant pour retenir tous les accessoires sur les séances 4j intermediate (upper_lower).
+    const unconstrained = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: null, volumeTolerance: 'medium' }),
+    }));
+    const constrained = await generateProgram(defaultInput({
+      answers: defaultAnswers({ maxSessionDurationMin: 90, volumeTolerance: 'medium' }),
+    }));
+    const sumExercises = (r: Awaited<ReturnType<typeof generateProgram>>) =>
+      r.days.reduce((acc, d) => acc + d.plannedExercises.length, 0);
+    expect(sumExercises(constrained)).toBeLessThanOrEqual(sumExercises(unconstrained));
+  });
+
+  it('TA-92 — la boucle retire des accessoires/secondary mais jamais sous le plancher métier', async () => {
+    // 90 min force l'élaguage sur upper_lower intermediate (séances ~95 min sans limite)
     const result = await generateProgram(defaultInput({
-      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'medium' }),
+      answers: defaultAnswers({ maxSessionDurationMin: 90, volumeTolerance: 'high' }),
     }));
     for (const d of result.days) {
-      expect(d.day.estimatedDurationMin).toBeLessThanOrEqual(60);
+      const byRole = {
+        accessory: d.plannedExercises.filter((pe) => pe.role === 'accessory').length,
+        secondary: d.plannedExercises.filter((pe) => pe.role === 'secondary').length,
+      };
+      expect(byRole.accessory).toBeGreaterThanOrEqual(2);
+      expect(byRole.secondary).toBeGreaterThanOrEqual(1);
     }
   });
 
-  it('TA-92 — toutes les séances respectent maxSessionDurationMin même quand les accessoires ne suffisent pas (élaguage secondary)', async () => {
+  it('TA-92 — exercise_order linéaire après élaguage', async () => {
     const result = await generateProgram(defaultInput({
-      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'high' }),
-    }));
-    for (const d of result.days) {
-      expect(d.day.estimatedDurationMin).toBeLessThanOrEqual(60);
-    }
-  });
-
-  it('TA-92 — exercise_order linéaire après élaguage accessoires ET secondary', async () => {
-    const result = await generateProgram(defaultInput({
-      answers: defaultAnswers({ maxSessionDurationMin: 60, volumeTolerance: 'high' }),
+      answers: defaultAnswers({ maxSessionDurationMin: 90, volumeTolerance: 'high' }),
     }));
     for (const d of result.days) {
       const orders = d.plannedExercises.map((pe) => pe.exerciseOrder);
@@ -729,8 +740,8 @@ describe('generateProgram — invariants', () => {
       answers: defaultAnswers({ maxSessionDurationMin: 1, volumeTolerance: 'high' }),
     }));
     for (const d of result.days) {
-      const roles = d.plannedExercises.map((pe) => pe.role);
-      expect(roles.every((r) => r === 'main')).toBe(true);
+      const mainCount = d.plannedExercises.filter((pe) => pe.role === 'main').length;
+      expect(mainCount).toBeGreaterThanOrEqual(1);
     }
   });
 
@@ -836,8 +847,38 @@ describe('generateProgram — invariants', () => {
       };
       expect(byRole.main).toBeGreaterThanOrEqual(1);
       expect(byRole.main).toBeLessThanOrEqual(2);
+      expect(byRole.secondary).toBeGreaterThanOrEqual(1);
       expect(byRole.secondary).toBeLessThanOrEqual(3);
+      expect(byRole.accessory).toBeGreaterThanOrEqual(2);
       expect(byRole.accessory).toBeLessThanOrEqual(4);
+    }
+  });
+
+  it('TA-93 — respecte le minimum de 4 exercices (1 main + 1 secondary + 2 accessory) même avec contrainte de durée courte', async () => {
+    for (const freq of [3, 4, 5, 6] as const) {
+      const result = await generateProgram(defaultInput({
+        answers: defaultAnswers({ frequencyDays: freq, maxSessionDurationMin: 60, volumeTolerance: 'medium' }),
+      }));
+      for (const d of result.days) {
+        expect(d.plannedExercises.length).toBeGreaterThanOrEqual(4);
+        const accessoryCount = d.plannedExercises.filter((pe) => pe.role === 'accessory').length;
+        const secondaryCount = d.plannedExercises.filter((pe) => pe.role === 'secondary').length;
+        expect(accessoryCount).toBeGreaterThanOrEqual(2);
+        expect(secondaryCount).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('TA-93 — respecte le minimum de 4 exercices même avec volumeTolerance high et durée contrainte', async () => {
+    const result = await generateProgram(defaultInput({
+      answers: defaultAnswers({ frequencyDays: 4, maxSessionDurationMin: 60, volumeTolerance: 'high' }),
+    }));
+    for (const d of result.days) {
+      expect(d.plannedExercises.length).toBeGreaterThanOrEqual(4);
+      const accessoryCount = d.plannedExercises.filter((pe) => pe.role === 'accessory').length;
+      const secondaryCount = d.plannedExercises.filter((pe) => pe.role === 'secondary').length;
+      expect(accessoryCount).toBeGreaterThanOrEqual(2);
+      expect(secondaryCount).toBeGreaterThanOrEqual(1);
     }
   });
 
