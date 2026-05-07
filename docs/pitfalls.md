@@ -120,6 +120,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### NAV-01 — Screen non déclaré dans le Stack → header fantôme avec nom de route comme titre
+**Symptôme** : un écran Expo Router non enregistré explicitement dans le `<Stack>` du layout reçoit un header par défaut dont le titre est le nom du fichier (ex : `index`). En bonus, si d'autres écrans ont été empilés avant lui, un back button peut apparaître même si l'écran est la racine logique du groupe.
+**Fix** : toujours déclarer `<Stack.Screen name="index" options={{ headerShown: false }} />` (ou un titre explicite) dans `app/(app)/_layout.tsx` pour chaque écran racine. Ne pas compter sur le comportement par défaut d'Expo Router pour les routes racine.
+**Détecté** : TA-115 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

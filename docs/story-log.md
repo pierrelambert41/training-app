@@ -356,6 +356,22 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-115 — Fix header 'index' et back button fantôme post-séance
+**Livré** : suppression du header par défaut (titre 'index') sur l'écran Aujourd'hui et du back button fantôme qui apparaissait après une séance terminée. Fix en une ligne : déclaration explicite de `Stack.Screen name="index"` avec `headerShown: false` dans `app/(app)/_layout.tsx`.
+
+**Fichiers modifiés** :
+- `app/(app)/_layout.tsx` — ajout de `<Stack.Screen name="index" options={{ headerShown: false }} />`
+
+**S'appuie sur** : structure de navigation Expo Router déjà en place (groupe `(app)`). Toutes les navigations retour vers home utilisaient déjà `router.replace()` — aucun changement nécessaire côté appels de navigation.
+
+**Ouvre** : TA-116 (tab bar) qui remplacera ce header désactivé par une navigation par onglets.
+
+**Bugs découverts** : comportement Expo Router documenté dans pitfalls NAV-01 : screen non déclaré dans le Stack → titre = nom de fichier + back button potentiel.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-114 — Tests d'intégration moteur de progression end-to-end
 **Livré** : 6 tests E2E qui valident la chaîne complète "séance loggée → runRulesEngine → recommandations persistées → SessionPlan correct" sur base SQLite in-memory. Helpers partagés extraits pour éviter la duplication avec les tests TA-109.
 
