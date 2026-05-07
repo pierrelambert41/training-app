@@ -194,6 +194,51 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-109 — Service rules engine : orchestration et persistance des recommandations
+**Livré** : `runRulesEngine(db, sessionId, options?) → RulesEngineResult`. Orchestre les fonctions domain TA-104..TA-108 + persiste Recommendation/Session/Block. Branché dans `app/(app)/session/end.tsx` post-`completeSession`.
+
+**Fichiers créés** :
+- `src/features/progression/api/rules-engine-service.ts` — orchestrateur (351 lignes), point d'entrée unique, idempotent.
+- `src/features/progression/api/rules-engine-service.test.ts` — 13 tests d'intégration in-memory SQLite.
+- `src/features/progression/domain/rules-engine-helpers.ts` — helpers purs (groupage SetLogs, plateau-per-exercise, fatigue history, action mapping).
+- `src/features/progression/domain/progression-vs-previous.ts` — `computeProgressionVsPrevious(current, previous)` : remplace stub TA-83 (e1RM Epley pondéré, ratio current/previous, normalisé 0..1 via fenêtre 0.7..1.1).
+- `src/features/progression/domain/progression-vs-previous.test.ts` — 16 tests (no history, stable, progression, regression, multi-exercices, edge cases).
+
+**Fichiers modifiés** :
+- `src/services/session-scores.ts` — `computeSessionScores` accepte un 4ᵉ argument optionnel `progressionVsPrevious` (default 0.5). Stub TA-83 supprimé du commentaire interne.
+- `src/services/session-scores.test.ts` — 2 tests pour le nouveau param (override 1.0, override 0).
+- `app/(app)/session/end.tsx` — appelle `runRulesEngine` après `completeSession`, try/catch tolérant pour ne pas bloquer la nav offline.
+- `src/features/progression/index.ts` — export `runRulesEngine`, `RulesEngineResult`, `RunRulesEngineOptions`, `computeProgressionVsPrevious`.
+- `eslint.config.mjs` — ajout `feature-api → feature-domain` (même feature) suite à pitfall ARCH-03.
+- `docs/decisions.md` — ADR-020 (idempotence par clear+recreate, no-regression sur block.status).
+- `docs/pitfalls.md` — ARCH-03.
+
+**Persistance** :
+- 1 `Recommendation` `load_change` par exercice planifié (source `rules_engine`, action mappée depuis `ExercisePlan.decision`).
+- 1 `Recommendation` `plateau` par exercice détecté en plateau (action `replace` si 6+ séances, sinon `maintain`).
+- 1 `Recommendation` `deload` niveau séance si déclenché (`exerciseId = null`, action `deload`).
+- `session.completion_score`/`performance_score`/`fatigue_score` mis à jour avec valeurs réelles (composite TA-105 pour fatigue, override du legacy readiness-only).
+- `block.status active → deloaded` si deload déclenché (ADR-011) — idempotent : pas de mutation si déjà `deloaded`/`completed`/`planned`.
+
+**Idempotence** : `clearRecommendationsForSession` au début de chaque run, puis recreate. Re-run produit le même état sémantique (même nombre de recos, mêmes types/exercises/actions/charges). IDs UUID différents mais identité repose sur `(session_id, exercise_id, type)`.
+
+**progressionVsPrevious** : ratio e1RM moyen pondéré (Epley) par exercice partagé entre séance courante et séance précédente (la plus récente complétée du même user). Plage 0..1 via mapping linéaire 0.7..1.1 → 0..1. Returns 0.5 si pas d'historique exploitable.
+
+**S'appuie sur** : TA-103 (CRUD Recommendation), TA-104 à TA-108 (domain pur), TA-72 (CRUD Session/SetLog), ADR-011 (block.status `deloaded`).
+
+**Ouvre** : Phase 6 (sync Supabase) peut maintenant exploiter le contenu de `recommendations` côté serveur. Phase 7 (IA) peut résumer les `Recommendation` du moteur en langage naturel. UI post-séance peut afficher `RulesEngineResult.sessionPlan` pour annoncer les charges de la prochaine séance.
+
+**Tests** : 13 tests d'intégration TA-109 + 16 tests progression-vs-previous + 524 total suite, 100 % verts. TypeScript 0 erreur. ESLint boundaries 0 erreur (sur features/).
+
+**R6** : `rules-engine-service.ts` à 351 lignes (entre 250 et 400) — orchestration séquentielle linéaire, splittable mais non requis. Helpers purs déjà extraits dans `rules-engine-helpers.ts` (133 lignes). Fonction principale `runRulesEngine` reste lisible top-to-bottom.
+
+**Stubs laissés** :
+- Pas d'historique `ProgressionDecision` persisté entre séances (param `progressionHistoryByExercise` toujours `{}`). À ajouter quand on stockera les décisions du moteur.
+- `attendanceRate` non calculé pour le deload (PROG-02 — pas de planning vs réalisé). Condition 3 du fatigue_triggered inactivable.
+- RecoveryLog/CardioSession non disponibles → tableaux vides à `computeFatigueScore` (pitfall PROG-02 inchangé).
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  

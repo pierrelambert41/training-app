@@ -36,3 +36,11 @@ export type {
   FatigueHistoryEntry,
   ShouldTriggerDeloadInputs,
 } from './domain/deload-rules';
+
+export { computeProgressionVsPrevious } from './domain/progression-vs-previous';
+
+export { runRulesEngine } from './api/rules-engine-service';
+export type {
+  RulesEngineResult,
+  RunRulesEngineOptions,
+} from './api/rules-engine-service';

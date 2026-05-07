@@ -19,6 +19,7 @@ import {
   computeSessionScores,
   performanceScoreLabel,
 } from '@/services/session-scores';
+import { runRulesEngine } from '@/features/progression';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 
@@ -197,6 +198,15 @@ export default function SessionEndScreen() {
         updateSessionNotes(db, session.preSessionNotes, postNotes.trim() || null);
       }
       await completeSession(db);
+      // TA-109 : moteur de règles post-completion. Recalcule les scores avec
+      // progressionVsPrevious réel, persiste les Recommendation, déclenche
+      // un éventuel deload (block.status). Les erreurs ne bloquent pas la
+      // sortie de séance — la complétion offline-first reste prioritaire.
+      try {
+        await runRulesEngine(db, session.id);
+      } catch (e) {
+        console.error('[session/end] runRulesEngine failed', e);
+      }
       reset();
       router.replace('/(app)');
     } finally {
