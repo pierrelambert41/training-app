@@ -6,6 +6,22 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-94 — Bug : calendrier programme affiche N-1 séances pour programmes legacy
+**Livré** : correction de `buildWeekCells` dans `WeekCalendar`. Les programmes générés avant TA-91 stockaient `dayOrder` en 0-based (0,1,2,3 pour 4 jours). Le calendrier lookupait `i+1` (1-based), donc `dayOrder=0` ne matchait jamais → 1 séance invisible.
+
+**Fichiers modifiés** :
+- `src/components/ui/week-calendar.tsx` — `buildWeekCells` : calcule `minDayOrder`, applique `dayOrderOffset = minDayOrder === 0 ? 1 : 0` avant d'insérer dans la map
+
+**S'appuie sur** : TA-91 (qui a introduit `spreadDayOrders` pour les nouveaux programmes, mais n'a pas migré les données existantes en DB).
+
+**Ouvre** : rien — fix isolé sur un composant UI. Les programmes existants pré-TA-91 avec `dayOrder=0` sont maintenant correctement affichés.
+
+**Bugs découverts** : voir pitfall CAL-01.
+
+**Stubs laissés** : aucun.
+
+---
+
 ## TA-80 — Ajout exercice non-prévu en séance live
 **Livré** : Modal de recherche d'exercice + ajout d'un `PlannedExercise` éphémère à la session en cours.  
 **S'appuie sur** : session-store (TA-7x), liste d'exercices existants.  

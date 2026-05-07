@@ -63,8 +63,12 @@ function buildWeekCells(
   workoutDays: WorkoutDay[]
 ): WeekDayCell[] {
   const workoutDayByOrder = new Map<number, WorkoutDay>();
+  const minDayOrder = workoutDays.length > 0
+    ? Math.min(...workoutDays.map((d) => d.dayOrder))
+    : 1;
+  const dayOrderOffset = minDayOrder === 0 ? 1 : 0;
   for (const wd of workoutDays) {
-    workoutDayByOrder.set(wd.dayOrder, wd);
+    workoutDayByOrder.set(wd.dayOrder + dayOrderOffset, wd);
   }
 
   const cells: WeekDayCell[] = [];
