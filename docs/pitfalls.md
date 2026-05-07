@@ -143,6 +143,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### PROG-05 — `dayOrder` consécutif dans `generateProgram` (0,1,2,3 au lieu de slots hebdomadaires)
+**Symptôme** : pour un programme 4 jours, `generateProgram` assignait `dayOrder` = index de boucle (0,1,2,3), plaçant les séances lundi–mardi–mercredi–jeudi sans repos intercalé. Le calendrier hebdomadaire (`week-calendar`) et le hook `use-today-workout` interprètent `dayOrder` comme jour de semaine (1=Lun…7=Dim).  
+**Fix** : `spreadDayOrders(frequency)` retourne des slots pré-définis avec repos intercalés (3j→[1,3,5], 4j→[1,2,4,5], 5j→[1,2,3,5,6], 6j→[1,2,3,4,5,6]). Appelé dans `generateProgram` pour remplacer `dayIdx` raw.  
+**Détecté** : test utilisateur Phase 4 — **Résolu** : TA-91 / 2026-05-07
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

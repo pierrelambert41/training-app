@@ -12,6 +12,7 @@ import {
   filterCatalogue,
   calibrateLoad,
   orderDays,
+  spreadDayOrders,
 } from './program-generation';
 import type {
   Exercise,
@@ -389,6 +390,52 @@ describe('orderDays', () => {
     };
     const out = orderDays([sameDay, sameDay, sameDay]);
     expect(out).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// spreadDayOrders
+// ---------------------------------------------------------------------------
+
+describe('spreadDayOrders', () => {
+  it('3 jours → [1,3,5] (repos entre chaque séance)', () => {
+    expect(spreadDayOrders(3)).toEqual([1, 3, 5]);
+  });
+
+  it('4 jours → [1,2,4,5] (repos mer + week-end)', () => {
+    expect(spreadDayOrders(4)).toEqual([1, 2, 4, 5]);
+  });
+
+  it('5 jours → [1,2,3,5,6]', () => {
+    expect(spreadDayOrders(5)).toEqual([1, 2, 3, 5, 6]);
+  });
+
+  it('6 jours → [1,2,3,4,5,6]', () => {
+    expect(spreadDayOrders(6)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('3 jours : au moins 1 repos entre chaque séance', () => {
+    const slots = spreadDayOrders(3);
+    for (let i = 1; i < slots.length; i++) {
+      expect(slots[i] - slots[i - 1]).toBeGreaterThan(1);
+    }
+  });
+
+  it('4 jours : au moins 1 repos intercalé dans la semaine', () => {
+    const slots = spreadDayOrders(4);
+    const maxGap = Math.max(...slots.slice(1).map((s, i) => s - slots[i]));
+    expect(maxGap).toBeGreaterThanOrEqual(2);
+  });
+
+  it('generateProgram produit des dayOrder correspondant aux slots étalés', () => {
+    const catalogue = buildMinimalCatalogue();
+    return generateProgram(defaultInput({
+      answers: defaultAnswers({ frequencyDays: 4, level: 'intermediate', goal: 'hypertrophy' }),
+      catalogue,
+    })).then((result) => {
+      const dayOrders = result.days.map((d) => d.day.dayOrder).sort((a, b) => a - b);
+      expect(dayOrders).toEqual([1, 2, 4, 5]);
+    });
   });
 });
 
