@@ -113,6 +113,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-06 — `feature-api` ne peut pas importer ses propres sous-modules api par défaut
+**Symptôme** : ESLint `boundaries/dependencies` bloque les imports entre fichiers du même dossier `api/` d'une feature (ex: `rules-engine-test-helpers.ts` → `./rules-engine-in-memory-db.ts`). La règle `feature-api` autorisait `feature-domain`, `feature-types` et infra partagée mais pas l'auto-référence.
+**Fix** : ajouter `{ to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } }` dans la section `from: { type: 'feature-api' }` de `eslint.config.mjs`. Même pattern que `feature-components → feature-components` (TA-98) et `feature-domain → feature-domain` (TA-104). Reste interdit : feature-api → autre feature, feature-api → components/hooks/stores.
+**Détecté** : TA-114 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

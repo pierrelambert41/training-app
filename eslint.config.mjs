@@ -183,10 +183,13 @@ const dependenciesRules = [
   },
   // R5 : feature-api → ses propres domain/types (orchestration), infra partagée et types
   // L'api d'une feature peut orchestrer son propre domain (TA-109 / pitfall ARCH-03).
+  // L'api peut aussi importer ses propres modules api (helpers internes,
+  // factories de tests partagées — TA-114 / pitfall ARCH-06).
   // Reste interdit : feature-api → autre feature, feature-api → feature-components/hooks/stores.
   {
     from: { type: 'feature-api' },
     allow: [
+      { to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'shared-services' } },
