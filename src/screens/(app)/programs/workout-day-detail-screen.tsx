@@ -232,8 +232,8 @@ export default function WorkoutDayDetailScreen() {
   const router = useRouter();
   const { data, isLoading, error } = useWorkoutDayDetail(workoutDayId ?? '');
 
-  function handleExercisePress(_exerciseId: string) {
-    // TODO TA-XX: route exercise detail pas encore implémentée
+  function handleExercisePress(exerciseId: string) {
+    router.push({ pathname: '/(app)/exercise/[id]', params: { id: exerciseId } });
   }
 
   function handleReplacePress(pe: PlannedExerciseWithExercise) {

@@ -106,13 +106,19 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-05 — `feature-components` ne peut pas importer un type depuis `feature-api` (même feature)
+**Symptôme** : ESLint `boundaries/dependencies` bloque `src/features/<feat>/components/*.tsx` → `../api/*.ts` même pour un simple `import type`. La règle `feature-components` n'autorise pas `feature-api` comme dépendance.
+**Fix** : déplacer le type partagé dans `src/features/<feat>/types/` et l'importer depuis là. La couche `feature-api` peut ensuite ré-exporter via `export type { ... } from '../types/...'`. Les composants importent depuis `types/`, les APIs importent depuis `types/`, tout le monde est satisfait.
+**Détecté** : TA-113 / 2026-05-06
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
 
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
-| Détail exercice | `src/screens/(app)/programs/workout-day-detail-screen.tsx` | `handleExercisePress` | Phase 5 |
 | `currentLoad` dans metadata load_change | `src/features/progression/api/rules-engine-service.ts` | `saveRecommendation` (load_change) | Phase 6 ou cleanup |
 
 ---
