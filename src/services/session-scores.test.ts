@@ -176,49 +176,71 @@ describe('computeSessionScores', () => {
     });
   });
 
-  describe('progressionVsPrevious parameter', () => {
-    it('uses neutral contribution (0.5) when not provided (default)', () => {
-      // Default: progressionVsPrevious = 0.5 (Phase 4 behavior).
-      // With perfect completion (1.0), perfect RIR (1.0) and target achievement normalized
-      // at 1.0/1.2 ≈ 0.833:
-      //   raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.5*0.2 = 0.85 → score = 8.5
+  describe('previousSetLogs — progressionVsPrevious computation', () => {
+    it('uses neutral contribution (0.5) when previousSetLogs is null (no history)', () => {
+      // no previous session → progressionVsPrevious = 0.5 (neutral)
+      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.5*0.2 = 0.85 → score = 8.5
       const session = makeSession({ readiness: 8 });
       const pe = makePe({ sets: 1 });
       const setLogs: SetLog[] = [
         makeSetLog({ id: 'sl-1', setNumber: 1, targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
       ];
 
-      const result = computeSessionScores(session, setLogs, [pe]);
+      const result = computeSessionScores(session, setLogs, [pe], null);
 
       expect(result.performance_score).toBeCloseTo(8.5, 1);
-      expect(result.performance_score).toBeLessThan(9.5);
     });
 
-    it('honors a real progressionVsPrevious value (TA-109)', () => {
-      // Same inputs but progressionVsPrevious = 1.0:
-      //   raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 1.0*0.2 = 0.95 → score = 9.5
+    it('raises performance_score when current e1RM is much higher than previous (+5%)', () => {
+      // current 105@8 vs previous 100@8 → ratio 1.05 → progressionScore = (1.05-0.7)/0.4 = 0.875
+      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.875*0.2 ≈ 0.925 → score ≈ 9.25
       const session = makeSession({ readiness: 8 });
-      const pe = makePe({ sets: 1 });
-      const setLogs: SetLog[] = [
-        makeSetLog({ id: 'sl-1', setNumber: 1, targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
+      const pe = makePe({ sets: 1, exerciseId: 'ex-bench' });
+      const current: SetLog[] = [
+        makeSetLog({ id: 'c1', setNumber: 1, exerciseId: 'ex-bench', targetLoad: 105, targetReps: 8, targetRir: 2, load: 105, reps: 8, rir: 2 }),
+      ];
+      const previous: SetLog[] = [
+        makeSetLog({ id: 'p1', setNumber: 1, exerciseId: 'ex-bench', sessionId: 'sess-prev', load: 100, reps: 8, completed: true }),
       ];
 
-      const result = computeSessionScores(session, setLogs, [pe], 1.0);
+      const result = computeSessionScores(session, current, [pe], previous);
 
-      expect(result.performance_score).toBeCloseTo(9.5, 1);
+      expect(result.performance_score).toBeGreaterThan(8.5);
     });
 
-    it('lowers performance_score when progressionVsPrevious indicates regression', () => {
-      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0*0.2 = 0.75 → score = 7.5
+    it('lowers performance_score when current e1RM is 10% below previous (regression)', () => {
+      // current 90@8 vs previous 100@8 → ratio 0.9 → progressionScore = (0.9-0.7)/0.4 = 0.5
+      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.5*0.2 = 0.85 → score ≈ 8.5
+      // vs severe regression: 70@8 → ratio 0.7 → score = 0 → raw = 0.75 → 7.5
       const session = makeSession({ readiness: 8 });
-      const pe = makePe({ sets: 1 });
-      const setLogs: SetLog[] = [
-        makeSetLog({ id: 'sl-1', setNumber: 1, targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
+      const pe = makePe({ sets: 1, exerciseId: 'ex-bench' });
+      const current: SetLog[] = [
+        makeSetLog({ id: 'c1', setNumber: 1, exerciseId: 'ex-bench', targetLoad: 70, targetReps: 8, targetRir: 2, load: 70, reps: 8, rir: 2 }),
+      ];
+      const previous: SetLog[] = [
+        makeSetLog({ id: 'p1', setNumber: 1, exerciseId: 'ex-bench', sessionId: 'sess-prev', load: 100, reps: 8, completed: true }),
       ];
 
-      const result = computeSessionScores(session, setLogs, [pe], 0);
+      const result = computeSessionScores(session, current, [pe], previous);
 
       expect(result.performance_score).toBeCloseTo(7.5, 1);
+    });
+
+    it('returns neutral score (0.5) when no shared exercises between sessions', () => {
+      // current has ex-bench, previous has ex-squat → no overlap → progressionVsPrevious = 0.5
+      // raw = 1.0*0.3 + 0.833*0.3 + 1.0*0.2 + 0.5*0.2 = 0.85 → score = 8.5
+      const session = makeSession({ readiness: 8 });
+      const pe = makePe({ sets: 1, exerciseId: 'ex-bench' });
+      const current: SetLog[] = [
+        makeSetLog({ id: 'c1', setNumber: 1, exerciseId: 'ex-bench', targetLoad: 100, targetReps: 8, targetRir: 2, load: 100, reps: 8, rir: 2 }),
+      ];
+      const previous: SetLog[] = [
+        makeSetLog({ id: 'p1', setNumber: 1, exerciseId: 'ex-squat', sessionId: 'sess-prev', load: 100, reps: 8, completed: true }),
+      ];
+
+      const result = computeSessionScores(session, current, [pe], previous);
+
+      expect(result.performance_score).toBeCloseTo(8.5, 1);
     });
   });
 

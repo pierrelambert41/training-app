@@ -2,6 +2,9 @@ import type { Session } from '@/types/session';
 import type { SetLog } from '@/types/set-log';
 import type { PlannedExercise } from '@/types/planned-exercise';
 
+const PROGRESSION_RATIO_MIN = 0.7;
+const PROGRESSION_RATIO_MAX = 1.1;
+
 export type SessionScores = {
   completion_score: number;
   performance_score: number;
@@ -20,6 +23,52 @@ export type ExerciseAchievement = {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+function epleyE1rm(load: number, reps: number): number {
+  return load * (1 + reps / 30);
+}
+
+function avgE1rmForExercise(setLogs: SetLog[], exerciseId: string): number | null {
+  const values = setLogs
+    .filter((s) => s.exerciseId === exerciseId && s.completed)
+    .filter(
+      (s): s is SetLog & { load: number; reps: number } =>
+        s.load !== null && s.reps !== null && s.load > 0 && s.reps > 0,
+    )
+    .map((s) => epleyE1rm(s.load, s.reps));
+
+  if (values.length === 0) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+function computeProgressionVsPrevious(
+  currentSetLogs: SetLog[],
+  previousSetLogs: SetLog[] | null,
+): number {
+  if (previousSetLogs === null || previousSetLogs.length === 0) return 0.5;
+
+  const currentIds = new Set(currentSetLogs.filter((s) => s.completed).map((s) => s.exerciseId));
+  const previousIds = new Set(previousSetLogs.filter((s) => s.completed).map((s) => s.exerciseId));
+  const shared = [...currentIds].filter((id) => previousIds.has(id));
+
+  if (shared.length === 0) return 0.5;
+
+  const ratios: number[] = [];
+  for (const exerciseId of shared) {
+    const cur = avgE1rmForExercise(currentSetLogs, exerciseId);
+    const prev = avgE1rmForExercise(previousSetLogs, exerciseId);
+    if (cur === null || prev === null || prev === 0) continue;
+    ratios.push(cur / prev);
+  }
+
+  if (ratios.length === 0) return 0.5;
+
+  const meanRatio = ratios.reduce((sum, r) => sum + r, 0) / ratios.length;
+
+  if (meanRatio <= PROGRESSION_RATIO_MIN) return 0;
+  if (meanRatio >= PROGRESSION_RATIO_MAX) return 1;
+  return (meanRatio - PROGRESSION_RATIO_MIN) / (PROGRESSION_RATIO_MAX - PROGRESSION_RATIO_MIN);
 }
 
 function computeCompletionScore(
@@ -109,21 +158,11 @@ function computeFatigueScore(readiness: number | null): number {
 // Public API
 // ---------------------------------------------------------------------------
 
-/**
- * Calcule les 3 scores post-séance (completion, performance, fatigue).
- *
- * @param progressionVsPrevious - Composante 4 du performance score (§5
- *   business-rules.md). Plage 0..1.
- *   - Phase 4 (TA-83) : default 0.5 (neutre, pas d'historique cross-session).
- *   - Phase 5+ (TA-109) : valeur réelle calculée par le rules engine via
- *     `computeProgressionVsPrevious` (e1RM séance courante vs précédente).
- *   Voir docs/business-rules.md §5.
- */
 export function computeSessionScores(
   session: Session,
   setLogs: SetLog[],
   plannedExercises: PlannedExercise[],
-  progressionVsPrevious: number = 0.5
+  previousSetLogs: SetLog[] | null = null,
 ): SessionScores {
   const completion_score = computeCompletionScore(setLogs, plannedExercises);
 
@@ -132,12 +171,13 @@ export function computeSessionScores(
 
   const normalizedTargetAchievement = clamp(targetAchievement / 1.2, 0, 1);
   const rirContribution = rirAccuracy ?? 0.5;
+  const progressionScore = computeProgressionVsPrevious(setLogs, previousSetLogs);
 
   const raw =
     completion_score * 0.3 +
     normalizedTargetAchievement * 0.3 +
     rirContribution * 0.2 +
-    progressionVsPrevious * 0.2;
+    progressionScore * 0.2;
 
   const performance_score = clamp(raw * 10, 0, 10);
   const fatigue_score = computeFatigueScore(session.readiness);
