@@ -445,6 +445,23 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-92 — Bug : contrainte `maxSessionDurationMin` non respectée
+**Livré** : correction de la boucle de troncage dans `generateProgram`. La logique précédente ne supprimait que les accessoires et s'arrêtait (break) quand le dernier élément était un secondary, laissant la durée estimée > `maxSessionDurationMin`. La nouvelle implémentation fait deux passes séquentielles : d'abord les accessoires, puis les secondary si nécessaire. Les exercices main ne sont jamais retirés.
+
+**Fichiers modifiés** :
+- `src/services/program-generation.ts` — remplacement de la boucle while unique par deux passes `for (const roleToTrim of ['accessory', 'secondary'])`
+- `src/services/program-generation.test.ts` — 4 nouveaux tests TA-92 (contrainte respectée avec medium et high volumeTolerance, ordre linéaire, main jamais retiré)
+
+**S'appuie sur** : TA-91 (même fichier `program-generation.ts`).
+
+**Ouvre** : rien — fix isolé.
+
+**Bugs découverts** : voir pitfall PROG-06.
+
+**Stubs laissés** : aucun. Note dette : `program-generation.ts` à 941 lignes (seuil R6 = 400). Dette pré-existante à décomposer dans une story dédiée.
+
+---
+
 ## TA-91 — Bug : jours d'entraînement consécutifs sans repos
 **Livré** : correction de `generateProgram` — `dayOrder` n'est plus l'index brut de boucle mais un slot hebdomadaire espacé via `spreadDayOrders(frequency)`.
 
