@@ -164,6 +164,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### CAL-01 — `week-calendar` affiche N-1 séances pour les programmes pré-TA-91 (dayOrder 0-based)
+**Symptôme** : avant TA-91, `generateProgram` assignait `dayOrder = dayIdx` (0-based : 0,1,2,3 pour 4 jours). Le composant `WeekCalendar`/`buildWeekCells` mappe les 7 cellules avec `dayOrder = i + 1` (1-based, 1..7), donc `dayOrder=0` ne match jamais. Résultat : la première séance est invisible dans le calendrier (3 séances affichées pour un programme à 4 jours).  
+**Fix** : dans `buildWeekCells`, calculer le minimum des dayOrders. Si le minimum est 0 (programme legacy), appliquer un offset de +1 avant d'insérer dans la map. Les nouveaux programmes (dayOrders ≥ 1) ne sont pas affectés (offset=0).  
+**Détecté** : TA-94 / 2026-05-07
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
