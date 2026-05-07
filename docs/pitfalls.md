@@ -99,6 +99,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### UX-01 — `metadata.currentLoad` absent des Recommendation `load_change`
+**Symptôme** : les lignes `exercice Xkg → Ykg` de l'écran fin de séance affichent `—kg → Ykg` car le rules engine ne persiste pas `currentLoad` dans `metadata` au moment de la sauvegarde. Le `nextLoad` est correct.
+**Fix attendu** : dans `rules-engine-service.ts`, calculer `currentLoad` depuis les SetLogs de la séance courante (moyenne des charges loggées pour cet exercice) et l'ajouter à `metadata` lors de `saveRecommendation` (type `load_change`).
+**Détecté** : TA-112 / 2026-05-06 — stub laissé ouvert.
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
@@ -106,6 +113,7 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
 | Détail exercice | `src/screens/(app)/programs/workout-day-detail-screen.tsx` | `handleExercisePress` | Phase 5 |
+| `currentLoad` dans metadata load_change | `src/features/progression/api/rules-engine-service.ts` | `saveRecommendation` (load_change) | Phase 6 ou cleanup |
 
 ---
 

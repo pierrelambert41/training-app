@@ -299,6 +299,34 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-112 — Écran fin de séance : affichage des recommandations moteur
+**Livré** : la page `end.tsx` affiche maintenant la section "Prochaine séance" après complétion, avec les recommandations du moteur de règles. State machine `idle → completing → completed` en React local. `reset()` + navigation vers home déplacés dans un bouton "Retour à l'accueil" explicite (n'est plus appelé dans `doFinish`).
+
+**Fichiers créés** :
+- `src/features/session/components/end-session-screen.tsx` — composant principal `EndSessionScreen` (315 lignes), state machine, orchestration.
+- `src/features/session/components/session-recommendations.tsx` — section "Prochaine séance" : badge statut, liste load_change, cards plateau, section deload, loading state (282 lignes).
+- `src/features/session/components/session-score-ring.tsx` — `ScoreRing`, `AchievementDot`, `StatPill`, `formatDuration` extraits de l'ancien `end.tsx` pour respecter R6.
+- `src/features/session/hooks/use-session-recommendations.ts` — hook React Query `useSessionRecommendations(sessionId)`, staleTime Infinity.
+
+**Fichiers modifiés** :
+- `app/(app)/session/end.tsx` — réduit à 3 lignes (import + re-export thin, R1). Était un god-object de 397 lignes.
+- `src/features/session/index.ts` — export `EndSessionScreen` + `useSessionRecommendations`.
+
+**Flow** : 1. "Terminer" → `completing` (spinner "Calcul en cours…") → `runRulesEngine` → `completed`. 2. Section "Prochaine séance" révélée : badge statut, lignes `exercice Xkg → Ykg [↑/→/↓]`, cards plateau amber, section deload rouge. 3. Bouton "Retour à l'accueil" → `reset()` + `router.replace`. Le champ notes est masqué après complétion.
+
+**Gestion de la liste load_change** : max 5 visible, "Voir plus (N exercices)" si plus. Noms d'exercice résolus via `exercisesById` (déjà chargé par `useSessionExercises`), fallback sur `metadata.exerciseName` puis `exerciseId`.
+
+**S'appuie sur** : TA-109 (`runRulesEngine`, `RulesEngineResult`), TA-111 (patterns de composants recommandations), TA-83 (état initial de `end.tsx`), TA-98 (architecture Bulletproof React).
+
+**Ouvre** : Phase 7 (IA) peut enrichir les messages des `Recommendation` pour les afficher dans les cards plateau/deload. `useSessionRecommendations` est disponible pour d'autres écrans.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** :
+- `metadata.currentLoad` non persisté par le rules engine (toujours `null` dans la row affichée) — les lignes affichent `—kg → Xkg`. À corriger quand le rules engine persistera la charge courante dans les métadonnées.
+
+---
+
 ## TA-84 — Abandon explicite, reprise automatique et tests d'intégration offline
 **Livré** : abandon de séance (action dans `live.tsx`), reprise automatique (`start.tsx` redirige vers `live` si session en cours), tests d'intégration offline complets.  
 **S'appuie sur** : `session-store`, `sessions` service, `start.tsx`, `live.tsx`, `end.tsx`.  
