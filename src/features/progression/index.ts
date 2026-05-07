@@ -27,3 +27,12 @@ export type {
   PlateauRecommendation,
   PlateauRecommendationType,
 } from './domain/plateau-detection';
+
+export { shouldTriggerDeload, applyDeloadModifiers } from './domain/deload-rules';
+export type {
+  DeloadMode,
+  DeloadDecision,
+  RecentSessionSnapshot,
+  FatigueHistoryEntry,
+  ShouldTriggerDeloadInputs,
+} from './domain/deload-rules';
