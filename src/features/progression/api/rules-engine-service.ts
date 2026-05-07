@@ -41,7 +41,6 @@ import type {
   DeloadDecision,
   RecentSessionSnapshot,
 } from '../domain/deload-rules';
-import { computeProgressionVsPrevious } from '../domain/progression-vs-previous';
 import { computeFatigueScore } from '../domain/fatigue-score';
 import {
   buildFatigueHistory,
@@ -116,12 +115,6 @@ export async function runRulesEngine(
     ? previousSetLogsBySession.get(previousMostRecent.id) ?? []
     : null;
 
-  // -- progressionVsPrevious : remplace stub TA-83 --------------------------
-  const progressionVsPrevious = computeProgressionVsPrevious(
-    currentSetLogs,
-    previousMostRecentSetLogs,
-  );
-
   // -- plannedExercises (référence pour le plan) ----------------------------
   const plannedExercises: PlannedExercise[] = session.workoutDayId
     ? await getPlannedExercisesByWorkoutDayId(db, session.workoutDayId)
@@ -147,7 +140,7 @@ export async function runRulesEngine(
     session,
     currentSetLogs,
     plannedExercises,
-    progressionVsPrevious,
+    previousMostRecentSetLogs,
   );
   // WHY : computeSessionScores produit son propre fatigue_score à partir de
   // readiness uniquement (legacy Phase 4). On le remplace par le score

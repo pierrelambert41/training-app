@@ -34,7 +34,7 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 **Livré** : `end.tsx` avec calcul des scores via `session-scores.ts`. Score `progressionVsPrevious` stubbé à 0.5 (données cross-session non disponibles avant Phase 5).  
 **S'appuie sur** : `live.tsx` (abandon → end), `session-store`, `computeSessionScores`.  
 **Ouvre** : Phase 5 devra remplacer le stub `progressionVsPrevious` par le vrai moteur.  
-**Stubs laissés** : `session-scores.ts:121` — `progressionVsPrevious` hardcodé à 0.5.
+**Stubs laissés** : `session-scores.ts:121` — `progressionVsPrevious` hardcodé à 0.5. **Résolu en TA-110.**
 
 ---
 
@@ -236,6 +236,26 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 - Pas d'historique `ProgressionDecision` persisté entre séances (param `progressionHistoryByExercise` toujours `{}`). À ajouter quand on stockera les décisions du moteur.
 - `attendanceRate` non calculé pour le deload (PROG-02 — pas de planning vs réalisé). Condition 3 du fatigue_triggered inactivable.
 - RecoveryLog/CardioSession non disponibles → tableaux vides à `computeFatigueScore` (pitfall PROG-02 inchangé).
+
+---
+
+## TA-110 — Remplacement du stub `progressionVsPrevious = 0.5` dans session-scores
+**Livré** : le stub `progressionVsPrevious: number = 0.5` de `computeSessionScores` remplacé par un calcul réel basé sur les SetLogs de la séance précédente. La signature passe de `progressionVsPrevious: number = 0.5` à `previousSetLogs: SetLog[] | null = null`. La logique e1RM Epley (`load * (1 + reps / 30)`) est inline dans `session-scores.ts` (2 fonctions privées + `computeProgressionVsPrevious` privée), car les `shared-services` ne peuvent pas importer depuis `feature-index` selon les règles ESLint boundaries.
+
+**Fichiers modifiés** :
+- `src/services/session-scores.ts` — nouvelle signature + logique inline `computeProgressionVsPrevious` privée (16 lignes). 4 nouveaux tests sur la composante progression.
+- `src/services/session-scores.test.ts` — bloc `progressionVsPrevious parameter` remplacé par `previousSetLogs — progressionVsPrevious computation` (4 tests : null/neutre, +5%, -10% sévère, 0 exercice commun).
+- `src/features/progression/api/rules-engine-service.ts` — suppression de l'import `computeProgressionVsPrevious` + passage de `previousMostRecentSetLogs` directement à `computeSessionScores` (la valeur était déjà chargée).
+
+**Note architecture** : la fonction `computeProgressionVsPrevious` reste dans `src/features/progression/domain/progression-vs-previous.ts` comme source de vérité pour les tests unitaires détaillés (16 tests). La copie dans `session-scores.ts` est intentionnelle — l'isolation ESLint boundaries (shared-services → feature-index interdit) justifie la duplication des 2 fonctions utilitaires e1RM (3 lignes chacune).
+
+**S'appuie sur** : TA-109 (`rules-engine-service.ts`, `progression-vs-previous.ts`), TA-83 (stub initial).
+
+**Ouvre** : le calcul de performance post-séance est maintenant complet end-to-end. `session-store.completeSession` produit un score neutre (pas d'historique → 0.5), puis `runRulesEngine` recalcule avec l'historique réel.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** : aucun. L'entrée stub TA-83 de `docs/story-log.md` est clôturée.
 
 ---
 
