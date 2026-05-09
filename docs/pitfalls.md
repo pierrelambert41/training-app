@@ -134,6 +134,20 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-08 — `feature-hooks` ne pouvait pas importer ses propres sous-modules hooks
+**Symptôme** : ESLint `boundaries/dependencies` bloquait les imports entre fichiers du dossier `hooks/` d'une feature (ex: `use-sync-status.ts` → `./use-network-sync`). La section `from: { type: 'feature-hooks' }` n'incluait pas d'auto-référence intra-feature.
+**Fix** : ajouter `{ to: { type: 'feature-hooks', captured: { featureName: '{{ from.captured.featureName }}' } } }` dans la section `from: { type: 'feature-hooks' }` de `eslint.config.mjs`. Reste interdit : hooks → hooks d'une autre feature.
+**Détecté** : TA-121 / 2026-05-09
+
+---
+
+### SYNC-01 — `SyncBridge` ne doit pas importer `@/services/supabase` directement
+**Symptôme** : `sync-bridge.tsx` importait `supabase` depuis `@/services/supabase`. Ce service importe `react-native-url-polyfill/auto` non mocké dans Jest. Résultat : 18 suites de tests échouaient à l'import de la feature sync (via `index.ts` → `sync-bridge.tsx` → `supabase.ts`).
+**Fix** : passer le client Supabase en prop depuis `app/_layout.tsx` (qui est déjà hors scope des tests Jest car dans `app/`). Le cast `as unknown as SupabasePushClient` est fait dans `app/_layout.tsx`. La feature sync reste testable sans dépendance réseau.
+**Détecté** : TA-121 / 2026-05-09
+
+---
+
 ### NAV-01 — Screen non déclaré dans le Stack → header fantôme avec nom de route comme titre
 **Symptôme** : un écran Expo Router non enregistré explicitement dans le `<Stack>` du layout reçoit un header par défaut dont le titre est le nom du fichier (ex : `index`). En bonus, si d'autres écrans ont été empilés avant lui, un back button peut apparaître même si l'écran est la racine logique du groupe.
 **Fix** : toujours déclarer `<Stack.Screen name="index" options={{ headerShown: false }} />` (ou un titre explicite) dans `app/(app)/_layout.tsx` pour chaque écran racine. Ne pas compter sur le comportement par défaut d'Expo Router pour les routes racine.
