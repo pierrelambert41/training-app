@@ -211,6 +211,18 @@ const dependenciesRules = [
       { to: { type: 'shared-config' } },
     ],
   },
+  // feature-types : types d'une feature peuvent importer d'autres types
+  // de la même feature (compositions de types) + types partagés + config.
+  // Reste interdit : import vers feature-api/components/hooks/stores/lib (ascendant).
+  // Cf. ARCH-04 (TA-111) pour la règle générale "types ne dépendent pas de l'UI".
+  {
+    from: { type: 'feature-types' },
+    allow: [
+      { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
+      { to: { type: 'shared-types' } },
+      { to: { type: 'shared-config' } },
+    ],
+  },
   // feature-lib : helpers/transformations pures d'une feature
   {
     from: { type: 'feature-lib' },

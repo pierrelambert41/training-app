@@ -6,6 +6,35 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-120 — Implémentation de `SyncService.push()` (SQLite → Supabase)
+**Livré** : implémentation du moteur de push synchronisation — lecture de la `sync_queue`, dispatch vers Supabase (upsert idempotent pour insert/update, delete ciblé), marquage `synced=1` après confirmation, stamp `synced_at` sur la ligne source pour les tables concernées. Stratégie non fail-fast : une erreur sur l'entrée N ne bloque pas N+1.
+
+**Fichiers créés** :
+- `src/features/sync/api/sync-service.ts` — `createSyncService({ supabase })` exposant `getUnsynced(db)` et `push(db)`. Fonctions internes : `pushEntry`, `dispatchToSupabase`, `markEntrySynced`, `stampSourceSyncedAt`.
+- `src/features/sync/api/sync-service.test.ts` — 10 tests couvrant : queue vide, push complet 6/6 tables (sessions, set_logs, recommendations, blocks, workout_days, planned_exercises), push partiel (erreur Supabase au milieu), réseau coupé (throw), action delete, delete sur sessions sans stamp, payload JSON corrompu, ordre causal (created_at ASC), idempotence upsert insert/update, snapshot de queue.
+- `src/features/sync/api/sync-service-test-helpers.ts` — helpers partagés : `makeMockDb`, `makeQueueRow`, `makeStubBuilder`, `makeSupabaseStub` (ADR-021).
+- `src/features/sync/types/sync-service.ts` — types `SupabasePushBuilder`, `SupabasePushClient`, `PushEntryOutcome` (union `pushed`/`failed`), `PushResult`.
+
+**Décisions clés** :
+- ADR-022 : stratégie push non fail-fast + upsert idempotent (`onConflict: 'id'`). Une entrée n'est marquée `synced=1` qu'après confirmation Supabase. Si le mark local échoue après un push réussi, la donnée sera re-pushée (idempotent, sans corruption).
+- ADR-023 : règle ESLint `feature-types` étendue pour autoriser les imports intra-feature depuis `types/` vers `api/` (évite de tout faire transiter par `index.ts` à l'intérieur d'une feature).
+- `stampSourceSyncedAt` utilise une SQL constante (pas de template literal) pour éliminer tout risque d'injection si une entrée corrompue passait le cast `as SyncTableName`. Extension future via switch explicite.
+
+**S'appuie sur** :
+- TA-119 (refactor sync vers Bulletproof React, crée `getPendingSyncRecords`, `safeEnqueue`).
+- TA-72/TA-103 (`safeEnqueue` qui alimente la `sync_queue` consommée ici).
+- ADR-012 (format payload sync, garanties non-rejection de `safeEnqueue`).
+
+**Hors scope rappelé** : retry/reconnexion automatique (TA-121+), pull depuis Supabase, résolution de conflits (last-write-wins Phase 6), récupération du timestamp serveur réel via `RETURNING synced_at`.
+
+**Ouvre** : TA-121 peut brancher `push()` sur un trigger réseau (`useSyncOnReconnect`) sans toucher à la logique de dispatch. Le hook React et `domain/sync-engine.ts` restent à créer.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés** : `TABLES_WITH_SYNCED_AT` ne contient que `'sessions'` — extension future documentée dans le code via switch explicite plutôt que template literal.
+
+---
+
 ## TA-119 — Migration `sync/` vers Bulletproof React
 **Livré** : migration de la feature `sync/` depuis `src/services/` vers `src/features/sync/` selon Bulletproof React (R2/R3/R5). Refacto pur, zéro changement de comportement. Préalable à l'implémentation du sync engine en Phase 6.
 
