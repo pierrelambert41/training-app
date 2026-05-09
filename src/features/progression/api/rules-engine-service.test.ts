@@ -292,6 +292,50 @@ describe('runRulesEngine — orchestration & persistence', () => {
     expect(second.fatigueScore).toBe(first.fatigueScore);
   });
 
+  it('sets metadata.currentLoad to the average completed load for each load_change', async () => {
+    const db = makeInMemoryDb();
+    await seedBlock(db);
+    const session = await seedSession(db);
+    await seedPlannedExercise(db);
+    // 3 sets : 90, 100, 110 kg → moyenne = 100 kg
+    await logBenchSets(db, session.id, 90, 8, 2, 1, 'ex-bench', 'pe-bench', 'sl-a');
+    await logBenchSets(db, session.id, 100, 8, 2, 1, 'ex-bench', 'pe-bench', 'sl-b');
+    await logBenchSets(db, session.id, 110, 8, 2, 1, 'ex-bench', 'pe-bench', 'sl-c');
+
+    await runRulesEngine(db, session.id);
+
+    const recs = await getRecommendationsBySession(db, session.id);
+    const loadChange = recs.find((r) => r.type === 'load_change' && r.exerciseId === 'ex-bench');
+    expect(loadChange).toBeDefined();
+    expect(loadChange!.metadata?.currentLoad).toBeCloseTo(100, 5);
+  });
+
+  it('sets metadata.currentLoad to null when no set has a load value', async () => {
+    const db = makeInMemoryDb();
+    await seedBlock(db);
+    const session = await seedSession(db);
+    await seedPlannedExercise(db);
+    // Set sans load (bodyweight, load=null)
+    await insertSetLog(db, {
+      id: 'sl-noload-1',
+      sessionId: session.id,
+      exerciseId: 'ex-bench',
+      plannedExerciseId: 'pe-bench',
+      setNumber: 1,
+      load: null,
+      reps: 10,
+      rir: 2,
+      completed: true,
+    });
+
+    await runRulesEngine(db, session.id);
+
+    const recs = await getRecommendationsBySession(db, session.id);
+    const loadChange = recs.find((r) => r.type === 'load_change' && r.exerciseId === 'ex-bench');
+    expect(loadChange).toBeDefined();
+    expect(loadChange!.metadata?.currentLoad).toBeNull();
+  });
+
   it('respects the historySize option (caps loaded sessions)', async () => {
     const db = makeInMemoryDb();
     await seedBlock(db);
