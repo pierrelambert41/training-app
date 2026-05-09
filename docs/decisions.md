@@ -431,3 +431,57 @@ Deux contraintes :
 - Le helper dépend de `jest` (typage global via `@types/jest`) — il ne sera jamais bundlé en prod car non importé depuis du code non-test.
 - Si une 3e feature a besoin de mutualiser une infra de tests (rare), on déplacera vers `src/lib/test/` (shared-lib) — point de bascule explicite, pas par défaut.
 - Pitfall ARCH-06 documenté pour la règle ESLint étendue.
+
+---
+
+## ADR-022 : SyncService.push() — upsert idempotent + non fail-fast + snapshot
+
+**Statut** : Accepté
+**Date** : 2026-05-09
+
+### Contexte
+TA-120 implémente le push SQLite → Supabase. La SyncQueue contient des entrées `insert`/`update`/`delete` créées via `safeEnqueue` (ADR-012). Trois questions à arbitrer :
+1. Comment garantir l'idempotence côté serveur (rejouer une op ne corrompt pas l'état) ?
+2. Que faire quand une entrée échoue au milieu d'un batch (fail-fast vs continuer) ?
+3. Comment éviter les races entre `push()` et `safeEnqueue` exécutés en parallèle ?
+
+### Décision
+1. **Insert et update sont traités identiquement via `upsert(payload, { onConflict: 'id' })`**. Le verbe Postgres `upsert` est idempotent : rejouer = même résultat sémantique. Cela neutralise aussi les violations d'ordre causal côté serveur (un `update` qui passe avant son `insert` créera la ligne).
+2. **Delete utilise `.delete().eq('id', recordId)`** où `recordId` vient de la SyncQueue (pas du payload). Si la ligne est absente côté serveur, `delete` est silencieux (count=0, pas d'erreur).
+3. **Non fail-fast** : une erreur sur l'entrée N (réseau, RLS, payload corrompu) ne bloque pas les entrées N+1. `push()` retourne un `PushResult` avec un récap par entrée (`pushed` ou `failed` + message). L'idempotence d'`upsert` rend la stratégie sûre : les FK qui échouent reviendront en queue et seront rejouées au prochain cycle.
+4. **Snapshot au début** : `push()` lit la queue une seule fois (`getPendingSyncRecords`) et boucle sur ce snapshot. Toute entrée enfilée pendant l'exécution sera traitée au prochain `push()`. Borne la durée d'un push et évite les boucles infinies si un caller enqueue en parallèle.
+5. **`synced_at` source** patché localement uniquement pour `sessions` (seule table avec la colonne, côté SQLite et Supabase). Pour les autres tables, seul le flag `sync_queue.synced=1` est mis à jour.
+6. **Client Supabase injecté** : la factory `createSyncService({ supabase })` accepte une interface minimale (`SupabasePushClient`), pas le `SupabaseClient` typé. Permet le mock complet en tests sans dépendre du module global.
+
+### Conséquences
+- Aucune perte de donnée : une entrée n'est marquée `synced=1` qu'après confirmation Supabase. Erreur réseau totale → toutes les entrées restent en queue.
+- Pas de retry intégré (hors scope TA-120) : un caller (hook au boot/au retour réseau, futur TA-121) décide quand relancer `push()`.
+- L'usage d'`upsert` masque la distinction `insert`/`update` côté serveur — c'est voulu : la SyncQueue est une optimisation, l'état local SQLite reste la source de vérité tant que le pull n'est pas implémenté.
+- Le snapshot au début de `push()` exclut les entrées tardives, mais les inclut au prochain cycle. Pas de famine si `push()` est appelé régulièrement.
+
+---
+
+## ADR-023 : Règle ESLint feature-types → feature-types intra-feature
+
+**Statut** : Accepté
+**Date** : 2026-05-09
+
+### Contexte
+TA-120 introduit `src/features/sync/types/sync-service.ts` qui réutilise `SyncAction` et `SyncTableName` définis dans `src/features/sync/types/sync-queue.ts` (même feature). ESLint `boundaries/dependencies` bloquait avec "There is no rule allowing dependencies from elements of type feature-types to feature-types". Les autres `feature-*` (api, domain, components) avaient déjà cette permission auto-référencée (cf. ARCH-02, ARCH-03, ARCH-06) — `feature-types` était l'oublié.
+
+### Décision
+Ajouter dans `eslint.config.mjs` la règle :
+```js
+{ from: { type: 'feature-types' },
+  allow: [
+    { to: { type: 'feature-types', captured: { featureName: '{{ from.captured.featureName }}' } } },
+    { to: { type: 'shared-types' } },
+    { to: { type: 'shared-config' } },
+  ] }
+```
+Reste interdit : `feature-types → feature-api/components/hooks/stores/lib` (imports ascendants), `feature-types → autre feature` (cf. ARCH-04 / TA-111).
+
+### Conséquences
+- Les types d'une feature peuvent se composer entre eux (ex: `PushEntryOutcome` réutilise `SyncTableName` et `SyncAction` du même module). Évite la duplication.
+- L'invariant "types ne dépendent pas de l'UI" reste préservé.
+- Pattern régulier maintenant complet : tous les segments `feature-*` peuvent s'auto-référencer intra-feature.

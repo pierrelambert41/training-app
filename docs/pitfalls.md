@@ -127,6 +127,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-07 — `feature-types` ne pouvait pas importer ses propres sous-modules types
+**Symptôme** : ESLint `boundaries/dependencies` bloquait les imports entre fichiers du dossier `types/` d'une feature (ex: `sync-service.ts` → `./sync-queue` pour réutiliser `SyncAction` et `SyncTableName`). Aucune section `from: { type: 'feature-types' }` n'existait dans `eslint.config.mjs`, donc `default: 'disallow'` s'appliquait — seul segment `feature-*` sans permission auto-référence.
+**Fix** : ajouter la section `from: { type: 'feature-types' }` avec auto-référence intra-feature (`captured: { featureName: '{{ from.captured.featureName }}' }`) + accès `shared-types` / `shared-config`. Reste interdit : import vers feature-api/components/hooks/stores/lib (ascendant) et vers les types d'une autre feature (cf. ARCH-04). Cf. ADR-023.
+**Détecté** : TA-120 / 2026-05-09
+
+---
+
 ### NAV-01 — Screen non déclaré dans le Stack → header fantôme avec nom de route comme titre
 **Symptôme** : un écran Expo Router non enregistré explicitement dans le `<Stack>` du layout reçoit un header par défaut dont le titre est le nom du fichier (ex : `index`). En bonus, si d'autres écrans ont été empilés avant lui, un back button peut apparaître même si l'écran est la racine logique du groupe.
 **Fix** : toujours déclarer `<Stack.Screen name="index" options={{ headerShown: false }} />` (ou un titre explicite) dans `app/(app)/_layout.tsx` pour chaque écran racine. Ne pas compter sur le comportement par défaut d'Expo Router pour les routes racine.
