@@ -6,6 +6,30 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-124 — Import CSV Hevy : parser et validation du fichier
+**Livré** : `parseHevyCsv(csv, options?)` — fonction pure qui parse le format CSV Hevy, normalise les données (regroupement par date+exercice, conversion lb→kg, BOM strip), détecte les erreurs bloquantes (header invalide, lignes malformées, valeurs non numériques) et les warnings non-bloquants (doublons). 23 tests unitaires, 0 erreur lint boundaries.
+
+**Fichiers créés** :
+- `src/features/sync/domain/hevy-csv-parser.ts` — parser pur (172 lignes). Pas de lib externe.
+- `src/features/sync/domain/hevy-csv-parser.test.ts` — 23 tests couvrant parsing nominal, lb→kg, BOM, RPE/Notes absents, doublons, lignes malformées, header invalide, fichier vide.
+
+**Fichiers modifiés** :
+- `src/features/sync/index.ts` — export de `parseHevyCsv` et des 5 types publics (`ParsedHevyData`, `ParsedHevySession`, `ParsedHevySet`, `ParseWarning`, `ParseError`).
+
+**S'appuie sur** :
+- `docs/integrations.md` §2 pour le format CSV attendu.
+- Feature sync existante (dossier `domain/` déjà structuré avec `conflict-resolution.ts`).
+
+**Ouvre** :
+- TA-125 (mapping exercices Hevy → bibliothèque interne) : consommera `ParsedHevySession.exerciseName` brut.
+- TA-126 (UI d'import et persistance) : branchera sur `parseHevyCsv` via l'index de la feature.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-123 — Fix UX-01 : metadata.currentLoad dans les recommendations load_change
 **Livré** : `metadata.currentLoad` est désormais calculé et persisté dans chaque `Recommendation` de type `load_change`. La valeur est la moyenne des charges loggées (`set_logs.load`, non-null, `completed = true`) pour le `plannedExerciseId` correspondant pendant la séance courante. Si aucun set avec load non-null : `currentLoad = null` (fallback conservé).
 
