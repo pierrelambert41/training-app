@@ -485,3 +485,36 @@ Reste interdit : `feature-types → feature-api/components/hooks/stores/lib` (im
 - Les types d'une feature peuvent se composer entre eux (ex: `PushEntryOutcome` réutilise `SyncTableName` et `SyncAction` du même module). Évite la duplication.
 - L'invariant "types ne dépendent pas de l'UI" reste préservé.
 - Pattern régulier maintenant complet : tous les segments `feature-*` peuvent s'auto-référencer intra-feature.
+
+---
+
+## ADR-024 : Résolution de conflits last-write-wins client-side, fetch avant upsert
+
+**Statut** : Accepté
+**Date** : 2026-05-09
+
+### Contexte
+TA-122 (Phase 6) introduit la résolution de conflits multi-device. Quand deux appareils écrivent offline puis synchronisent, l'ordre d'arrivée n'est pas l'ordre logique. La spec retenue est last-write-wins (LWW) basée sur `updated_at`. Trois questions à arbitrer :
+1. Où vit la résolution : client (avant push) ou serveur (stored proc / trigger) ?
+2. Quelles tables sont concernées et comment gérer l'absence d'`updated_at` côté `recommendations` ?
+3. Comment loguer les conflits sans persistance lourde ?
+
+### Décision
+1. **Résolution côté client, AVANT chaque upsert** : pour chaque entrée de la SyncQueue sur une table conflict-checked, le SyncService fetch d'abord la ligne remote (`select(*).eq('id', recordId).maybeSingle()`), puis applique `resolveConflict({local, remote})` (fonction pure). Si remote gagne, on copie remote→local et on marque `synced=1` SANS faire d'upsert. Si local gagne ou ligne remote absente, upsert classique. Coût : 1 round-trip réseau supplémentaire par entrée — acceptable Phase 6 (pas de batch fetch).
+2. **Tables checkées** : `sessions`, `set_logs`, `recommendations`. Les tables programme (programs, blocks, workout_days, planned_exercises) sont exclues car le workflow de génération est séquentiel (pas de mutation parallèle multi-device attendue).
+3. **`recommendations` sans `updated_at`** : fallback sur `created_at` (la table est append-only via ADR-020 — collision improbable mais on reste conservateur).
+4. **`device_id`** : déjà persisté en SQLite via `getOrCreateDeviceId` (ADR-015) et déjà inclus dans le payload `sessions` côté repo (`toSupabasePayload`). Le SyncService ne mute pas le payload — il forward tel quel. Pour `set_logs` et `recommendations`, la colonne `device_id` n'existe PAS côté Supabase ; le payload n'inclut donc pas ce champ (cohérent avec le schéma).
+5. **Logs in-memory** : un `ConflictLogStore` (factory `createConflictLogStore()`) accumule les logs à la durée de vie du SyncService, accessibles via `getConflictLogs()`. Buffer FIFO de 200 entrées max. Pas de persistance DB — ces logs sont une aide au debug, pas une donnée canonique.
+6. **Outcome enrichi** : `PushEntryOutcome` expose `conflictResolved?: 'local' | 'remote'` quand un conflit a été détecté. `PushResult.conflicts` contient le snapshot des conflits du cycle courant.
+
+### Alternatives rejetées
+- **Stored procedure Supabase** (résolution côté serveur) : couple la logique au backend, nuit à l'offline-first (impossible à dry-run en local), nécessite une migration SQL.
+- **Vector clocks / version vectors** : surdimensionné pour Phase 6 mono-utilisateur ; LWW suffit.
+- **AsyncStorage pour `device_id`** (proposé dans le ticket) : déjà résolu en SQLite (ADR-015) — pas de duplication.
+
+### Conséquences
+- Le coût réseau du push est x2 sur les tables conflict-checked. Optimisable plus tard (batch fetch via `select.in('id', [...])`).
+- Quand remote gagne, le local "saute" un état intermédiaire — c'est l'invariant LWW : l'écriture la plus récente prime, même si elle vient d'un autre appareil.
+- Les logs de conflits ne survivent pas au redémarrage de l'app — c'est volontaire (debug uniquement). Si un besoin de persistance émerge, créer une table `conflict_logs` dédiée.
+- La fenêtre de race entre fetch et upsert reste — un autre device peut écrire entre les deux. Postgres résoudra l'upsert final (idempotent), mais l'ordre exact n'est pas garanti. Acceptable Phase 6.
+- Pattern de fetch-before-write extensible : si une autre table rejoint `CONFLICT_CHECKED_TABLES`, ajouter (a) une colonne `updated_at` côté local + remote, (b) un mapping dans `TIMESTAMP_COLUMN_BY_TABLE`, (c) un handler dans `copyRemoteRowToLocal`.

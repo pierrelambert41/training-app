@@ -1,10 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
+import type { ConflictResolutionLog } from '../types/conflict';
 import type { SyncQueueRecord, SyncTableName } from '../types/sync-queue';
 import type {
   PushEntryOutcome,
   PushResult,
   SupabasePushClient,
 } from '../types/sync-service';
+import { type ConflictLogStore, createConflictLogStore } from './conflict-log-store';
+import { isConflictCheckedTable, runConflictCheck } from './conflict-check';
 import { getPendingSyncRecords } from './sync-queue';
 
 /**
@@ -22,37 +25,52 @@ const TABLES_WITH_SYNCED_AT: ReadonlySet<SyncTableName> = new Set([
 
 type SyncServiceDeps = {
   supabase: SupabasePushClient;
+  /**
+   * Permet d'injecter un store partagé (ex: tests, observabilité). Si non
+   * fourni, le service en crée un en interne.
+   */
+  conflictLogStore?: ConflictLogStore;
 };
 
 /**
  * Service de synchronisation push : SQLite → Supabase.
  *
- * Responsabilités (TA-120) :
+ * Responsabilités :
  * - `getUnsynced(db)` : retourne les entrées `sync_queue` avec `synced=0`,
  *   ordonnées causalement (created_at ASC).
  * - `push(db)` : envoie chaque entrée vers Supabase (upsert pour insert/update,
- *   delete pour delete), marque les entrées traitées comme synced.
+ *   delete pour delete). Avant chaque upsert sur une table conflict-checked,
+ *   fetch le timestamp remote, applique LWW (TA-122), log les conflits.
+ * - `getConflictLogs()` : retourne les logs cumulés depuis l'instanciation
+ *   du service. Utile pour debug ou observabilité.
  *
- * Garanties :
- * - **Idempotence** : on utilise `upsert(onConflict: 'id')` pour insert/update
- *   et `delete().eq('id', recordId)` (no-op silencieux si absent côté serveur).
- * - **Pas de perte** : une entrée n'est marquée `synced=1` qu'après confirmation
- *   Supabase. Erreur réseau → l'entrée reste en queue et sera rejouée.
- * - **Non fail-fast** : une erreur sur l'entrée N ne bloque pas N+1, N+2... Le
- *   résultat global recense chaque entrée (pushed/failed). L'usage systématique
- *   d'`upsert` neutralise les violations d'ordre causal côté serveur (un
- *   `update` qui passe avant son `insert` créera la ligne ; FK constraint
- *   échouera et sera rejouée au cycle suivant).
+ * Garanties (cf. ADR-022 + ADR-024) :
+ * - **Idempotence** : `upsert(onConflict: 'id')` pour insert/update, `delete`
+ *   silencieux si absent. Rejouer une op ne corrompt pas l'état serveur.
+ * - **Pas de perte** : une entrée n'est marquée `synced=1` qu'après
+ *   confirmation Supabase OU qu'après copy remote→local réussi (cas remote
+ *   gagne). Erreur réseau → l'entrée reste en queue et sera rejouée.
+ * - **Non fail-fast** : une erreur sur l'entrée N ne bloque pas N+1.
+ * - **Last-write-wins** : pour sessions/set_logs/recommendations, on
+ *   compare `updated_at` (ou `created_at` pour recommendations) avant
+ *   chaque upsert. Le timestamp le plus récent gagne ; un conflit résolu
+ *   produit un `ConflictResolutionLog`.
  *
  * Hors scope :
- * - Reconnexion automatique / retry timer (TA-121+).
- * - Pull depuis Supabase.
- * - Résolution de conflits (last-write-wins par updated_at — Phase 6 ultérieure).
+ * - Pull descendant automatique (sync engine bidirectionnel).
+ * - UI de résolution manuelle de conflits.
+ * - Merge trois-voies (last-write-wins suffit pour Phase 6).
  */
-export function createSyncService({ supabase }: SyncServiceDeps): {
+export function createSyncService({
+  supabase,
+  conflictLogStore,
+}: SyncServiceDeps): {
   getUnsynced: (db: SQLiteDatabase) => Promise<SyncQueueRecord[]>;
   push: (db: SQLiteDatabase) => Promise<PushResult>;
+  getConflictLogs: () => ConflictResolutionLog[];
 } {
+  const logStore = conflictLogStore ?? createConflictLogStore();
+
   async function getUnsynced(db: SQLiteDatabase): Promise<SyncQueueRecord[]> {
     return getPendingSyncRecords(db);
   }
@@ -63,22 +81,27 @@ export function createSyncService({ supabase }: SyncServiceDeps): {
     // et évite les boucles infinies si un caller enqueue en parallèle.
     const pending = await getPendingSyncRecords(db);
     if (pending.length === 0) {
-      return { pushed: 0, failed: 0, results: [] };
+      return { pushed: 0, failed: 0, results: [], conflicts: [] };
     }
 
     const results: PushEntryOutcome[] = [];
+    const conflictsThisPush: ConflictResolutionLog[] = [];
 
     for (const entry of pending) {
-      const outcome = await pushEntry(db, supabase, entry);
+      const outcome = await pushEntry(db, supabase, entry, logStore, conflictsThisPush);
       results.push(outcome);
     }
 
     const pushed = results.filter((r) => r.status === 'pushed').length;
     const failed = results.length - pushed;
-    return { pushed, failed, results };
+    return { pushed, failed, results, conflicts: conflictsThisPush };
   }
 
-  return { getUnsynced, push };
+  function getConflictLogs(): ConflictResolutionLog[] {
+    return logStore.getAll();
+  }
+
+  return { getUnsynced, push, getConflictLogs };
 }
 
 /**
@@ -89,7 +112,9 @@ export function createSyncService({ supabase }: SyncServiceDeps): {
 async function pushEntry(
   db: SQLiteDatabase,
   supabase: SupabasePushClient,
-  entry: SyncQueueRecord
+  entry: SyncQueueRecord,
+  logStore: ConflictLogStore,
+  conflictsThisPush: ConflictResolutionLog[]
 ): Promise<PushEntryOutcome> {
   const base = {
     id: entry.id,
@@ -109,6 +134,40 @@ async function pushEntry(
       err
     );
     return { ...base, status: 'failed', error: 'invalid_payload' };
+  }
+
+  // Check de conflit AVANT upsert pour les tables concernées (TA-122).
+  // Pas de check pour delete (idempotent, ligne supprimée des deux côtés).
+  // Pas de check pour les tables non-listées (programs, etc.).
+  let conflictWinner: 'local' | 'no_remote' = 'no_remote';
+  if (entry.action !== 'delete' && isConflictCheckedTable(entry.tableName)) {
+    const check = await runConflictCheck(db, supabase, entry, parsedPayload);
+
+    if (check.kind === 'failed') {
+      return { ...base, status: 'failed', error: check.error };
+    }
+
+    if (check.kind === 'remote_wins') {
+      // Remote gagne : on a déjà copié remote→local et logué. On marque
+      // synced=1 SANS upsert (la donnée serveur est canonique).
+      conflictsThisPush.push(check.log);
+      logStore.append(check.log);
+      try {
+        await markEntrySynced(db, entry);
+      } catch (err) {
+        console.warn(
+          `[sync] entry #${entry.id} resolved as remote-wins but local mark failed`,
+          err
+        );
+      }
+      return { ...base, status: 'pushed', conflictResolved: 'remote' };
+    }
+
+    if (check.kind === 'local_wins') {
+      conflictsThisPush.push(check.log);
+      logStore.append(check.log);
+      conflictWinner = 'local';
+    }
   }
 
   // Appel réseau — toute exception (fetch fail, RLS, contrainte) → failed.
@@ -148,7 +207,9 @@ async function pushEntry(
     );
   }
 
-  return { ...base, status: 'pushed' };
+  return conflictWinner === 'local'
+    ? { ...base, status: 'pushed', conflictResolved: 'local' }
+    : { ...base, status: 'pushed' };
 }
 
 /**

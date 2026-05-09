@@ -4,6 +4,11 @@ export { createSyncService } from './api/sync-service';
 export { SyncBridge } from './components/sync-bridge';
 export { useSyncStatus } from './hooks/use-sync-status';
 export type {
+  ConflictCheckedTable,
+  ConflictResolutionLog,
+  ConflictWinner,
+} from './types/conflict';
+export type {
   SyncAction,
   SyncQueueRecord,
   SyncTableName,
