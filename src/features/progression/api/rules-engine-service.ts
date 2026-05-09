@@ -213,6 +213,8 @@ export async function runRulesEngine(
   // -- Persistence : nettoyage idempotent + écritures -----------------------
   await clearRecommendationsForSession(db, sessionId);
 
+  const avgLoadByPlannedExerciseId = computeAvgLoadByPlannedExercise(currentSetLogs);
+
   const recommendations: Recommendation[] = [];
 
   // load_change par exercice du plan
@@ -235,6 +237,7 @@ export async function runRulesEngine(
         plannedExerciseId: exercise.id,
         sessionStatus: sessionPlan.status,
         nextSets: plan.next_sets,
+        currentLoad: avgLoadByPlannedExerciseId[exercise.id] ?? null,
       },
     });
     recommendations.push(rec);
@@ -323,6 +326,29 @@ async function loadSetLogsForSessions(
     map.set(s.id, logs);
   }
   return map;
+}
+
+/**
+ * Pour chaque `plannedExerciseId`, calcule la moyenne des `load` non-null des
+ * sets complétés de la séance courante. Retourne null pour les exercices sans
+ * set avec load renseigné.
+ */
+function computeAvgLoadByPlannedExercise(
+  setLogs: SetLog[],
+): Record<string, number | null> {
+  const sumByExercise: Record<string, { total: number; count: number }> = {};
+  for (const log of setLogs) {
+    if (log.plannedExerciseId === null || !log.completed || log.load === null) continue;
+    const entry = sumByExercise[log.plannedExerciseId] ?? { total: 0, count: 0 };
+    entry.total += log.load;
+    entry.count += 1;
+    sumByExercise[log.plannedExerciseId] = entry;
+  }
+  const result: Record<string, number | null> = {};
+  for (const [id, { total, count }] of Object.entries(sumByExercise)) {
+    result[id] = count > 0 ? total / count : null;
+  }
+  return result;
 }
 
 function buildPreSessionReadiness(session: Session) {

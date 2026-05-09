@@ -6,6 +6,25 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-123 — Fix UX-01 : metadata.currentLoad dans les recommendations load_change
+**Livré** : `metadata.currentLoad` est désormais calculé et persisté dans chaque `Recommendation` de type `load_change`. La valeur est la moyenne des charges loggées (`set_logs.load`, non-null, `completed = true`) pour le `plannedExerciseId` correspondant pendant la séance courante. Si aucun set avec load non-null : `currentLoad = null` (fallback conservé).
+
+**Fichiers modifiés** :
+- `src/features/progression/api/rules-engine-service.ts` — ajout de `computeAvgLoadByPlannedExercise()` (helper file-local pur) + alimentation de `metadata.currentLoad` dans la boucle `load_change`.
+- `src/features/progression/api/rules-engine-service.test.ts` — 2 nouveaux tests : calcul correct de la moyenne (90+100+110 → 100), et fallback null quand tous les sets n'ont pas de load.
+- `docs/pitfalls.md` — suppression du stub UX-01 (résolu) et mise à jour de la table des stubs ouverts.
+
+**S'appuie sur** :
+- TA-109 (`runRulesEngine`, variable `currentSetLogs` déjà chargée).
+- TA-112 (`session-recommendations.tsx` — l'affichage `Xkg → Ykg` était déjà correct, seule la donnée manquait).
+- Pitfall PROG-03 (indexation par `PlannedExercise.id`, pas `Exercise.id`).
+
+**Ouvre** : rien. Stub UX-01 consommé.
+
+**Bugs découverts** : aucun.
+
+---
+
 ## TA-122 — Résolution de conflits sync : last-write-wins par `updated_at`
 **Livré** : résolution de conflits client-side basée sur `updated_at` (ou `created_at` pour `recommendations`) avant chaque upsert sur les tables conflict-checked. Si remote est plus récent, on copie remote→local et on marque l'entrée synced=1 sans push. Si local gagne ou pas de ligne remote, upsert classique. Logs de conflits in-memory accessibles via `getConflictLogs()`.
 
