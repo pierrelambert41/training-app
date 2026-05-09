@@ -1,9 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import {
-  enqueueSyncRecord,
-  type SyncAction,
-  type SyncTableName,
-} from './sync-queue';
+import type { SyncAction, SyncTableName } from '../types/sync-queue';
+import { enqueueSyncRecord } from './sync-queue';
 
 /**
  * Enqueue safe : un échec n'interrompt JAMAIS l'écriture locale qui le précède

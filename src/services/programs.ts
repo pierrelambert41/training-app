@@ -4,7 +4,7 @@ import type {
   Program,
   UpdateProgramInput,
 } from '@/types';
-import { safeEnqueue } from './sync-helpers';
+import { safeEnqueue } from '@/features/sync';
 
 const TABLE = 'programs';
 

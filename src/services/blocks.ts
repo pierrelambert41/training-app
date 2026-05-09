@@ -5,7 +5,7 @@ import type {
   NewBlockInput,
   UpdateBlockInput,
 } from '@/types';
-import { safeEnqueue } from './sync-helpers';
+import { safeEnqueue } from '@/features/sync';
 
 const TABLE = 'blocks';
 
