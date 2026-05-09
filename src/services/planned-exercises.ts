@@ -5,7 +5,7 @@ import type {
   ProgressionConfig,
   UpdatePlannedExerciseInput,
 } from '@/types';
-import { safeEnqueue } from './sync-helpers';
+import { safeEnqueue } from '@/features/sync';
 
 const TABLE = 'planned_exercises';
 

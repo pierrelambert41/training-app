@@ -5,7 +5,7 @@ import type {
   SessionStatus,
   UpdateSessionInput,
 } from '@/types';
-import { safeEnqueue } from './sync-helpers';
+import { safeEnqueue } from '@/features/sync';
 import { getOrCreateDeviceId } from './device-id';
 
 const TABLE = 'sessions';

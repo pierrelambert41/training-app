@@ -282,11 +282,13 @@ const dependenciesRules = [
       { to: { type: 'shared-config' } },
     ],
   },
-  // shared-services : peuvent s'importer entre eux
+  // shared-services : peuvent s'importer entre eux et accèdent aux features via leur index
+  // (pendant la migration des services restants vers les features — ex: TA-119 pour sync)
   {
     from: { type: 'shared-services' },
     allow: [
       { to: { type: 'shared-services' } },
+      { to: { type: 'feature-index' } },
       { to: { type: 'shared-lib' } },
       { to: { type: 'shared-config' } },
       { to: { type: 'shared-types' } },

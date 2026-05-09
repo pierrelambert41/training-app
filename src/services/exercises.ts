@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { Exercise, ExerciseCategory, LogType, MovementPattern } from '@/types';
-import { enqueueSyncRecord } from './sync-queue';
+import { enqueueSyncRecord } from '@/features/sync';
 
 export type CustomExerciseInput = {
   id: string;

@@ -6,6 +6,39 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-119 — Migration `sync/` vers Bulletproof React
+**Livré** : migration de la feature `sync/` depuis `src/services/` vers `src/features/sync/` selon Bulletproof React (R2/R3/R5). Refacto pur, zéro changement de comportement. Préalable à l'implémentation du sync engine en Phase 6.
+
+**Fichiers créés** :
+- `src/features/sync/types/sync-queue.ts` — types `SyncAction`, `SyncTableName`, `SyncQueueRecord` (extraits)
+- `src/features/sync/api/sync-queue.ts` — `enqueueSyncRecord`, `getPendingSyncRecords` (I/O SQLite)
+- `src/features/sync/api/safe-enqueue.ts` — `safeEnqueue` (wrapper try/catch, ADR-012)
+- `src/features/sync/api/sync-queue.test.ts` — tests existants déplacés tels quels (7 tests)
+- `src/features/sync/api/safe-enqueue.test.ts` — 2 tests ajoutés pour verrouiller l'invariant ADR-012 (jamais rejeter en cas d'erreur, console.warn loggé)
+- `src/features/sync/index.ts` — public API (R3) : `safeEnqueue`, `enqueueSyncRecord`, `getPendingSyncRecords`, types
+
+**Fichiers modifiés** :
+- `src/services/exercises.ts`, `programs.ts`, `set-logs.ts`, `sessions.ts`, `planned-exercises.ts`, `recommendations.ts`, `workout-days.ts`, `blocks.ts` — imports `safeEnqueue`/`enqueueSyncRecord` redirigés vers `@/features/sync`
+- `src/features/sync/README.md` — structure réelle documentée
+- `eslint.config.mjs` — ajout `{ to: { type: 'feature-index' } }` dans `from: { type: 'shared-services' }` pour permettre aux services restants (encore dans `src/services/`) d'importer la feature sync via sa public API. Pattern à réutiliser pour les futures migrations de services vers features.
+
+**Fichiers supprimés** :
+- `src/services/sync-helpers.ts` — déplacé dans `features/sync/api/safe-enqueue.ts`
+- `src/services/sync-queue.ts` — déplacé dans `features/sync/api/sync-queue.ts` + types extraits dans `types/`
+- `src/services/sync-queue.test.ts` — déplacé en colocalisation dans `features/sync/api/`
+
+**Découpage `domain` vs `api`** : aucun code de logique pure aujourd'hui. `enqueueSyncRecord`, `getPendingSyncRecords` et `safeEnqueue` sont tous de l'I/O SQLite (avec ou sans wrapper try/catch), donc `api/`. Les `hooks/` et `domain/` mentionnés dans le ticket ne sont pas créés à vide (R6 : pas d'abstraction prématurée) — ils seront ajoutés en Phase 6 quand le sync engine (replay, conflict resolution) et les hooks React (useSyncOnReconnect) seront implémentés.
+
+**Vérifications** : `npx tsc --noEmit` 0 erreur ; `npx eslint src/features/sync/` 0 erreur ; `npm test` 568 tests passants (les 2 erreurs ESLint préexistantes hors sync subsistent — `today-screen.tsx` ARCH-05 et `end-session-screen.tsx` rule react-hooks introuvable).
+
+**S'appuie sur** : TA-97 (architecture Bulletproof + ESLint boundaries), TA-98 (pattern de migration). ADR-012 (format payload sync) et ADR-017 (boundaries) inchangés.
+
+**Ouvre** : Phase 6 peut maintenant ajouter `domain/sync-engine.ts` (logique de replay pure) et `hooks/use-sync-on-reconnect.ts` sans toucher à `src/services/`. Le pattern `shared-services → feature-index` est désormais autorisé pour faciliter la migration progressive des autres services restants (`exercises.ts`, `programs.ts`, etc. → leurs features respectives).
+
+**Stubs laissés** : aucun ajouté. Tous les invariants ADR-012 sont préservés à l'identique (le test `safe-enqueue.test.ts` verrouille explicitement la non-propagation d'erreur).
+
+---
+
 ## TA-96 — Sélection des jours d'entraînement dans le questionnaire de génération
 **Livré** : nouvelle étape 2b dans le flow de génération de programme. L'utilisateur sélectionne exactement N jours de la semaine (N = fréquence choisie à l'étape 2). Le moteur de génération utilise ces jours pour assigner les `dayOrder` via `spreadDayOrders`. Avertissement affiché si 3 jours consécutifs ou plus sont sélectionnés.
 
