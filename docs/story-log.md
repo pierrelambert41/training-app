@@ -6,6 +6,62 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-125 — Import CSV Hevy : écran d'import avec mapping des exercices
+**Livré** : écran d'import CSV Hevy en 3 étapes (sélection fichier, mapping exercices, confirmation), accessible depuis l'onglet Profil via la route `/(app)/import/hevy`.
+
+**Skill consulté** : `expo:building-native-ui` consulté avant de coder l'UI (patterns NativeWind, minHeight 44 pour cibles tactiles, SafeAreaView edges, FlatList vs ScrollView).
+
+**Fonctionnalités** :
+- Étape 1 : sélection de fichier via `expo-document-picker` (installé), lecture via `expo-file-system/legacy`, validation format CSV + header. Erreurs bloquantes affichées inline.
+- Étape 2 : liste des exercices Hevy détectés avec fuzzy match Levenshtein (seuil 0.5) sur la bibliothèque interne. Badge rouge "Non mappé" pour les exercices bloquants. Modal de recherche interne pour corriger un mapping. Bouton "Ignorer" par exercice. Passage à l'étape suivante bloqué tant qu'il reste des exercices non mappés et non ignorés.
+- Étape 3 : résumé chiffré (séances, exercices, sets, ignorés), accordéon warnings, bouton "Importer" (persistance en base stubée — TODO TA-126), état succès final.
+- Barre de progression en haut, navigation retour à chaque étape, bouton Annuler.
+
+**Fichiers créés** :
+- `src/features/import/types/hevy-csv-types.ts` — types `ParsedHevyData`, `ParsedHevySession`, `ParsedHevySet`, `ParseWarning`, `ParseError`
+- `src/features/import/types/import-state.ts` — types `ImportState`, `ExerciseMatch`, `ImportStep`
+- `src/features/import/domain/hevy-csv-parser.ts` — fonction pure `parseHevyCsv` (déplacée depuis `features/sync` — R4)
+- `src/features/import/domain/hevy-csv-parser.test.ts` — 23 tests unitaires
+- `src/features/import/domain/exercise-matcher.ts` — `levenshtein`, `findBestMatch`, `buildExerciseMappings` (73L)
+- `src/features/import/domain/exercise-matcher.test.ts` — 13 tests unitaires (100% pass)
+- `src/features/import/domain/compute-stats.ts` — `computeStats` (R4 : fonction pure extraite de step-confirmation)
+- `src/features/import/domain/compute-stats.test.ts` — 7 tests unitaires
+- `src/features/import/api/read-csv-file.ts` — `pickAndReadCsvFile` via expo-document-picker + expo-file-system/legacy
+- `src/features/import/api/get-exercises.ts` — `getAllExerciseRefs` (SQLite)
+- `src/features/import/hooks/use-hevy-import.ts` — orchestrateur d'état du wizard (134L)
+- `src/features/import/components/step-file-selection.tsx` — étape 1 (79L)
+- `src/features/import/components/exercise-search-modal.tsx` — modal de recherche d'exercices (105L)
+- `src/features/import/components/mapping-row.tsx` — composant extrait de step-exercise-mapping
+- `src/features/import/components/stat-row.tsx` — composant extrait de step-confirmation
+- `src/features/import/components/step-exercise-mapping.tsx` — étape 2
+- `src/features/import/components/step-confirmation.tsx` — étape 3 avec accordéon warnings
+- `src/features/import/components/hevy-import-screen.tsx` — orchestrateur UI (125L)
+- `src/features/import/index.ts` — public API de la feature
+- `app/(app)/import/hevy.tsx` — route thin (5L)
+
+**Fichiers modifiés** :
+- `app/(app)/_layout.tsx` — ajout `Stack.Screen name="import/hevy"` (headerShown: false)
+- `src/screens/(app)/profile-screen.tsx` — bouton "Importer depuis Hevy (CSV)" → `router.push('/(app)/import/hevy')`
+- `src/features/sync/index.ts` — suppression des exports `parseHevyCsv` et types CSV (déplacés dans `features/import`)
+- `.expo/types/router.d.ts` — ajout de la route `/(app)/import/hevy` dans les types générés (hors git, régénéré au `expo start`)
+
+**S'appuie sur** :
+- `useExercises` hook depuis `src/hooks/` (shared-hooks).
+- `useDebounce` hook depuis `src/hooks/`.
+- `ExercisePickerModal` comme référence de pattern (non réutilisé directement — R2 interdit import horizontal entre features).
+
+**Note sur TA-124** : `parseHevyCsv` avait été placé dans `features/sync/domain/` par erreur. C'est une fonction pure d'import, pas de sync. Déplacé dans `features/import/domain/` (R4) avec ses types dans `features/import/types/` (R4). `features/sync/index.ts` nettoyé.
+
+**Ouvre** :
+- TA-126 : persistance des séances importées en SQLite (`set_logs`, `sessions`). Le stub `TODO TA-126` est dans `hevy-import-screen.tsx` `handleConfirm()`.
+
+**Bugs découverts** : violations R2 (import cross-features) et R4 (logique dans composant) corrigées en review.
+
+**Stubs laissés ouverts** :
+- `hevy-import-screen.tsx` `handleConfirm` — persistance réelle stubée, `TODO TA-126`.
+
+---
+
 ## TA-124 — Import CSV Hevy : parser et validation du fichier
 **Livré** : `parseHevyCsv(csv, options?)` — fonction pure qui parse le format CSV Hevy, normalise les données (regroupement par date+exercice, conversion lb→kg, BOM strip), détecte les erreurs bloquantes (header invalide, lignes malformées, valeurs non numériques) et les warnings non-bloquants (doublons). 23 tests unitaires, 0 erreur lint boundaries.
 

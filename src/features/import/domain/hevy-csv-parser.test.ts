@@ -1,4 +1,4 @@
-import { parseHevyCsv } from './hevy-csv-parser';
+import { parseHevyCsv } from '../domain/hevy-csv-parser';
 
 const VALID_HEADER = 'Date,Exercise Name,Set Order,Weight,Reps,RPE,Notes';
 

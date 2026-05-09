@@ -208,13 +208,34 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### ARCH-09 — Fonction pure d'import placée dans `features/sync` : violation R4 + R2
+**Symptôme** : `parseHevyCsv` (fonction pure, aucun I/O) avait été placée dans `src/features/sync/domain/` parce que la story TA-124 la livrait avant l'écran d'import. La story suivante (TA-125) l'importait via `@/features/sync` — import horizontal entre features bloqué par `boundaries/dependencies`.
+**Fix** : déplacer la fonction pure dans `src/features/import/domain/` (R4 : logique sans I/O dans domain/) et les types associés dans `src/features/import/types/` (R4). Nettoyer `features/sync/index.ts`. Règle : le placement d'une fonction ne dépend pas de qui la livre, mais de qui la consomme logiquement. Un parser CSV d'import appartient à la feature import.
+**Détecté** : TA-125 review / 2026-05-09
+
+---
+
+### IMPORT-01 — `expo-file-system` v2 : `EncodingType` n'est plus sur l'export principal
+**Symptôme** : `import * as FileSystem from 'expo-file-system'` puis `FileSystem.EncodingType` → TS2339 "Property 'EncodingType' does not exist". L'API principale d'expo-file-system v2 a migré vers une API différente ; l'ancienne API est dans le namespace `legacy`.  
+**Fix** : utiliser `import * as FileSystem from 'expo-file-system/legacy'` pour accéder à `readAsStringAsync` et `EncodingType`. Valide aussi pour SDK 54.  
+**Détecté** : TA-125 / 2026-05-09
+
+---
+
+### IMPORT-02 — Route Expo Router non incluse dans `.expo/types/router.d.ts` jusqu'au premier `expo start`
+**Symptôme** : TS2345 sur `router.push('/(app)/import/hevy')` — la route n'est pas reconnue par le système de types Expo Router parce que le fichier `.expo/types/router.d.ts` est auto-généré au démarrage du dev server et n'inclut pas encore la nouvelle route.  
+**Fix** : ajouter manuellement la route dans `.expo/types/router.d.ts` pour que le type check CI passe. Ce fichier est dans `.gitignore` et sera écrasé au prochain `expo start` — la route sera incluse automatiquement. Pas de hack `as any` nécessaire.  
+**Détecté** : TA-125 / 2026-05-09
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
 
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
-| *(aucun stub ouvert)* | — | — | — |
+| Persistance import Hevy | `src/features/import/components/hevy-import-screen.tsx` | `handleConfirm()` | TA-126 |
 
 ---
 
