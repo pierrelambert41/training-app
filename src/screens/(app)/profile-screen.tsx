@@ -1,9 +1,11 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuthStore, useAuth } from '@/features/auth';
 import { colors } from '@/theme/tokens';
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const { logout, isLoading } = useAuth();
 
@@ -14,6 +16,12 @@ export default function ProfileScreen() {
       {user && (
         <Text className="text-body text-content-secondary">{user.email}</Text>
       )}
+      <Pressable
+        onPress={() => router.push('/(app)/import/hevy')}
+        className="bg-background-surface border border-border rounded-button h-tap items-center justify-center"
+      >
+        <Text className="text-body text-content-primary font-semibold">Importer depuis Hevy (CSV)</Text>
+      </Pressable>
       <Pressable
         onPress={logout}
         disabled={isLoading}
