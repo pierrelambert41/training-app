@@ -5,8 +5,16 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/features/auth';
+import { SyncBridge } from '@/features/sync';
+import type { SupabasePushClient } from '@/features/sync';
 import { checkSupabaseHealth, supabase } from '@/services/supabase';
 import { DBProvider } from '@/components/db-provider';
+
+// SupabaseClient est structurellement compatible avec SupabasePushClient
+// (sous-ensemble minimal : .from().upsert() et .from().delete().eq()).
+// Le cast est sûr au niveau runtime — uniquement nécessaire car TS voit les
+// génériques complets de PostgrestFilterBuilder vs la signature simplifiée.
+const supabasePushClient = supabase as unknown as SupabasePushClient;
 
 colorScheme.set('dark');
 
@@ -76,6 +84,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <DBProvider>
+        <SyncBridge supabase={supabasePushClient} />
         <SessionHydrator>
           <AuthGuard />
         </SessionHydrator>

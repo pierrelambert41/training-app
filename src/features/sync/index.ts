@@ -1,6 +1,8 @@
 export { safeEnqueue } from './api/safe-enqueue';
 export { enqueueSyncRecord, getPendingSyncRecords } from './api/sync-queue';
 export { createSyncService } from './api/sync-service';
+export { SyncBridge } from './components/sync-bridge';
+export { useSyncStatus } from './hooks/use-sync-status';
 export type {
   SyncAction,
   SyncQueueRecord,
@@ -12,3 +14,4 @@ export type {
   SupabasePushBuilder,
   SupabasePushClient,
 } from './types/sync-service';
+export type { SyncStatus } from './types/sync-status';

@@ -6,6 +6,41 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-121 — Queue offline : déclenchement automatique de la sync au retour réseau
+**Livré** : déclenchement automatique de `SyncService.push()` au retour réseau et au démarrage de l'app. Hook `useNetworkSync` avec mutex ref (pas de double-push). Hook `useSyncStatus` exposant `{ isSyncing, lastSyncedAt, pendingCount }`. Composant sans UI `SyncBridge` monté dans le root layout.
+
+**Fichiers créés** :
+- `src/features/sync/hooks/use-network-sync.ts` — écoute NetInfo, déclenche push() sur transition offline→online et au premier événement connecté. Mutex via `useRef` absorbe le double-mount React Strict Mode et les reconnexions rapides.
+- `src/features/sync/hooks/use-sync-status.ts` — orchestre `useNetworkSync` et expose l'état de sync. Initialise `pendingCount` au montage via `getUnsynced`.
+- `src/features/sync/hooks/use-network-sync.test.ts` — 7 tests : déclenchement initial, reconnexion, stabilité en restant connecté, queue vide, mutex concurrent, erreur silencieuse, désinscription NetInfo.
+- `src/features/sync/components/sync-bridge.tsx` — composant `SyncBridge({ supabase })` sans rendu, à monter une fois dans le root layout sous `DBProvider`.
+- `src/features/sync/types/sync-status.ts` — type `SyncStatus`.
+
+**Fichiers modifiés** :
+- `src/features/sync/index.ts` — exports `SyncBridge`, `useSyncStatus`, `SyncStatus`.
+- `app/_layout.tsx` — import `SyncBridge` + cast `supabasePushClient`, montage sous `<DBProvider>`.
+- `eslint.config.mjs` — ajout auto-référence `feature-hooks → feature-hooks` (même feature). Cf. ARCH-08.
+- `package.json` — installation de `@react-native-community/netinfo`.
+
+**Décisions clés** :
+- `SyncBridge` reçoit le client Supabase en prop (pas d'import direct) pour éviter que `@/services/supabase` soit tiré dans les tests Jest via `sync/index.ts` (SYNC-01).
+- Le cast `as unknown as SupabasePushClient` est dans `app/_layout.tsx` — hors scope des tests.
+- `pendingCount` n'est pas un flux temps-réel : il reflète l'état après chaque push(), pas les enfilages concurrents. C'est volontaire (borner la durée du push).
+
+**S'appuie sur** :
+- TA-120 (SyncService.push() et getUnsynced()).
+- TA-119 (architecture Bulletproof React de la feature sync).
+
+**Hors scope rappelé** : UI indicateur de sync, pull depuis Supabase, résolution de conflits.
+
+**Ouvre** : un écran ou badge de statut sync peut consommer `useSyncStatus` depuis `@/features/sync` sans toucher aux hooks internes. La migration progressive des `shared-services` restants vers des features permettra de supprimer le cast `supabasePushClient` si un `SupabaseContext` est créé.
+
+**Bugs découverts** : SYNC-01 — import transitif de supabase.ts via index.ts cassait 18 suites de tests.
+
+**Stubs laissés** : `pendingCount` non actualisé en temps-réel pendant le push (par design). `useSyncStatus` non exposé dans l'UI (ticket dédié).
+
+---
+
 ## TA-120 — Implémentation de `SyncService.push()` (SQLite → Supabase)
 **Livré** : implémentation du moteur de push synchronisation — lecture de la `sync_queue`, dispatch vers Supabase (upsert idempotent pour insert/update, delete ciblé), marquage `synced=1` après confirmation, stamp `synced_at` sur la ligne source pour les tables concernées. Stratégie non fail-fast : une erreur sur l'entrée N ne bloque pas N+1.
 

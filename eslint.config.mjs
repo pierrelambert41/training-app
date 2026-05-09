@@ -152,10 +152,13 @@ const dependenciesRules = [
       { to: { type: 'shared-screens' } },
     ],
   },
-  // R2 : hooks d'une feature → uniquement ses propres api/domain/lib/stores
+  // R2 : hooks d'une feature → uniquement ses propres api/domain/lib/stores/hooks
+  // Les sous-modules hooks peuvent s'importer entre eux (même feature,
+  // ex: useSyncStatus → useNetworkSync). Pattern identique à ARCH-02, ARCH-06.
   {
     from: { type: 'feature-hooks' },
     allow: [
+      { to: { type: 'feature-hooks', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-api', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-stores', captured: { featureName: '{{ from.captured.featureName }}' } } },
       { to: { type: 'feature-domain', captured: { featureName: '{{ from.captured.featureName }}' } } },
