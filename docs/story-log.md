@@ -6,6 +6,51 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-122 — Résolution de conflits sync : last-write-wins par `updated_at`
+**Livré** : résolution de conflits client-side basée sur `updated_at` (ou `created_at` pour `recommendations`) avant chaque upsert sur les tables conflict-checked. Si remote est plus récent, on copie remote→local et on marque l'entrée synced=1 sans push. Si local gagne ou pas de ligne remote, upsert classique. Logs de conflits in-memory accessibles via `getConflictLogs()`.
+
+**Fichiers créés** :
+- `src/features/sync/domain/conflict-resolution.ts` — fonction pure `resolveConflict({local, remote})` retournant `'local' | 'remote' | 'no_remote'`. Defensive sur timestamps null/corrompus.
+- `src/features/sync/domain/conflict-resolution.test.ts` — 10 tests : remote gagne, local gagne, égalité, ms precision, local null/undefined, remote unparseable, déterminisme.
+- `src/features/sync/api/conflict-log-store.ts` — factory `createConflictLogStore()` avec `append/getAll/clear`. Buffer FIFO de 200 entrées max. Copie défensive sur `getAll`.
+- `src/features/sync/api/copy-remote-row-to-local.ts` — handlers SQL constants par table (`sessions`, `set_logs`, `recommendations`) pour copier remote → local. SQL parametrée (pas de template literal dynamique).
+- `src/features/sync/types/conflict.ts` — types `ConflictCheckedTable`, `ConflictWinner`, `ConflictResolutionLog`.
+
+**Fichiers modifiés** :
+- `src/features/sync/api/sync-service.ts` — étendu : `runConflictCheck` avant chaque upsert sur les tables conflict-checked, `pushEntry` orchestre le flow (no_remote / local_wins / remote_wins / failed). Nouveau `getConflictLogs()` exposé. `PushResult` enrichi de `conflicts: ConflictResolutionLog[]`.
+- `src/features/sync/api/sync-service.test.ts` — 13 nouveaux tests (3 cas nominaux + 10 edge cases : set_logs, recommendations, tables non-checkées, delete sans check, fetch throws/error, cumul des logs). 1 test existant adapté (`PushResult.conflicts`). 2 tests `SupabasePushBuilder` ad-hoc convertis vers `makeStubBuilder` (le builder ad-hoc n'avait pas le `select` nécessaire au check de conflit).
+- `src/features/sync/api/sync-service-test-helpers.ts` — `StubBuilderOptions` étendu : `selectData`, `selectError`, `selectThrows`. `StubBuilderHandles` expose `select`, `selectEq`, `maybeSingle`. Compatibilité descendante : `selectData` par défaut → `null` (pas de ligne remote).
+- `src/features/sync/types/sync-service.ts` — `SupabasePushBuilder` étendu avec `.select(cols).eq(col, val).maybeSingle()`. `PushEntryOutcome` (variant `pushed`) enrichi de `conflictResolved?: 'local' | 'remote'`. `PushResult` enrichi de `conflicts`.
+- `src/features/sync/index.ts` — exports `ConflictCheckedTable`, `ConflictResolutionLog`, `ConflictWinner`.
+- `docs/decisions.md` — ADR-024 (résolution LWW client-side, fetch avant upsert).
+- `docs/pitfalls.md` — SYNC-02 (recommendations sans updated_at), SYNC-03 (set_logs/recommendations sans device_id).
+
+**Décisions clés** :
+- **Résolution côté client**, pas Supabase : préserve l'offline-first (ADR-024).
+- **Tables conflict-checked** : `sessions`, `set_logs`, `recommendations` uniquement. Programs/blocks/workout_days/planned_exercises sont exclus (workflow de génération séquentiel, pas de mutation parallèle attendue).
+- **`recommendations` utilise `created_at`** (pas d'`updated_at` ni local ni remote). Cohérent avec ADR-020 (append-only via clear+recreate). Documenté SYNC-02.
+- **`device_id` n'est PAS muté par le SyncService** : il vient déjà du payload côté repo `sessions` (TA-72, `toSupabasePayload`). `set_logs` et `recommendations` n'ont pas cette colonne côté Supabase. SYNC-03 documente l'extension future.
+- **Logs in-memory uniquement** : pas de table `conflict_logs` dédiée. Buffer FIFO 200 entrées. Si besoin de persistance, créer la table dédiée plus tard.
+- **Quand remote gagne, pas de stamp `synced_at`** : la version canonique est déjà côté serveur, le local sera réconcilié au prochain pull (futur). Cohérent avec l'invariant "synced_at = vu par le serveur".
+- **Fetch remote throw** → entrée failed, upsert non tenté. L'entrée sera rejouée au prochain cycle (idempotent grâce à upsert).
+
+**S'appuie sur** :
+- TA-120 (`SyncService.push()` et `getUnsynced()`).
+- TA-72 (device_id déjà en SQLite via `getOrCreateDeviceId`, déjà dans le payload sessions).
+- ADR-015 (device_id en SQLite, pas AsyncStorage).
+- ADR-020 (recommendations append-only via clear+recreate — justifie `created_at` comme proxy).
+- ADR-022 (idempotence upsert + non fail-fast — préservée).
+
+**Hors scope rappelé** : merge trois-voies, UI de résolution manuelle, pull descendant automatique (sync engine bidirectionnel), batch fetch (optimisation N+1).
+
+**Ouvre** : un futur ticket "pull engine" pourra étendre le SyncService pour synchroniser dans l'autre sens. Le `ConflictLogStore` peut alimenter un panneau debug si besoin (pas exposé dans l'UI Phase 6). Si la fenêtre de race fetch→upsert devient un problème (mesurable via les conflits avec deltas négatifs), on pourra ajouter un `If-Match` côté upsert ou passer à des version vectors.
+
+**Bugs découverts** : aucun (les tests ad-hoc devaient être convertis car le `SupabasePushBuilder` réel a maintenant besoin de `.select`).
+
+**Stubs laissés** : `recommendations` sans `updated_at` (SYNC-02) — fallback `created_at` documenté. Pas de batch fetch (acceptable Phase 6).
+
+---
+
 ## TA-121 — Queue offline : déclenchement automatique de la sync au retour réseau
 **Livré** : déclenchement automatique de `SyncService.push()` au retour réseau et au démarrage de l'app. Hook `useNetworkSync` avec mutex ref (pas de double-push). Hook `useSyncStatus` exposant `{ isSyncing, lastSyncedAt, pendingCount }`. Composant sans UI `SyncBridge` monté dans le root layout.
 

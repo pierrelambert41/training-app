@@ -1,5 +1,4 @@
 import { createSyncService } from './sync-service';
-import type { SupabasePushBuilder } from '../types/sync-service';
 import {
   type MockDbState,
   makeMockDb,
@@ -7,6 +6,13 @@ import {
   makeStubBuilder,
   makeSupabaseStub,
 } from './sync-service-test-helpers';
+
+// Suite "push de base" : couvre le moteur push() (succès / échec / robustesse
+// / ordre causal / snapshot / delete / payload corrompu) + getUnsynced().
+//
+// La suite TA-122 (résolution de conflits last-write-wins) vit dans
+// `sync-service-conflict.test.ts` — split thématique pour respecter R6
+// (signal d'alerte > 250 lignes, refacto obligatoire > 400 lignes).
 
 describe('createSyncService — push()', () => {
   let warnSpy: jest.SpyInstance;
@@ -28,7 +34,7 @@ describe('createSyncService — push()', () => {
     const svc = createSyncService({ supabase: client });
     const result = await svc.push(db);
 
-    expect(result).toEqual({ pushed: 0, failed: 0, results: [] });
+    expect(result).toEqual({ pushed: 0, failed: 0, results: [], conflicts: [] });
     expect(from).not.toHaveBeenCalled();
     expect(state.runCalls).toEqual([]);
   });
@@ -107,7 +113,10 @@ describe('createSyncService — push()', () => {
         c[0].includes('UPDATE planned_exercises SET synced_at')
       )
     ).toHaveLength(0);
-    expect(from).toHaveBeenCalledTimes(6);
+    // 6 upserts + 3 selects (conflict check sur sessions/set_logs/recommendations).
+    // Les 3 tables programme (blocks, workout_days, planned_exercises) ne sont
+    // pas conflict-checked → un seul from(table) chacune.
+    expect(from).toHaveBeenCalledTimes(6 + 3);
   });
 
   // AC : push partiel — erreur Supabase au milieu, les autres continuent
@@ -123,15 +132,15 @@ describe('createSyncService — push()', () => {
     const db = makeMockDb(state);
 
     let callCount = 0;
-    const upsert = jest.fn(async () => {
+    const handles = makeStubBuilder();
+    handles.upsert.mockImplementation(async () => {
       callCount += 1;
       if (callCount === 2) {
         return { error: { message: 'RLS violation' } };
       }
       return { error: null };
     });
-    const builder = { upsert, delete: jest.fn() } as unknown as SupabasePushBuilder;
-    const { client } = makeSupabaseStub({ sessions: builder });
+    const { client } = makeSupabaseStub({ sessions: handles.builder });
 
     const svc = createSyncService({ supabase: client });
     const result = await svc.push(db);
@@ -293,12 +302,12 @@ describe('createSyncService — push()', () => {
     };
     const db = makeMockDb(state);
     const callOrder: string[] = [];
-    const upsert = jest.fn(async (payload: Record<string, unknown>) => {
+    const handles = makeStubBuilder();
+    handles.upsert.mockImplementation(async (payload: Record<string, unknown>) => {
       callOrder.push(payload.id as string);
       return { error: null };
     });
-    const builder = { upsert, delete: jest.fn() } as unknown as SupabasePushBuilder;
-    const { client } = makeSupabaseStub({ sessions: builder });
+    const { client } = makeSupabaseStub({ sessions: handles.builder });
 
     const svc = createSyncService({ supabase: client });
     await svc.push(db);

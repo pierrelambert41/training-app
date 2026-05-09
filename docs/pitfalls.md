@@ -148,6 +148,22 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### SYNC-02 — `recommendations` sans `updated_at` : fallback `created_at` pour le LWW
+**Symptôme** : `recommendations` n'a pas de colonne `updated_at`, ni en SQLite ni en Supabase (cf. `data-model.md` §Recommendation). Le LWW basé sur `updated_at` (TA-122) ne pouvait donc pas s'appliquer tel quel.
+**Fix** : `TIMESTAMP_COLUMN_BY_TABLE` dans `src/features/sync/api/conflict-check.ts` mappe `recommendations → 'created_at'`. La table est de toute façon append-only via ADR-020 (clear+recreate avec UUID frais à chaque rerun du moteur), donc une collision sur `id` est virtuellement impossible.
+**Si une mutation in-place devient un cas d'usage** : ajouter `ALTER TABLE recommendations ADD COLUMN updated_at` (locale + remote) + bascule du mapping. Le `copyRecommendationRow` dans `copy-remote-row-to-local.ts` ne gère actuellement pas `updated_at` (à étendre).
+**Détecté** : TA-122 / 2026-05-09
+
+---
+
+### SYNC-03 — `set_logs` et `recommendations` sans `device_id` côté Supabase
+**Symptôme** : seule la table `sessions` a une colonne `device_id` côté Supabase (cf. `data-model.md` §Session). Inclure `device_id` dans le payload `set_logs.upsert` ou `recommendations.upsert` ferait crasher Supabase (colonne inconnue).
+**Fix** : le `device_id` est ajouté dans le payload uniquement par `toSupabasePayload` côté repo `sessions` (TA-72). Les payloads `set_logs` et `recommendations` ne contiennent jamais `device_id`. Le SyncService forward le payload tel quel sans le muter.
+**Si on veut tracer le device sur set_logs ou recommendations** : migration additive `ALTER TABLE ... ADD COLUMN device_id TEXT` côté Supabase + côté SQLite + extension du `toSupabasePayload` du repo concerné. Le SyncService n'a rien à changer.
+**Détecté** : TA-122 / 2026-05-09
+
+---
+
 ### NAV-01 — Screen non déclaré dans le Stack → header fantôme avec nom de route comme titre
 **Symptôme** : un écran Expo Router non enregistré explicitement dans le `<Stack>` du layout reçoit un header par défaut dont le titre est le nom du fichier (ex : `index`). En bonus, si d'autres écrans ont été empilés avant lui, un back button peut apparaître même si l'écran est la racine logique du groupe.
 **Fix** : toujours déclarer `<Stack.Screen name="index" options={{ headerShown: false }} />` (ou un titre explicite) dans `app/(app)/_layout.tsx` pour chaque écran racine. Ne pas compter sur le comportement par défaut d'Expo Router pour les routes racine.
