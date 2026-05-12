@@ -6,6 +6,42 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-126 — Import CSV Hevy : moteur d'import et persistance des sessions
+**Livré** : `importHevySessions(db, parsedData, exerciseMappings, userId) → ImportResult` — moteur d'import qui persiste les sessions Hevy dans SQLite, avec déduplication, import transactionnel par session, et alimentation automatique de la SyncQueue.
+
+**Fichiers créés** :
+- `src/features/import/api/import-service.ts` — moteur d'import (163L)
+- `src/features/import/api/import-service.test.ts` — 10 tests d'intégration (golden path, dédup, erreur mapping, ignored, sync queue)
+- `src/features/import/types/import-result.ts` — types `HevyExerciseMapping`, `HevyParsedData`, `HevyParsedSession`, `HevyParsedSet`, `ImportError`, `ImportResult`
+
+**Fichiers modifiés** :
+- `src/features/import/hooks/use-hevy-import.ts` — ajout de `importSessions()` via `useAuthStore` + `importHevySessions`
+- `src/features/import/components/hevy-import-screen.tsx` — `handleConfirm()` branché sur `importSessions()` (stub TA-126 consommé)
+- `src/features/import/index.ts` — export de `importHevySessions` + types `ImportResult`
+
+**S'appuie sur** :
+- `src/services/sessions.ts` — `insertSession` (shared-services)
+- `src/services/set-logs.ts` — `insertSetLog` (shared-services)
+- `src/features/sync/api/safe-enqueue.ts` — appelé implicitement via `insertSession`/`insertSetLog`
+- TA-125 : `ParsedHevyData`, `ExerciseMatch` depuis `import/types/`
+
+**Décisions clés** :
+- `importHevySessions` placé dans `features/import` (pas `features/sync` comme spécifié) pour respecter Bulletproof React boundaries — cf. IMPORT-03 dans pitfalls.md.
+- SyncQueue alimentée implicitement via `insertSession`/`insertSetLog` (pas de double enqueue).
+- Dédup par `date + exercise_ids` en comparant les sets existants (pas de hash).
+- `workout_day_id = null`, `block_id = null`, `pre_session_notes = "Importé depuis Hevy"`.
+
+**Ouvre** :
+- Affichage du `ImportResult` dans l'UI de confirmation (feedback erreurs/skipped — hors scope TA-126).
+- Filtrage de l'historique pour distinguer les sessions importées des sessions live.
+
+**Bugs découverts** :
+- 2 tests pré-existants échouent dans `rules-engine-integration.test.ts` (progression feature, hors scope TA-126).
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-125 — Import CSV Hevy : écran d'import avec mapping des exercices
 **Livré** : écran d'import CSV Hevy en 3 étapes (sélection fichier, mapping exercices, confirmation), accessible depuis l'onglet Profil via la route `/(app)/import/hevy`.
 

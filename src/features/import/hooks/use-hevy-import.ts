@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useDB } from '@/hooks/use-db';
+import { useAuthStore } from '@/features/auth';
+import { importHevySessions } from '../api/import-service';
+import type { ImportResult } from '../types/import-result';
 import { parseHevyCsv } from '../domain/hevy-csv-parser';
 import { pickAndReadCsvFile } from '../api/read-csv-file';
 import { getAllExerciseRefs } from '../api/get-exercises';
@@ -17,6 +20,7 @@ type UseHevyImportReturn = {
   goBack: () => void;
   reset: () => void;
   unmappedCount: number;
+  importSessions: () => Promise<ImportResult | null>;
 };
 
 const INITIAL_STATE: ImportState = {
@@ -29,6 +33,7 @@ const INITIAL_STATE: ImportState = {
 
 export function useHevyImport(): UseHevyImportReturn {
   const db = useDB();
+  const userId = useAuthStore((s) => s.user?.id);
   const [state, setState] = useState<ImportState>(INITIAL_STATE);
   const [fileError, setFileError] = useState<string | null>(null);
 
@@ -119,6 +124,11 @@ export function useHevyImport(): UseHevyImportReturn {
     (m) => !m.ignored && m.internalId === null,
   ).length;
 
+  const importSessions = useCallback(async (): Promise<ImportResult | null> => {
+    if (!state.parsedData || !userId) return null;
+    return importHevySessions(db, state.parsedData, state.exerciseMappings, userId);
+  }, [db, state.parsedData, state.exerciseMappings, userId]);
+
   return {
     state,
     fileError,
@@ -130,5 +140,6 @@ export function useHevyImport(): UseHevyImportReturn {
     goBack,
     reset,
     unmappedCount,
+    importSessions,
   };
 }

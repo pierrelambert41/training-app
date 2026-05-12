@@ -229,13 +229,21 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### IMPORT-03 — `importHevySessions` spécifiée dans `features/sync` par la spec mais appartient à `features/import`
+**Symptôme** : La spec TA-126 plaçait `importHevySessions` dans `src/features/sync/api/`. Mais `feature-hooks` (import) ne peut pas importer d'un `feature-index` d'une autre feature, ce qui rendait impossible d'appeler le service depuis `use-hevy-import.ts` sans violer boundaries.  
+**Fix** : placer le service dans `src/features/import/api/import-service.ts`. Les types associés (`ImportResult`, `HevyExerciseMapping`, etc.) dans `src/features/import/types/import-result.ts`. La SyncQueue est alimentée implicitement via `insertSession`/`insertSetLog` qui appellent `safeEnqueue` en interne — pas besoin d'importer `safeEnqueue` directement.  
+**Règle** : le placement d'un service suit la feature qui le consomme logiquement, pas la spec de ticket (cf. ARCH-09).  
+**Détecté** : TA-126 / 2026-05-12
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
 
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
-| Persistance import Hevy | `src/features/import/components/hevy-import-screen.tsx` | `handleConfirm()` | TA-126 |
+| (aucun stub ouvert) | — | — | — |
 
 ---
 
