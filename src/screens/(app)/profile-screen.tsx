@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore, useAuth } from '@/features/auth';
 import { colors } from '@/theme/tokens';
+import { SyncStatusSection } from '@/features/sync';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function ProfileScreen() {
       >
         <Text className="text-body text-content-primary font-semibold">Importer depuis Hevy (CSV)</Text>
       </Pressable>
+      <SyncStatusSection />
       <Pressable
         onPress={logout}
         disabled={isLoading}

@@ -245,6 +245,14 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### SYNC-04 — `useSyncStatus` retourne un snapshot du store, pas une vue réactive
+**Symptôme** : `useSyncStatus` retourne `useSyncStore.getState()` en fin de fonction (snapshot one-shot) au lieu de `useSyncStore(s => s)`. Les composants qui appellent `useSyncStatus` directement ne se re-renderent pas quand le store change.
+**Fix** : `SyncBridge` monte `useSyncStatus` (racine, pas pour le rendu). Les composants UI (`SyncStatusSection`) consomment directement `useSyncStore((s) => s.field)` — ce qui est réactif. Ne jamais appeler `useSyncStatus` depuis un composant UI.
+**Règle** : `useSyncStatus` = hook d'orchestration (root layout uniquement). `useSyncStore` = source de vérité réactive pour les composants.
+**Détecté** : TA-128 / 2026-05-12
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
