@@ -34,6 +34,7 @@ export function HevyImportScreen() {
     goBack,
     reset,
     unmappedCount,
+    importSessions,
   } = useHevyImport();
 
   const [isPicking, setIsPicking] = useState(false);
@@ -45,9 +46,7 @@ export function HevyImportScreen() {
   }
 
   async function handleConfirm() {
-    // Import not yet persisted to DB — stub for Phase 6 (hors scope TA-125)
-    // TODO TA-126: persist sessions/set_logs from parsedData + mappings
-    await Promise.resolve();
+    await importSessions();
   }
 
   const currentStep = STEP_NUMBERS[state.step] ?? 1;
