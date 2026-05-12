@@ -237,6 +237,14 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### CALIB-01 — `computeE1rm` dupliquée entre `features/import` et `features/progression`
+**Symptôme** : la formule Epley (`load * (1 + reps / 30)`) est déjà implémentée dans `src/features/progression/domain/progression-vs-previous.ts`. ESLint boundaries (`feature-domain` → seul `feature-domain` de la même feature autorisé) interdit un import cross-feature, même pour une fonction pure sans état.
+**Fix** : dupliquer la fonction dans `src/features/import/domain/calibration.ts`. 3 lignes, coût minimal. Si la formule change (ex: Brzycki), il faudra mettre à jour les deux endroits — acceptable car la formule est stable (cf. docs/business-rules.md §7).
+**Règle** : les fonctions pures cross-feature doivent être déplacées dans `src/lib/` ou `src/utils/` pour éviter la duplication. Si l'usage se généralize, migrer vers `src/lib/epley.ts` (shared-lib).
+**Détecté** : TA-127 / 2026-05-12
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.

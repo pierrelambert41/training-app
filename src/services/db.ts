@@ -314,6 +314,26 @@ const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_recommendations_type ON recommendations(type);
     `,
   },
+  // TA-127 — Calibration des charges initiales depuis l'historique importé.
+  // Table SQLite-only (données dérivées recalculables — pas dans SyncQueue).
+  // best_e1rm : meilleur e1RM Epley sur l'ensemble des SetLogs.
+  // recent_avg_load : charge moyenne sur les 4 dernières semaines.
+  // calibrated_at : date ISO 8601 du dernier recalcul.
+  {
+    version: 9,
+    sql: `
+      CREATE TABLE IF NOT EXISTS exercise_baselines (
+        exercise_id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        best_e1rm REAL NOT NULL,
+        recent_avg_load REAL NOT NULL,
+        calibrated_at TEXT NOT NULL,
+        FOREIGN KEY (exercise_id) REFERENCES exercises(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_exercise_baselines_user ON exercise_baselines(user_id);
+    `,
+  },
 ];
 
 let dbInstance: SQLite.SQLiteDatabase | null = null;

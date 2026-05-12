@@ -6,6 +6,43 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-127 — Calibration des charges initiales depuis l'historique importé
+**Livré** : `calibrateExerciseBaselines(db, userId) → CalibrationResult` — calcule les baselines (e1RM + charge récente sur 4 semaines) pour chaque exercice avec SetLogs, les stocke dans `exercise_baselines`, et met à jour `initial_load` dans le `progression_config` des PlannedExercise du programme actif.
+
+**Fichiers créés** :
+- `src/features/import/domain/calibration.ts` — fonctions pures : `computeE1rm`, `computeBestE1rm`, `computeRecentAvgLoad` (55L)
+- `src/features/import/domain/calibration.test.ts` — 9 tests unitaires
+- `src/features/import/api/calibration-service.ts` — `calibrateExerciseBaselines` (149L)
+- `src/features/import/api/calibration-service.test.ts` — 8 tests d'intégration
+
+**Fichiers modifiés** :
+- `src/services/db.ts` — migration v9 : table SQLite-only `exercise_baselines` + index `user_id`
+- `src/features/import/hooks/use-hevy-import.ts` — appel `calibrateExerciseBaselines` après `importHevySessions` (si `imported > 0`)
+- `src/features/import/index.ts` — export `calibrateExerciseBaselines`, `CalibrationResult`, `ExerciseCalibration`
+
+**S'appuie sur** :
+- TA-126 : `importHevySessions`, `use-hevy-import.ts`
+- `src/services/programs.ts` — pattern `getActiveProgramForUser` répliqué en SQL inline (shared-services non importable depuis feature-api)
+- `src/services/planned-exercises.ts` — pattern `updatePlannedExercise` via SQL direct (même raison)
+
+**Décisions clés** :
+- `computeE1rm` dupliquée depuis `features/progression` (boundaries interdit cross-feature domain) — cf. pitfall CALIB-01.
+- `exercise_baselines` est SQLite-only, pas dans SyncQueue (données dérivées recalculables).
+- L'update de `progression_config.initial_load` n'est pas enfilé en SyncQueue : c'est une dérivation locale, pas une mutation utilisateur. La calibration se réapplique à chaque import.
+- La calibration est déclenchée uniquement si `imported > 0` pour éviter un recalcul inutile.
+
+**Ouvre** :
+- Recalcul automatique à chaque séance (hors scope TA-127).
+- UI de visualisation des baselines (hors scope TA-127).
+- Calibration volume / fréquence (hors scope TA-127).
+- Si `computeE1rm` est utilisée dans une 3e feature, migrer vers `src/lib/epley.ts`.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-126 — Import CSV Hevy : moteur d'import et persistance des sessions
 **Livré** : `importHevySessions(db, parsedData, exerciseMappings, userId) → ImportResult` — moteur d'import qui persiste les sessions Hevy dans SQLite, avec déduplication, import transactionnel par session, et alimentation automatique de la SyncQueue.
 
