@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useDB } from '@/hooks/use-db';
 import { useAuthStore } from '@/features/auth';
 import { importHevySessions } from '../api/import-service';
+import { calibrateExerciseBaselines } from '../api/calibration-service';
 import type { ImportResult } from '../types/import-result';
 import { parseHevyCsv } from '../domain/hevy-csv-parser';
 import { pickAndReadCsvFile } from '../api/read-csv-file';
@@ -126,7 +127,11 @@ export function useHevyImport(): UseHevyImportReturn {
 
   const importSessions = useCallback(async (): Promise<ImportResult | null> => {
     if (!state.parsedData || !userId) return null;
-    return importHevySessions(db, state.parsedData, state.exerciseMappings, userId);
+    const result = await importHevySessions(db, state.parsedData, state.exerciseMappings, userId);
+    if (result.imported > 0) {
+      await calibrateExerciseBaselines(db, userId);
+    }
+    return result;
   }, [db, state.parsedData, state.exerciseMappings, userId]);
 
   return {
