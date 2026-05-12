@@ -6,6 +6,43 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-128 — Indicateur de statut sync dans l'UI
+**Livré** : `SyncStatusIndicator` (badge/spinner discret) + `SyncStatusSection` (section profil complète) + `useSyncStore` (store Zustand de sync state partagé). Intégré dans l'écran Profil. Push manuel depuis l'UI possible.
+
+**Fichiers créés** :
+- `src/features/sync/stores/sync-store.ts` — store Zustand : isSyncing, pendingCount, error, lastSyncedAt, triggerPush (39L)
+- `src/features/sync/components/sync-status-indicator.tsx` — badge/spinner discret, rien si synced (54L)
+- `src/features/sync/components/sync-status-section.tsx` — section profil avec statut textuel, date, bouton push manuel (86L)
+- `src/features/sync/components/sync-status-indicator.test.tsx` — 7 tests (rendu conditionnel synced/syncing/pending/error)
+- `src/features/sync/components/sync-status-section.test.tsx` — 7 tests (labels, bouton disabled, appel triggerPush)
+
+**Fichiers modifiés** :
+- `src/features/sync/types/sync-status.ts` — ajout champ `error: string | null`
+- `src/features/sync/hooks/use-sync-status.ts` — alimente le store Zustand, enregistre le push manuel, gère les erreurs
+- `src/features/sync/index.ts` — export `SyncStatusIndicator`, `SyncStatusSection`, `useSyncStore`
+- `src/screens/(app)/profile-screen.tsx` — import + usage de `SyncStatusSection` (41L)
+
+**S'appuie sur** :
+- TA-121/TA-122 : `useSyncStatus`, `useNetworkSync`, `SyncBridge`, `createSyncService`
+- `useSyncStore` alimenté uniquement par `useSyncStatus` (monté dans `SyncBridge` → root layout)
+
+**Décisions clés** :
+- Architecture séparée : `useSyncStatus` = orchestration (root layout, 1 instance), `useSyncStore` = source de vérité réactive pour tous les composants UI. Pas de prop drilling.
+- `SyncStatusIndicator` n'affiche rien si synced — discret par défaut (spec).
+- Skill expo:building-native-ui appliqué : zones tactiles 44×44 (h-tap), dark mode NativeWind, ActivityIndicator natif pour l'animation.
+
+**Ouvre** :
+- Historique des syncs (hors scope TA-128).
+- Indicateur dans le header global (décision libre — placé dans Profil pour l'instant).
+
+**Bugs découverts** : SYNC-04 dans pitfalls.md (`useSyncStatus` retourne snapshot non-réactif — les composants UI doivent consommer `useSyncStore` directement).
+
+**Stubs laissés ouverts** : aucun.
+
+**Test runtime UI** : impossible dans cet environnement (pas de simulateur/browser accessible). Le rendu conditionnel est couvert par 14 tests unitaires RNTL.
+
+---
+
 ## TA-127 — Calibration des charges initiales depuis l'historique importé
 **Livré** : `calibrateExerciseBaselines(db, userId) → CalibrationResult` — calcule les baselines (e1RM + charge récente sur 4 semaines) pour chaque exercice avec SetLogs, les stocke dans `exercise_baselines`, et met à jour `initial_load` dans le `progression_config` des PlannedExercise du programme actif.
 
