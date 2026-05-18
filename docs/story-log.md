@@ -6,6 +6,37 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-130 — Structure feature ai/ et types partagés
+**Livré** : Fondations structurelles de la feature `ai/` — arborescence Bulletproof React complète + types partagés + public API vide.
+
+**Fichiers créés** :
+- `src/features/ai/types/ai-context.ts` — `AIContextProfile` (cache persisté, champ `version`) + `AIContext` (payload enrichi pour un appel IA donné, inclut session courante + historique + recommandations rules engine)
+- `src/features/ai/types/ai-responses.ts` — `SessionSummary`, `Recommendation`, `BlockSummary`, `PlateauAnalysis` (conformes à `ai-strategy.md §4`)
+- `src/features/ai/index.ts` — public API : re-exporte tous les types des deux fichiers ci-dessus
+- `src/features/ai/{api,domain,hooks,components,stores}/.gitkeep` — placeholders pour les dossiers vides
+
+**S'appuie sur** :
+- `docs/ai-strategy.md` §2 (AIProvider) et §4 (formats des outputs)
+- `docs/data-model.md` §AIContextProfile (champ `version`, table `ai_context_profiles`)
+- ADR-007 (abstraction AIProvider), ADR-025 (Edge Function relay), ADR-026 (complétion locale), ADR-027 (cache SQLite)
+- `src/features/sync/` comme modèle de référence (structure feature)
+
+**Décisions clés** :
+- `AIContextProfile` (persisté JSON DB) et `AIContext` (payload runtime) sont deux types distincts — cf. spec ticket.
+- Les patterns ESLint `boundaries` existants couvrent automatiquement la feature `ai/` (patterns glob génériques `src/features/*/...`) — aucune modification de `eslint.config.mjs` nécessaire.
+- `index.ts` n'exporte que des types pour l'instant (pas de logique) — sera complété ticket par ticket (TA-131+).
+
+**Ouvre** :
+- TA-131 : `AIProvider` interface + `ClaudeProvider` + `FallbackProvider` (peut brancher sur `AIContext` et les types de réponse)
+- TA-132 : `refreshAIContextProfile` + migration SQLite `ai_context_profiles`
+- TA-133 : `generateSessionSummary` déclenché post-complétion locale
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-128 — Indicateur de statut sync dans l'UI
 **Livré** : `SyncStatusIndicator` (badge/spinner discret) + `SyncStatusSection` (section profil complète) + `useSyncStore` (store Zustand de sync state partagé). Intégré dans l'écran Profil. Push manuel depuis l'UI possible.
 

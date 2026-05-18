@@ -272,6 +272,8 @@ version         INTEGER DEFAULT 1
 updated_at      TIMESTAMPTZ DEFAULT now()
 ```
 
+**Cache SQLite local** (ADR-027) : table miroir `ai_context_profiles(id TEXT PK, user_id TEXT UNIQUE, profile_json TEXT, version INTEGER, updated_at TEXT)` — créée par TA-132. Source de vérité côté client pour permettre la génération de prompts IA offline. Push vers Supabase via `SyncQueue` standard, exclue de `CONFLICT_CHECKED_TABLES` (table dérivée recalculable).
+
 ### SyncQueue (locale uniquement — SQLite)
 ```sql
 id              INTEGER PRIMARY KEY AUTOINCREMENT

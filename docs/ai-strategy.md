@@ -45,20 +45,24 @@ Le `FallbackProvider` retourne des résumés basiques générés par templates, 
 
 | Quand | Type | Priorité |
 |---|---|---|
-| Fin de séance (après sync) | Automatique | Haute |
-| Mise à jour du contexte utilisateur | Automatique | Moyenne |
+| Fin de séance (complétion locale, pas post-sync — cf. ADR-026) | Automatique | Haute |
+| Mise à jour du contexte utilisateur (mensurations, profil, fin de bloc) | Automatique | Moyenne |
 | Analyse de séance demandée | À la demande | Haute |
 | Explication d'ajustement | À la demande | Moyenne |
 | Résumé de bloc | À la demande | Moyenne |
 | Analyse de plateau | À la demande | Basse |
 
+### Transport des appels (Edge Function relay)
+
+Tous les appels au LLM passent par une **Edge Function Supabase `ai-proxy`** qui détient la clé Anthropic côté serveur (cf. ADR-025). Le client mobile n'embarque jamais la clé. L'Edge Function applique un rate-limit par `user_id` et log les coûts (`input_tokens`, `output_tokens`, `cache_read_input_tokens`). Le `ClaudeProvider` appelle l'Edge Function via `supabase.functions.invoke('ai-proxy', { body })`.
+
 ### Fallback obligatoire
 
-Si l'IA ne répond pas (timeout, erreur, pas de réseau) :
+Si l'IA ne répond pas (timeout, erreur, pas de réseau, rate-limit Edge Function) :
 - L'app continue de fonctionner normalement
 - Les recommandations de base fonctionnent via les règles seules
-- Un résumé basique est généré par templates
-- L'appel IA est mis en queue pour retry ultérieur
+- Un résumé basique est généré par templates (`FallbackProvider`)
+- L'appel IA est mis en queue de retry et sera retenté au retour réseau ; si l'IA répond, la `Recommendation` fallback est remplacée par la version IA
 
 ## 3. Contexte utilisateur structuré (AIContextProfile)
 
@@ -117,10 +121,14 @@ Si l'IA ne répond pas (timeout, erreur, pas de réseau) :
 ### Mise à jour
 
 Le profil IA est recalculé :
-- Après chaque séance synchronisée
+- Après chaque séance complétée localement (pas post-sync — cf. ADR-026)
 - Après mise à jour des mensurations
 - Après fin de bloc
 - Le champ `version` s'incrémente à chaque mise à jour
+
+### Persistance
+
+Le profil est stocké comme **cache SQLite local** (table `ai_context_profiles`) miroir de la table Supabase, pour pouvoir construire les prompts IA offline (cf. ADR-027). Le push vers Supabase passe par la `SyncQueue` standard.
 
 ## 4. Pipeline IA par cas d'usage
 
