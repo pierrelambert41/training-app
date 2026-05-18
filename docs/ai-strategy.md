@@ -2,25 +2,59 @@
 
 ## 1. Rôle de l'IA
 
-L'IA **n'est pas** le moteur de décision des charges. Elle **interprète, explique et enrichit**.
+L'IA a **deux rôles** dans l'app, séparés clairement :
+
+1. **Générateur de programme (mode nominal)** — l'IA construit le programme initial et régénère les blocs suivants. C'est la valeur différenciante du produit : un programme véritablement personnalisé sur la morphologie, l'historique, les objectifs, les contraintes, la récup et les sports parallèles. Cf. ADR-028.
+2. **Interprète et enrichisseur** — l'IA explique, résume, détecte les patterns, analyse les plateaux. Cf. ADR-004.
+
+L'IA **n'est pas** le moteur de décision des charges **intra-bloc** (ajustement semaine après semaine). Cette responsabilité reste 100 % déterministe (moteur de règles, cf. ADR-004, ADR-006).
+
+### Dualité fondamentale : règles = espace de solutions, IA = choix experts dans cet espace
+
+La génération de programme repose sur une séparation stricte des rôles :
+
+- **Les règles déterministes définissent l'espace des programmes valides** : split compatible fréquence × niveau, exos uniquement dans le catalogue (table `exercises`), `progressionType` ∈ les 6 valeurs prédéfinies (ADR-006), contraintes utilisateur (matériel, blessures, sports parallèles, durée séance) respectées, schéma JSON strict. Hors de cet espace : rejet automatique. Ces règles sont la **garantie de cohérence** : pas d'exo halluciné, pas de structure incohérente, pas de prog impossible à piloter par le moteur intra-bloc.
+
+- **L'IA fait les choix experts à l'intérieur de cet espace** :
+  - quel exercice prioriser sur tel pattern pour ce profil morpho,
+  - quel volume hebdo cibler par groupe musculaire selon niveau et récup observée (volume landmarks MV/MEV/MAV/MRV),
+  - où placer les séances les plus intenses dans la semaine,
+  - comment doser RIR vs charge selon l'objectif déclaré,
+  - quels accessoires sont les plus rentables (stimulus-to-fatigue ratio) pour les objectifs prioritaires,
+  - quelle proportion d'exos conserver entre deux blocs successifs (continuité analytique vs renouveau),
+  - en s'appuyant sur des **principes evidence-based documentés** (littérature hypertrophie/force récente), **pas** sur des heuristiques figées dans le code.
+
+**Promesse produit** : *"un programme aussi rigoureux qu'un moteur de règles, aussi pertinent qu'un coach qui a lu la littérature et connaît l'utilisateur"*. C'est ce qu'aucun moteur purement déterministe ne peut produire (manque de raisonnement contextuel) et ce qu'un LLM sans garde-fous ne peut pas produire fiablement non plus (hallucinations, incohérences). La combinaison **règles-en-amont + IA-au-milieu + validateur-en-aval** est l'architecture de la promesse.
+
+**Conséquence sur le prompt système IA** (ticket d'implémentation à venir) :
+- Injecter les contraintes du moteur (catalogue d'exos disponibles, splits valides pour la fréquence, `progressionType` autorisés, contraintes utilisateur) en tant que cadre dur dans le prompt.
+- Inviter explicitement le modèle à **appuyer ses choix sur les principes établis** (volume landmarks, fréquence optimale par muscle, SFR, etc.), en demandant une justification courte pour les décisions principales (utile pour debug et amélioration des prompts).
+- Le validateur déterministe reste l'arbitre final : si l'IA propose quelque chose hors-règles, on rejette/retry, et en cas d'échec persistant on bascule sur `FallbackProvider`.
 
 ```
-Backend (calculs + règles) → données structurées → IA → texte humain
+Génération de programme :  Questionnaire + AIContextProfile → IA (ClaudeProvider) → Programme JSON validé
+                                                          └→ Fallback : moteur 3-couches (FallbackProvider) si IA indisponible
+
+Progression intra-bloc :   Set logs + State → Règles déterministes → Recommandation → IA (texte humain)
 ```
 
 ### Ce que l'IA fait
+- **Générer le programme initial** : split, structure semaine, sélection des exercices dans le catalogue, sets/reps/RIR cibles, charges de départ (cf. ADR-028)
+- **Régénérer un bloc** : transition entre blocs, en s'appuyant sur la progression réelle et le AIContextProfile (cf. ADR-028)
 - Résumer une séance en langage naturel
-- Expliquer pourquoi un ajustement est recommandé
+- Expliquer pourquoi un ajustement de charge est recommandé
 - Détecter des patterns sur plusieurs semaines
 - Analyser un plateau et suggérer des pistes
 - Synthétiser un bloc terminé
 - Contextualiser les recommandations avec le profil utilisateur
 
 ### Ce que l'IA ne fait PAS
-- Calculer les charges
-- Décider des progressions
-- Remplacer le moteur de règles
-- Être la source de vérité sur les métriques
+- Calculer les charges **intra-bloc** (progression semaine après semaine)
+- Décider des statuts de séance (progression / maintien / allégée / deload)
+- Détecter mécaniquement un plateau (la règle de détection est déterministe ; l'IA *analyse* un plateau déjà détecté)
+- Inventer des exercices hors du catalogue
+- Être la source de vérité sur les métriques (e1RM, volume, fréquence)
+- Décider d'un `progressionType` hors des 6 prédéfinis (ADR-006)
 
 ## 2. Architecture
 
@@ -28,6 +62,11 @@ Backend (calculs + règles) → données structurées → IA → texte humain
 
 ```typescript
 interface AIProvider {
+  // Génération (ADR-028) — l'IA est le générateur principal, FallbackProvider sinon
+  generateProgram(context: ProgramGenerationContext): Promise<Program>;
+  regenerateBlock(context: BlockRegenerationContext): Promise<Block>;
+
+  // Interprétation (ADR-004) — l'IA enrichit, FallbackProvider produit des templates basiques
   generateSessionSummary(context: AIContext): Promise<SessionSummary>;
   generateRecommendation(context: AIContext): Promise<Recommendation>;
   generateBlockSummary(context: AIContext): Promise<BlockSummary>;
@@ -39,12 +78,35 @@ class ClaudeProvider implements AIProvider { ... }
 class FallbackProvider implements AIProvider { ... }
 ```
 
-Le `FallbackProvider` retourne des résumés basiques générés par templates, sans appel LLM.
+Le `FallbackProvider` implémente :
+- `generateProgram` / `regenerateBlock` via le moteur de règles 3-couches (cf. `docs/program-generation.md`).
+- Les méthodes d'interprétation via des templates basiques (textes pré-formatés à partir des données structurées).
+
+### Pipeline de génération : schéma intermédiaire IA → validateur → transformer → Program
+
+La génération suit un pipeline en 3 étapes, isolant le prompt LLM du modèle interne :
+
+1. **L'IA produit un `AIIntermediateOutput`** — JSON épuré (split, weeks, days avec `exercise_id` / sets / reps / rir / start_weight_kg / progression). Le LLM ne génère ni UUIDs, ni `progressionConfig` complet, ni métadonnées internes.
+2. **Le validateur déterministe** opère sur le `AIIntermediateOutput` (pas sur le type `Program` complet) :
+   - schéma JSON conforme (champs requis, types attendus)
+   - `exercise_id` présents dans le catalogue local
+   - `progression` ∈ les 6 `progressionType` prédéfinis (ADR-006)
+   - contraintes utilisateur respectées (matériel, blessures, sports parallèles, durée séance)
+   - cohérence du split avec la fréquence déclarée
+3. **Le transformer** déterministe convertit le `AIIntermediateOutput` validé vers le type `Program` complet (UUIDs, `progressionConfig` détaillé, métadonnées). Partagé entre `ClaudeProvider` et `FallbackProvider` — le `FallbackProvider` produit lui aussi le schéma intermédiaire, garantissant un seul format d'entrée pour le transformer.
+
+Si la validation échoue : 1 retry avec feedback dans le prompt, puis bascule sur `FallbackProvider`. Toute erreur de validation est loguée pour amélioration des prompts.
+
+**Prompt caching du catalogue** : le catalogue d'exercices filtré (matériel × contraintes utilisateur, ~100-300 exos, ~5-15k tokens) est injecté en première position du prompt système avec `cache_control: ephemeral` (Anthropic prompt caching, ADR-025). 90 % de réduction coût attendue sur les générations suivantes du même utilisateur tant que le catalogue filtré ne change pas.
+
+**Retry et queue offline** : `generateProgram` et `regenerateBlock` **ne passent pas** par la queue de retry IA (réservée aux résumés/explications). Leur retry est explicitement utilisateur via le flow UX de remplacement fallback → IA au retour réseau. Justification : ce sont des moments produit majeurs qui doivent rester sous contrôle de l'utilisateur, pas retriés en silence.
 
 ### Déclenchement
 
 | Quand | Type | Priorité |
 |---|---|---|
+| **Génération initiale du programme** (onboarding) | À la demande (validation utilisateur) | Critique |
+| **Régénération de bloc** (fin de bloc, change d'objectif, gros écart entre prévu/réalisé) | À la demande (validation utilisateur) | Haute |
 | Fin de séance (complétion locale, pas post-sync — cf. ADR-026) | Automatique | Haute |
 | Mise à jour du contexte utilisateur (mensurations, profil, fin de bloc) | Automatique | Moyenne |
 | Analyse de séance demandée | À la demande | Haute |
@@ -60,8 +122,9 @@ Tous les appels au LLM passent par une **Edge Function Supabase `ai-proxy`** qui
 
 Si l'IA ne répond pas (timeout, erreur, pas de réseau, rate-limit Edge Function) :
 - L'app continue de fonctionner normalement
-- Les recommandations de base fonctionnent via les règles seules
-- Un résumé basique est généré par templates (`FallbackProvider`)
+- **Génération de programme** : `FallbackProvider.generateProgram` produit un programme via le moteur déterministe 3-couches. L'utilisateur n'est pas bloqué en offline. Au retour réseau, l'utilisateur peut demander une régénération IA pour remplacer le programme fallback (proposition UX explicite).
+- **Recommandations intra-bloc** : les ajustements de charges fonctionnent via les règles seules (déterministes, ADR-004).
+- **Résumés et explications** : un texte basique est généré par templates (`FallbackProvider`)
 - L'appel IA est mis en queue de retry et sera retenté au retour réseau ; si l'IA répond, la `Recommendation` fallback est remplacée par la version IA
 
 ## 3. Contexte utilisateur structuré (AIContextProfile)

@@ -111,17 +111,25 @@ Architecture complète dès le départ, livraison séquencée. Pas de faux MVP m
 
 ### Phase 7 — IA contextuelle (semaine 10-12)
 
-**Objectif** : l'IA explique et enrichit.
+**Objectif** : l'IA **génère** le programme (mode nominal) et explique/enrichit la progression intra-bloc. Le moteur déterministe Phase 3 devient `FallbackProvider`. Cf. ADR-028.
 
-- [ ] AIContextProfile : construction et mise à jour automatique
-- [ ] Abstraction AIProvider + ClaudeProvider + FallbackProvider
-- [ ] Résumé fin de séance (IA)
-- [ ] Explication d'ajustement (IA)
-- [ ] Analyse de plateau (IA, à la demande)
+**Génération (mode nominal IA, fallback déterministe)** :
+- [x] AIContextProfile : construction et mise à jour automatique _(TA-132 ✅)_
+- [x] Abstraction AIProvider + ClaudeProvider + FallbackProvider _(TA-130/131 ✅)_
+- [ ] `generateProgram(context)` côté ClaudeProvider — prompt + schéma JSON de sortie
+- [ ] Validateur déterministe post-IA (schéma + catalogue + contraintes utilisateur)
+- [ ] `regenerateBlock(context)` côté ClaudeProvider
+- [ ] `FallbackProvider.generateProgram` — wrapper sur le moteur 3-couches existant (Phase 3)
+- [ ] UX : remplacement programme fallback → IA au retour réseau
+
+**Interprétation (IA)** :
+- [ ] Résumé fin de séance
+- [ ] Explication d'ajustement
+- [ ] Analyse de plateau (à la demande)
 - [ ] Prompts versionnés
 - [ ] Affichage des résumés IA dans l'app
 
-**Livrables** : résumés et explications IA fonctionnels.
+**Livrables** : programme généré par IA en mode nominal, fallback déterministe garanti offline, résumés et explications IA fonctionnels.
 
 ---
 

@@ -73,39 +73,39 @@ Supabase (Auth + Postgres + Storage + Edge Functions) comme backend principal.
 
 ## ADR-004 : Moteur rules-based pour les charges, IA pour l'interprétation
 
-**Statut** : Accepté  
+**Statut** : Accepté — **amendé par ADR-028** pour la génération de programme (l'IA devient générateur principal). Reste pleinement valide pour la **progression intra-bloc** (charges semaine après semaine, statuts de séance, plateau, deload).
 **Date** : 2026-04-19
 
 ### Contexte
 L'IA est bonne pour expliquer mais mauvaise pour calculer des charges de façon fiable et répétable. Les décisions de progression doivent être déterministes.
 
 ### Décision
-Architecture 3 couches : calculs (backend) → règles métier (déterministes) → IA (interprétation). L'IA ne décide jamais des charges.
+Architecture 3 couches : calculs (backend) → règles métier (déterministes) → IA (interprétation). L'IA ne décide jamais des **charges intra-bloc** ni des statuts de séance. Pour la **génération de programme** initial et la régénération de bloc, voir ADR-028 (l'IA est le générateur principal, le moteur déterministe est un fallback).
 
 ### Conséquences
-- Progression fiable et explicable
-- L'app fonctionne sans IA (fallback)
-- L'IA ajoute de la valeur sans risquer des recommandations aberrantes
-- Les règles sont testables unitairement
+- Progression intra-bloc fiable et explicable
+- L'app fonctionne sans IA (fallback déterministe pour la génération, règles seules pour la progression)
+- L'IA ajoute de la valeur sans risquer des recommandations aberrantes sur les charges micro
+- Les règles de progression sont testables unitairement
 
 ---
 
 ## ADR-005 : Programmes générés, pas créés librement
 
-**Statut** : Accepté  
+**Statut** : Accepté — **précisé par ADR-028** (l'app génère, mais c'est l'IA qui produit le programme ; le moteur déterministe est un fallback).
 **Date** : 2026-04-19
 
 ### Contexte
 La philosophie est "système coaché". L'utilisateur ne doit pas construire sa méthode librement, ce qui mène souvent à des programmes mal équilibrés.
 
 ### Décision
-L'app génère les programmes à partir d'un questionnaire (objectif, fréquence, niveau, matériel, contraintes). Pas de création libre au MVP.
+L'app génère les programmes à partir d'un questionnaire (objectif, fréquence, niveau, matériel, contraintes). Pas de création libre au MVP. **Qui** génère : l'IA en mode nominal, le moteur déterministe en fallback offline (cf. ADR-028).
 
 ### Conséquences
-- Besoin d'un moteur de génération de programmes (templates + logique)
-- Les programmes sont toujours cohérents et bien structurés
+- Les programmes sont toujours cohérents et bien structurés (validateur post-IA)
 - L'utilisateur a moins de contrôle mais plus de guidance
-- Le dataset de templates d'exercices doit être solide dès le départ
+- Le dataset d'exercices (catalogue) doit être solide dès le départ — l'IA y puise, ne peut pas inventer d'exos
+- Le moteur de règles 3-couches reste implémenté (FallbackProvider, ADR-028)
 
 ---
 
@@ -623,3 +623,43 @@ Lecture : `getAIContextProfile(db, userId)` lit le row local, jamais Supabase au
 - Le `version` est local-monotone par device — il n'est pas garanti d'être cohérent multi-device avant la résolution de conflits (Phase 6 LWW sur `updated_at` couvre ce cas).
 - Le profil peut être stale entre deux déclencheurs explicites — acceptable : il représente l'état "à date du dernier refresh", pas l'état temps réel.
 - Pas de conflict resolution actif sur `ai_context_profiles` (table dérivée recalculable, pas une source canonique) — exclue de `CONFLICT_CHECKED_TABLES` (ADR-024).
+
+---
+
+## ADR-028 : L'IA est le générateur principal de programme ; le moteur déterministe est un fallback
+
+**Statut** : Accepté
+**Date** : 2026-05-18
+
+### Contexte
+Les ADR-004 et ADR-005 (rédigées en avril 2026) ont positionné l'IA comme couche d'interprétation uniquement, avec un moteur de règles déterministe responsable de générer les programmes. À l'usage, cette répartition limite la promesse produit : un assembleur de templates produit des programmes "raisonnables", pas véritablement personnalisés. La valeur différenciante de l'app est un programme **réellement** pensé pour l'utilisateur (morphologie + historique + objectifs + contraintes + récup + sports parallèles + préférences), ce qu'un moteur déterministe ne peut pas produire au niveau attendu. Le `AIContextProfile` (ADR-027, livré dans TA-132) fournit déjà l'input structuré nécessaire pour qu'une IA raisonne sur ce contexte.
+
+### Décision
+La génération de programme bascule sous responsabilité de l'**IA**, dans une architecture **règles-en-amont + IA-au-milieu + validateur-en-aval** :
+
+1. **Génération initiale et régénération de bloc** sont produites par `ClaudeProvider.generateProgram(context)` et `ClaudeProvider.regenerateBlock(context)`.
+2. La portée IA couvre **tout** : split, structure de la semaine, sélection des exercices dans le catalogue, sets/reps/RIR cibles, charges de départ.
+3. **Dualité fondamentale** :
+   - **Les règles définissent l'espace des programmes valides** (split compatible fréquence × niveau, exos ∈ catalogue, `progressionType` ∈ 6 valeurs, contraintes utilisateur respectées, schéma JSON strict). C'est le cadre dur, injecté dans le prompt système.
+   - **L'IA fait les choix experts à l'intérieur de cet espace** : quel exo prioriser pour ce profil morpho, volume hebdo cible (volume landmarks), placement des séances intenses, dosage RIR vs charge, accessoires à plus haut stimulus-to-fatigue ratio, proportion d'exos conservés entre deux blocs. Le raisonnement IA s'appuie sur des **principes evidence-based documentés** (littérature récente hypertrophie/force), pas sur des heuristiques figées.
+4. Le **moteur déterministe 3-couches** (`docs/program-generation.md`) reste implémenté et encapsulé dans `FallbackProvider.generateProgram()`. Il est invoqué uniquement quand l'IA est indisponible (offline complet, échec Edge Function `ai-proxy`, rate-limit, timeout, validation IA en échec après retry). Conformément au principe "l'app fonctionne sans IA" (CLAUDE.md).
+5. Le **moteur de progression intra-bloc** (ajustement des charges semaine après semaine, statuts de séance, détection de plateau, deload) **reste 100 % déterministe** — ce n'est pas concerné par ce pivot. ADR-004 reste valide sur ce point précis (progression micro), mais est amendée pour la génération de programme.
+6. L'IA opère sur un **catalogue d'exercices fermé** (table `exercises` SQLite/Supabase). Elle ne peut pas inventer d'exos ; elle sélectionne et combine.
+7. Le programme produit par l'IA respecte un **schéma JSON strict** (validé côté client) : tout `progressionType` doit être l'un des 6 types prédéfinis (ADR-006), tout `exercise_id` doit exister, toutes les contraintes utilisateur doivent être respectées. **Validation = post-traitement déterministe**, c'est l'arbitre final. Hors-espace → rejet/retry/fallback.
+
+### Alternatives rejetées
+- **Statu quo (moteur déterministe seul)** : produit des programmes "templates ++", manque la promesse de personnalisation profonde.
+- **IA partielle (structure IA, exos par règles)** : split incohérent par rapport au choix d'exos, perte de cohérence globale.
+- **IA sans validateur post-génération** : risque d'hallucination (exo inexistant, progressionType inventé, contrainte ignorée). Validateur déterministe obligatoire.
+- **Supprimer le moteur déterministe** : viole "l'app fonctionne sans IA", bloque l'utilisateur en offline lors de la 1ère génération ou d'une régénération de bloc.
+
+### Conséquences
+- L'interface `AIProvider` gagne `generateProgram(context) → Program` et `regenerateBlock(context) → Block`. Le `FallbackProvider` les implémente via le moteur 3-couches existant.
+- Le `AIContextProfile` devient l'input principal de la génération, pas seulement de l'interprétation. Sa qualité conditionne directement la qualité du programme produit.
+- Un **validateur de programme** déterministe est nécessaire en sortie du `ClaudeProvider` : schéma JSON + cohérence catalogue + cohérence contraintes utilisateur. Tout programme invalide → retry ou bascule sur `FallbackProvider`.
+- La latence de génération augmente (appel LLM via Edge Function `ai-proxy`, ADR-025). UX : afficher un état de chargement explicite et permettre l'annulation.
+- Coûts LLM : la génération de programme est plus longue (output ~1-3k tokens) que les résumés. Rate-limit par utilisateur côté Edge Function. Cache : un programme régénéré identique au précédent (input non-changé) doit être détecté pour éviter un appel inutile.
+- ADR-004 reste valide pour la **progression intra-bloc** (charges semaine après semaine, statuts, deload, plateau) — amendée pour la **génération de programme** par cet ADR.
+- ADR-005 reste valide ("programmes générés, pas créés librement") — précise seulement *qui* génère : l'IA d'abord, le moteur en fallback.
+- `docs/ai-strategy.md` et `docs/program-generation.md` sont réécrits en accord avec cette décision.
+- Un ticket Jira dédié à `generateProgram` (à créer, hors TA-132) cadrera : prompt design, schéma JSON de sortie, validateur, prompts versionnés, observabilité coûts/erreurs.
