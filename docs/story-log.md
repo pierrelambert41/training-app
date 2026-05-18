@@ -6,6 +6,46 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-132 — AIContextProfile : builder et persistance
+**Livré** : Migration SQLite v10 (`ai_context_profiles`), fonction pure `buildAIContextProfile`, service `refreshAIContextProfile` + `getAIContextProfile`, 25 tests.
+
+**Fichiers créés** :
+- `src/lib/epley.ts` — `computeE1rm` migré en shared-lib (CALIB-01 résolu : 3+ usages justifient la lib partagée)
+- `src/features/ai/domain/build-ai-context-profile.ts` — fonction PURE `buildAIContextProfile(inputs)`, détection PR/plateaux/sommeil dégradé, 0 I/O
+- `src/features/ai/domain/build-ai-context-profile.test.ts` — 18 tests (version, user, baselines, highlights, schéma)
+- `src/features/ai/api/ai-context-service.ts` — `refreshAIContextProfile` + `getAIContextProfile` (reads SQLite, persiste, enqueue sync)
+- `src/features/ai/api/ai-context-service.test.ts` — 7 tests (null si absent, idempotence version, insert/update safeEnqueue)
+
+**Fichiers modifiés** :
+- `src/services/db.ts` — migration v10 : `CREATE TABLE ai_context_profiles` + index `user_id`
+- `src/features/sync/types/sync-queue.ts` — `ai_context_profiles` ajouté à `SyncTableName`
+- `src/features/ai/index.ts` — exports publics : `refreshAIContextProfile`, `getAIContextProfile`, `buildAIContextProfile` + types inputs
+
+**S'appuie sur** :
+- TA-127 : table `exercise_baselines` pour `performance_baselines`
+- TA-130 : types `AIContextProfile`, `AIContextProfileUser`, etc.
+- TA-131 : `AIProvider` (consommera le profil via `AIContext.profile`)
+- ADR-027 : cache SQLite miroir Supabase, refresh explicite
+- ADR-024 : `ai_context_profiles` exclue de `CONFLICT_CHECKED_TABLES`
+- ADR-012 : `safeEnqueue` snake_case payload pour Supabase
+
+**Décisions clés** :
+- `computeE1rm` migré vers `src/lib/epley.ts` (4e usage, règle du ticket CALIB-01 atteinte).
+- `recovery_logs` lus avec try/catch : dégradation gracieuse si table vide (pitfall PROG-02 toujours ouvert).
+- Trend calculé sur les sessions des 8 dernières semaines pour les set_logs, 7 jours pour la récupération.
+- `recent_highlights` : max 5 entrées, ordre : PR > plateaux > sommeil dégradé.
+
+**Ouvre** :
+- TA-134 : déclenchement automatique `refreshAIContextProfile` post-complétion séance (ADR-026)
+- TA-133 : prompts versionnés qui liront `getAIContextProfile` via `AIContext.profile`
+- Migration Supabase `ai_context_profiles` : table côté serveur à créer avant le premier push
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : `user_profiles` table non créée en SQLite (service la query avec graceful fallback). À créer quand la saisie du profil utilisateur sera implémentée.
+
+---
+
 ## TA-131 — Abstraction AIProvider : ClaudeProvider + FallbackProvider
 **Livré** : Interface `AIProvider` + `ClaudeProvider` (via Edge Function Supabase) + `FallbackProvider` (templates statiques) + factory `createAIProvider()` + Edge Function `ai-proxy` + 18 tests.
 
