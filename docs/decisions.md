@@ -518,3 +518,108 @@ TA-122 (Phase 6) introduit la résolution de conflits multi-device. Quand deux a
 - Les logs de conflits ne survivent pas au redémarrage de l'app — c'est volontaire (debug uniquement). Si un besoin de persistance émerge, créer une table `conflict_logs` dédiée.
 - La fenêtre de race entre fetch et upsert reste — un autre device peut écrire entre les deux. Postgres résoudra l'upsert final (idempotent), mais l'ordre exact n'est pas garanti. Acceptable Phase 6.
 - Pattern de fetch-before-write extensible : si une autre table rejoint `CONFLICT_CHECKED_TABLES`, ajouter (a) une colonne `updated_at` côté local + remote, (b) un mapping dans `TIMESTAMP_COLUMN_BY_TABLE`, (c) un handler dans `copyRemoteRowToLocal`.
+
+---
+
+## ADR-025 : Appels Claude API via Edge Function Supabase (clé serveur)
+
+**Statut** : Accepté
+**Date** : 2026-05-17
+
+### Contexte
+Phase 7 introduit les appels IA depuis l'app mobile. Deux options : (a) appel direct `api.anthropic.com` depuis le client avec clé Anthropic embarquée, (b) relay via Edge Function Supabase qui détient la clé. L'option (a) expose la clé (extractible du bundle RN), interdit tout rate-limit côté serveur et expose à du surcoût/abus.
+
+### Décision
+Tous les appels Claude API passent par une **Edge Function Supabase** (`ai-proxy`) qui :
+- détient la clé `ANTHROPIC_API_KEY` (secret Supabase, jamais côté client),
+- relaie la requête `messages` (incl. `cache_control`, `anthropic-beta` headers) sans transformer la sémantique,
+- applique un rate-limit par `user_id` (RLS / auth token),
+- log les coûts (`input_tokens`, `output_tokens`, `cache_read_input_tokens`) pour observabilité.
+
+Le `ClaudeProvider` (TA-131) appelle l'Edge Function via `supabase.functions.invoke('ai-proxy', { body })` — pas de fetch direct vers Anthropic.
+
+### Alternatives rejetées
+- **Appel direct client** : clé exposée, pas de rate-limit serveur, risque de surcoût non maîtrisé.
+- **Direct en dev / Edge Function en prod** : double code path, divergence du comportement (rate-limit, logs) entre environnements — sourcing de bugs.
+
+### Conséquences
+- Hop réseau supplémentaire (~100-300ms) — acceptable car les appels IA sont async/non bloquants pour le logging.
+- L'Edge Function `ai-proxy` doit exister avant de coder TA-131 — la créer dans TA-131 ou en pré-requis.
+- Aucune clé Anthropic ne doit apparaître dans `process.env.EXPO_PUBLIC_*` (variable publique du bundle). Le `ClaudeProvider` ne lit jamais de clé locale.
+- Le rate-limit Edge Function rend le fallback obligatoire (cf. ADR-007) encore plus nécessaire : un quota dépassé renvoie HTTP 429 → `FallbackProvider`.
+
+---
+
+## ADR-026 : Génération IA post-complétion locale, retry async via queue
+
+**Statut** : Accepté
+**Date** : 2026-05-17
+
+### Contexte
+`docs/ai-strategy.md §2 Déclenchement` indiquait "fin de séance (après sync)" comme trigger du résumé IA. Mais l'architecture offline-first (ADR-002) permet à une séance d'être complétée localement sans sync immédiate (pas de réseau). Attendre la sync Supabase ferait apparaître le résumé avec un retard arbitraire (parfois plusieurs heures) — UX dégradée pour la feature à plus haute priorité.
+
+### Décision
+Le résumé IA (et plus généralement chaque appel IA "automatique") est déclenché **dès la complétion locale** de la séance (`session.status = 'completed'` en SQLite), pas après sync.
+
+Flow :
+1. Séance complétée localement → `generateAndStoreSessionSummary` est appelé en fire-and-forget.
+2. Si online + `ClaudeProvider` disponible → appel via Edge Function (ADR-025). Résultat persisté comme `Recommendation { source: 'ai', type: 'summary' }`.
+3. Si offline OU erreur Edge Function/Claude → `FallbackProvider` immédiat, persisté avec `metadata.fallback: true`.
+4. Si fallback déclenché à cause de l'offline, une entrée est ajoutée à une queue de retry IA (TA-141) qui retentera l'appel Claude au retour réseau et remplacera la `Recommendation` fallback par la version IA.
+
+### Alternatives rejetées
+- **Post-sync Supabase strict** : viole l'offline-first ; le résumé peut attendre des heures en mode dégradé.
+- **Bloquer l'UI sur la réponse IA** : ajoute une latence visible (1-5s) à un moment où l'utilisateur veut fermer l'écran ; va à l'encontre du principe "le logger doit être plus rapide qu'un carnet".
+
+### Conséquences
+- Le résumé est toujours présent à l'ouverture de l'écran fin de séance — soit IA, soit fallback template.
+- La queue de retry IA (TA-141) est nécessaire pour upgrade un fallback en résumé IA quand le réseau revient.
+- L'AIContextProfile (ADR-027) doit être lisible offline pour que le `ClaudeProvider` puisse construire le prompt sans attendre Supabase.
+- Doc `ai-strategy.md §2` mise à jour en conséquence (tableau de déclenchement).
+
+---
+
+## ADR-027 : AIContextProfile cache SQLite local + push Supabase
+
+**Statut** : Accepté
+**Date** : 2026-05-17
+
+### Contexte
+TA-132 doit construire et persister l'`AIContextProfile`. Le schéma Supabase prévoit la table `ai_context_profiles` (cf. `data-model.md`). Question : faut-il une table SQLite locale miroir, recalculer à la volée à chaque appel IA, ou ne vivre que côté Supabase ?
+
+Contraintes :
+- ADR-026 impose que les appels IA puissent partir offline (donc le profil doit être lisible offline).
+- Recalculer le profil à chaque prompt coûte des reads SQLite (sessions, baselines, recovery) non triviaux.
+- Le profil change peu (post-séance, post-mensurations, fin de bloc).
+
+### Décision
+Le profil vit comme **cache SQLite local** miroir de la table Supabase, mis à jour explicitement par `refreshAIContextProfile(db, userId)` aux 3 déclencheurs : (1) post-complétion séance (local, pas post-sync), (2) post-update mensurations/profil, (3) fin de bloc.
+
+Migration SQLite (nouvelle, à inclure dans TA-132) :
+```sql
+CREATE TABLE ai_context_profiles (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL UNIQUE,
+  profile_json TEXT NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_ai_context_profiles_user ON ai_context_profiles(user_id);
+```
+
+`refreshAIContextProfile` :
+- lit le profil courant (`SELECT ... WHERE user_id`), prend `version` + 1,
+- réécrit le row entier (`INSERT OR REPLACE`),
+- `safeEnqueue` une entrée sync pour push vers `ai_context_profiles` Supabase (mêmes règles ADR-012).
+
+Lecture : `getAIContextProfile(db, userId)` lit le row local, jamais Supabase au runtime. Si le row est absent, le caller décline (le `ClaudeProvider` peut retourner un fallback ou demander un refresh explicite).
+
+### Alternatives rejetées
+- **Calcul à la volée à chaque prompt** : reads SQLite multiples à chaque appel IA, latence ajoutée à un chemin déjà sensible (résumé fin de séance).
+- **Supabase seulement** : viole l'offline-first pour les features IA — pas de profil offline → fallback systématique sans contexte personnalisé.
+
+### Conséquences
+- Une migration SQLite supplémentaire (v8 ou suivante) est nécessaire dans TA-132.
+- Le `version` est local-monotone par device — il n'est pas garanti d'être cohérent multi-device avant la résolution de conflits (Phase 6 LWW sur `updated_at` couvre ce cas).
+- Le profil peut être stale entre deux déclencheurs explicites — acceptable : il représente l'état "à date du dernier refresh", pas l'état temps réel.
+- Pas de conflict resolution actif sur `ai_context_profiles` (table dérivée recalculable, pas une source canonique) — exclue de `CONFLICT_CHECKED_TABLES` (ADR-024).
