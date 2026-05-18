@@ -33,3 +33,12 @@ export type {
   CurrentBlockSnapshot,
 } from './domain/build-ai-context-profile';
 export { buildAIContextProfile } from './domain/build-ai-context-profile';
+
+// TA-133 — Prompts versionnés (4 cas d'usage)
+export type { ClaudeMessages, ClaudeMessage, TextContentBlock, CacheControl } from './types/claude-messages';
+export {
+  buildSessionSummaryPrompt,
+  buildPlateauAnalysisPrompt,
+  buildBlockSummaryPrompt,
+  buildExplainAdjustmentPrompt,
+} from './domain/prompts';
