@@ -6,6 +6,46 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-131 — Abstraction AIProvider : ClaudeProvider + FallbackProvider
+**Livré** : Interface `AIProvider` + `ClaudeProvider` (via Edge Function Supabase) + `FallbackProvider` (templates statiques) + factory `createAIProvider()` + Edge Function `ai-proxy` + 18 tests.
+
+**Fichiers créés** :
+- `src/features/ai/api/ai-provider.ts` — interface `AIProvider` avec les 5 méthodes (ADR-007)
+- `src/features/ai/api/fallback-provider.ts` — templates statiques, aucun appel réseau, fallback immédiat
+- `src/features/ai/api/claude-provider.ts` — appels via `supabase.functions.invoke('ai-proxy', ...)`, fallback auto sur toute erreur
+- `src/features/ai/api/create-ai-provider.ts` — factory `createAIProvider(config)` mode 'claude' | 'fallback'
+- `src/features/ai/api/fallback-provider.test.ts` — 10 tests (structure conforme par méthode, cas edge)
+- `src/features/ai/api/claude-provider.test.ts` — 8 tests (fallback déclenché sur error/throw/empty/ok)
+- `supabase/functions/ai-proxy/index.ts` — Edge Function Deno : relay vers Anthropic API, rate-limit par user_id, log tokens
+- `supabase/functions/ai-proxy/deno.json` — config Deno locale (imports JSR)
+
+**Fichiers modifiés** :
+- `src/features/ai/index.ts` — exports publics : `AIProvider`, `createAIProvider`, `AIProviderConfig`, `FallbackProvider`, `ClaudeProvider`
+- `tsconfig.json` — `supabase/functions/**/*` exclu du scope tsc (incompatible Deno/Node)
+
+**S'appuie sur** :
+- TA-130 : types `AIContext`, `SessionSummary`, `Recommendation`, `BlockSummary`, `PlateauAnalysis`
+- ADR-007 (abstraction AIProvider), ADR-025 (Edge Function relay, jamais de clé côté client)
+- ADR-026 (fallback immédiat + retry async future), docs/ai-strategy.md §2 + §5
+
+**Décisions clés** :
+- `ClaudeProvider` délègue toujours à `FallbackProvider` en cas d'erreur (network, timeout, 429, parse error) — jamais de throw vers l'UI.
+- Les prompts sont des placeholders (`TA-133`) — les méthodes acceptent un `AIContext` complet.
+- L'Edge Function utilise `jsr:@supabase/supabase-js@2` (runtime Deno) — exclu du tsconfig Expo.
+- Rate-limit in-memory dans l'Edge Function (Map) : simple et suffisant en Phase 7 (pas de persistence). À migrer vers Redis/KV si besoin de persistance entre restarts.
+- `anthropic-beta: prompt-caching-2024-07-31` forwarded tel quel (ADR-025 + ai-strategy.md §5).
+
+**Ouvre** :
+- TA-132 : `refreshAIContextProfile` + migration SQLite `ai_context_profiles` (branché sur `AIContext`)
+- TA-133 : prompts versionnés (les méthodes `ClaudeProvider` attendent les vrais prompts)
+- TA-141 : queue de retry IA offline (les fallbacks avec `metadata.fallback: true` seront upgradés)
+
+**Bugs découverts** : AI-01 dans pitfalls.md (Edge Function Deno exclue du tsconfig Expo).
+
+**Stubs laissés ouverts** : les prompts dans `ClaudeProvider` sont des placeholders JSON-dump — à remplacer par TA-133.
+
+---
+
 ## TA-130 — Structure feature ai/ et types partagés
 **Livré** : Fondations structurelles de la feature `ai/` — arborescence Bulletproof React complète + types partagés + public API vide.
 
