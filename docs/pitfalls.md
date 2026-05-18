@@ -245,6 +245,21 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### AI-02 — Edge Function `ai-proxy` : `timeout_ms` non enforced côté serveur
+**Symptôme** : l'Edge Function reçoit un champ `timeout_ms` dans le payload mais n'utilise pas d'`AbortSignal` sur le `fetch` vers Anthropic. En cas de réponse lente, le timeout effectif est celui de Supabase Edge Functions (~60 s). Le client (`ClaudeProvider`) coupe via son propre timeout et reçoit une erreur, mais la requête Anthropic peut continuer côté serveur après le retour client, consommant des tokens inutilement.
+**Fix** : fonctionnellement acceptable pour le MVP. Si le coût devient un problème, brancher un `AbortSignal` : `const ac = new AbortController(); setTimeout(() => ac.abort(), body.timeout_ms); fetch(url, { signal: ac.signal })`.
+**Détecté** : TA-131 / 2026-05-17
+
+---
+
+### AI-01 — Edge Function Deno exclue du tsconfig Expo/Node
+**Symptôme** : `npx tsc --noEmit` échoue avec TS2307 (`jsr:@supabase/supabase-js@2`) et TS2304 (`Deno`) sur `supabase/functions/ai-proxy/index.ts`. Le tsconfig projet pointe vers le runtime Expo/Node — incompatible avec les imports JSR et les globals Deno.
+**Fix** : ajouter `"supabase/functions/**/*"` dans `"exclude"` du `tsconfig.json` racine. Créer `supabase/functions/ai-proxy/deno.json` pour la configuration Deno locale. Le typecheck Deno se fait avec `deno check` (pas `tsc`).
+**Règle** : les Edge Functions Supabase ne font jamais partie du scope `tsc` du projet Expo. Le lint/typecheck Deno est optionnel et séparé.
+**Détecté** : TA-131 / 2026-05-17
+
+---
+
 ### SYNC-04 — `useSyncStatus` retourne un snapshot du store, pas une vue réactive
 **Symptôme** : `useSyncStatus` retourne `useSyncStore.getState()` en fin de fonction (snapshot one-shot) au lieu de `useSyncStore(s => s)`. Les composants qui appellent `useSyncStatus` directement ne se re-renderent pas quand le store change.
 **Fix** : `SyncBridge` monte `useSyncStatus` (racine, pas pour le rendu). Les composants UI (`SyncStatusSection`) consomment directement `useSyncStore((s) => s.field)` — ce qui est réactif. Ne jamais appeler `useSyncStatus` depuis un composant UI.

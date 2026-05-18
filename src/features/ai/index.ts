@@ -16,3 +16,8 @@ export type {
   Recommendation,
   SessionSummary,
 } from './types/ai-responses';
+
+// TA-131 — AIProvider interface + providers + factory
+export type { AIProvider } from './api/ai-provider';
+export { createAIProvider } from './api/create-ai-provider';
+export type { AIProviderConfig } from './api/create-ai-provider';
