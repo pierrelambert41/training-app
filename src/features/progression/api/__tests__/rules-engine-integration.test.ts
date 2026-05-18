@@ -32,6 +32,20 @@ import {
 
 beforeAll(() => {
   installCryptoMock();
+  // Fige l'horloge système au jour de la séance courante des fixtures.
+  // `computeNextSessionPlan` utilise `today = new Date()` par défaut pour la
+  // détection longue pause (> 14j depuis la dernière séance terminée → statut
+  // `prudente`, cf. business-rules.md §4). Sans ce mock, `today` est la date
+  // d'exécution réelle, qui peut être > 14j après les fixtures d'avril 2026 :
+  // tous les tests basculent alors en `prudente` et écrasent les `next_load`
+  // attendus (E2E 1) ou le statut `allegee` attendu (E2E 2).
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask', 'setTimeout'] });
+  // J = date courante des fixtures; dernière séance précédente max: 2026-04-28T11:00:00Z → gap < 14j
+  jest.setSystemTime(new Date('2026-04-29T12:00:00Z'));
+});
+
+afterAll(() => {
+  jest.useRealTimers();
 });
 
 /**

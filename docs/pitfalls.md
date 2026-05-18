@@ -99,6 +99,14 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### TEST-02 — Tests d'intégration moteur de progression dépendant de l'horloge système
+**Symptôme** : les tests E2E de `rules-engine-integration.test.ts` deviennent rouges quand la date d'exécution réelle s'éloigne des fixtures statiques (> 14 jours). `computeNextSessionPlan` utilise `today = new Date()` pour détecter une longue pause (`longPause`), ce qui bascule le statut en `prudente` au lieu d'`allegee` ou du comportement attendu.
+**Fix** : mocker l'horloge dans toute suite E2E qui touche au moteur de progression via `jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask', 'setTimeout'] })` + `jest.setSystemTime(new Date('<date-proche-des-fixtures>'))` dans `beforeAll`, restaurer avec `jest.useRealTimers()` dans `afterAll`.
+**Note** : à terme, exposer `today` via `RunRulesEngineOptions` permettrait une injection propre sans mock système — signalé pour future story.
+**Détecté** : Fix post-TA-114 / 2026-05-18
+
+---
+
 ### ARCH-04 — `feature-types` ne peut pas importer `shared-components`
 **Symptôme** : ESLint `boundaries/dependencies` bloque `src/features/<feat>/types/*.ts` → `src/components/**/*` (shared-components). La règle implicite `default: 'disallow'` s'applique.
 **Fix** : si un type feature a besoin d'un type défini dans shared-components (ex: `DisplaySessionStatus`), redéfinir localement l'union de strings dans le fichier de types feature. Éviter les imports ascendants (types → UI components).

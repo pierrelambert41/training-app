@@ -6,6 +6,29 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## Fix — tests E2E `rules-engine-integration` cassés depuis TA-114
+**Livré** : mock horloge système dans `rules-engine-integration.test.ts` pour stabiliser les tests E2E du moteur de progression ; ajout de `'setTimeout'` dans `doNotFake` (défensif) ; commentaire inline expliquant la date mockée.
+
+**Root cause** : `computeNextSessionPlan` utilise `new Date()` pour calculer si la pause depuis la dernière séance dépasse 14 jours (`longPause`). Les fixtures statiques ont pour date maximale `2026-04-28T11:00:00Z`. À partir de mai 2026, le gap > 14j déclenche le statut `prudente` au lieu d'`allegee`, cassant E2E 1 et E2E 2.
+
+**Fix** : `jest.useFakeTimers` + `jest.setSystemTime(new Date('2026-04-29T12:00:00Z'))` dans `beforeAll`/`afterAll`. Aucune modification du moteur de progression (correct selon `business-rules.md` §4).
+
+**Fichiers modifiés** :
+- `src/features/progression/api/__tests__/rules-engine-integration.test.ts` — mock horloge, `doNotFake` étendu, commentaire inline
+
+**S'appuie sur** :
+- TA-114 : tests E2E rules-engine-integration (source du piège)
+- `docs/business-rules.md` §4 : logique `longPause` / statut `prudente`
+
+**Ouvre** :
+- Injection propre de `today` via `RunRulesEngineOptions` pour éviter la dépendance à `new Date()` dans le moteur (signalé en TEST-02 dans pitfalls.md)
+
+**Bugs découverts** : TEST-02 dans pitfalls.md (horloge système dans les tests moteur de progression).
+
+**Stubs laissés ouverts** : injection `today` dans `RunRulesEngineOptions` (future story).
+
+---
+
 ## TA-133 — Prompts versionnés pour les 4 cas d'usage IA
 **Livré** : Module `src/features/ai/domain/prompts/` avec 4 builders de prompts, type `ClaudeMessages`, et 19 tests unitaires.
 
