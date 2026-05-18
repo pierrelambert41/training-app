@@ -1,16 +1,21 @@
 # Moteur de génération de programmes — version révisée
 
+> **À lire en premier (mai 2026)** — ADR-028 a redéfini la responsabilité de génération :
+> - **Mode nominal** : la génération du programme est produite par l'**IA** (`ClaudeProvider.generateProgram` / `regenerateBlock`), avec validation déterministe en sortie. Cf. `docs/ai-strategy.md` §1-2.
+> - **Mode fallback** : le moteur déterministe 3-couches décrit dans ce document est encapsulé dans `FallbackProvider.generateProgram` et appelé **uniquement** quand l'IA est indisponible (offline, rate-limit, échec ai-proxy). Il garantit le principe "l'app fonctionne sans IA".
+> - **Ce document** décrit la logique du moteur déterministe (fallback). Il sert aussi de **référentiel de contraintes** pour le prompt IA : l'IA doit produire un programme qui respecte les mêmes invariants (split cohérent, sélection d'exos dans le catalogue, progressionType ∈ les 6 prédéfinis, etc.).
+
 ## 1. Objectif
 
 L'utilisateur ne crée pas son programme librement. Il répond à un questionnaire et l'app génère un programme structuré, cohérent, adapté, **et piloté par une méthode propriétaire**.
 
-Le moteur ne doit pas seulement “assembler des exercices”.
+Le générateur (IA en nominal, moteur déterministe en fallback) ne doit pas seulement “assembler des exercices”.
 Il doit :
 
 - choisir un split cohérent,
-- sélectionner les exercices les plus adaptés,
+- sélectionner les exercices les plus adaptés **dans le catalogue fermé** (table `exercises`),
 - doser le volume,
-- choisir les bons types de progression,
+- choisir les bons types de progression (parmi les 6 prédéfinis, ADR-006),
 - tenir compte de la fatigue,
 - tenir compte du profil morphologique,
 - tenir compte du niveau réel et pas seulement des années de pratique,
@@ -334,25 +339,29 @@ Il doit être une vraie base de connaissance exploitable par le moteur.
 ## 7. Création / proposition des programmes au MVP
 
 ## Décision forte
-Au MVP, **l’app doit proposer / générer les programmes**.  
-L’utilisateur **ne crée pas son programme librement**.
+Au MVP, **l'app doit proposer / générer les programmes**.
+L'utilisateur **ne crée pas son programme librement**.
 
-### Ce que l’utilisateur fait
+**Qui génère** (ADR-028) :
+- **Mode nominal — IA** : `ClaudeProvider.generateProgram(context)` produit le programme à partir du `AIContextProfile` (ADR-027) + le questionnaire utilisateur. La sortie passe par un validateur déterministe (cf. `docs/ai-strategy.md` §2) qui s'appuie sur les règles décrites dans le présent document.
+- **Mode fallback — moteur déterministe** : `FallbackProvider.generateProgram(context)` utilise les 3 couches décrites aux §4-5 de ce document. Appelé uniquement quand l'IA est indisponible (offline complet, rate-limit Edge Function `ai-proxy`, échec validation IA après retry). Au retour réseau, l'utilisateur peut demander une régénération IA pour remplacer le programme fallback.
+
+### Ce que l'utilisateur fait
 - répond à un questionnaire,
-- valide un programme généré,
-- peut faire des micro-ajustements cadrés.
+- valide un programme généré (par l'IA ou le fallback),
+- peut faire des micro-ajustements cadrés (cf. §8).
 
-### Ce qu’il ne peut pas faire
-- partir d’une page blanche,
+### Ce qu'il ne peut pas faire
+- partir d'une page blanche,
 - inventer la structure complète,
 - changer librement la logique du bloc.
 
 ### Pourquoi
-Le produit repose sur une **philosophie de coaching**.  
+Le produit repose sur une **philosophie de coaching**.
 Donc :
-- le programme doit rester cohérent avec les règles,
-- l’app doit rester capable d’analyser ce qu’elle a prescrit,
-- l’IA doit travailler sur une structure fiable.
+- le programme doit rester cohérent avec les règles (validateur déterministe en sortie d'IA),
+- l'app doit rester capable d'analyser ce qu'elle a prescrit (schéma JSON strict, `progressionType` ∈ 6 valeurs prédéfinies),
+- la couche IA d'interprétation (résumés, explications) doit travailler sur une structure fiable.
 
 ---
 
@@ -428,10 +437,12 @@ Les exercices ne doivent pas changer trop brutalement.
 - mieux structurer le catalogue d’exercices
 
 ### 10.3 Positionnement final
-Le moteur de génération ne doit pas seulement “remplir des séances”.  
-Il doit produire **le meilleur programme possible dans le cadre d’une méthode imposée** :
+Le générateur de programme (IA en nominal, moteur déterministe en fallback) ne doit pas seulement “remplir des séances”.
+Il doit produire **le meilleur programme possible dans le cadre d'une méthode imposée** :
 - lisible,
 - progressif,
 - analysable,
 - ajustable,
-- cohérent avec le moteur de progression et la couche IA.
+- cohérent avec le moteur de progression intra-bloc (déterministe, ADR-004) et la couche IA d'interprétation.
+
+L'IA porte la promesse différenciante : un programme **véritablement personnalisé** sur la morphologie, l'historique, les objectifs, les contraintes, la récup et les sports parallèles. Le moteur déterministe porte la promesse "l'app fonctionne sans IA" : un programme correct, cohérent, immédiatement exploitable, même offline.
