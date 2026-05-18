@@ -286,6 +286,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### AI-04 — Signature `buildExplainAdjustmentPrompt` ne correspond pas à `AIProvider.explainAdjustment`
+**Symptôme** : `buildExplainAdjustmentPrompt(ctx, recommendation: Recommendation)` attend deux paramètres, mais `AIProvider.explainAdjustment(context: AIContext)` dans `src/features/ai/api/ai-provider.ts:19` n'en accepte qu'un. Brancher le builder dans `ClaudeProvider.explainAdjustment` sans modifier l'interface lèvera une erreur TS (argument supplémentaire non déclaré).
+**Fix attendu (TA-134)** : étendre la signature de `AIProvider.explainAdjustment` pour accepter `recommendation: Recommendation` en second paramètre. Mettre à jour `NullAIProvider` et `ClaudeProvider` en conséquence.
+**Détecté** : TA-133 review / 2026-05-18
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
@@ -293,6 +300,7 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
 | `user_profiles` SQLite | `src/features/ai/api/ai-context-service.ts` | `readUserProfile` | Onboarding/profil utilisateur |
+| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateSessionSummary`, `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-134 (brancher les builders de TA-133) |
 
 ---
 

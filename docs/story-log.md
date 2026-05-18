@@ -6,6 +6,43 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-133 — Prompts versionnés pour les 4 cas d'usage IA
+**Livré** : Module `src/features/ai/domain/prompts/` avec 4 builders de prompts, type `ClaudeMessages`, et 19 tests unitaires.
+
+**Fichiers créés** :
+- `src/features/ai/types/claude-messages.ts` — types `ClaudeMessages`, `ClaudeMessage`, `TextContentBlock`, `CacheControl`
+- `src/features/ai/domain/prompts/session-summary-prompt.ts` — `buildSessionSummaryPrompt(ctx)` → résumé fin de séance
+- `src/features/ai/domain/prompts/plateau-analysis-prompt.ts` — `buildPlateauAnalysisPrompt(ctx, exerciseId)` → analyse plateau
+- `src/features/ai/domain/prompts/block-summary-prompt.ts` — `buildBlockSummaryPrompt(ctx)` → synthèse de bloc
+- `src/features/ai/domain/prompts/explain-adjustment-prompt.ts` — `buildExplainAdjustmentPrompt(ctx, recommendation)` → explication ajustement
+- `src/features/ai/domain/prompts/index.ts` — public API du sous-module
+- `src/features/ai/domain/prompts/prompts.test.ts` — 19 tests (structure valide, cache_control, system en français, données injectées)
+
+**Fichiers modifiés** :
+- `src/features/ai/index.ts` — exports publics des 4 builders + types `ClaudeMessages`
+
+**S'appuie sur** :
+- TA-130 : types `AIContext`, `AIContextProfile` depuis `types/ai-context.ts`
+- TA-131 : types `Recommendation` depuis `types/ai-responses.ts`
+- TA-132 : `AIContextProfile` construit et stocké, consommé via `ctx.profile`
+- docs/ai-strategy.md §4 (pipelines), §5 (optimisation prompt caching), §6 (portabilité)
+
+**Décisions clés** :
+- `ClaudeMessages` défini dans `types/` (pas dans `api/`) pour que `domain/` puisse y accéder sans violer boundaries (domain → types autorisé, domain → api interdit).
+- Format 3 blocs par message : label texte → profil (cache_control ephemeral) → données variables + instructions JSON.
+- Contexte historique limité à 6-12 sessions selon le cas d'usage (§5).
+- Les prompts sont des fonctions pures sans I/O, testables sans mock.
+
+**Ouvre** :
+- TA-134 : `ClaudeProvider` peut être mis à jour pour appeler `buildSessionSummaryPrompt` au lieu du prompt inline actuel
+- TA-134 : déclenchement automatique `refreshAIContextProfile` post-complétion séance
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : `ClaudeProvider` utilise encore ses prompts inline (TA-131). Les builders de TA-133 sont prêts à être branchés (remplacement à faire dans `claude-provider.ts`).
+
+---
+
 ## TA-132 — AIContextProfile : builder et persistance
 **Livré** : Migration SQLite v10 (`ai_context_profiles`), fonction pure `buildAIContextProfile`, service `refreshAIContextProfile` + `getAIContextProfile`, 25 tests.
 
