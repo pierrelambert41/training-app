@@ -21,3 +21,15 @@ export type {
 export type { AIProvider } from './api/ai-provider';
 export { createAIProvider } from './api/create-ai-provider';
 export type { AIProviderConfig } from './api/create-ai-provider';
+
+// TA-132 — AIContextProfile builder + persistance
+export { refreshAIContextProfile, getAIContextProfile } from './api/ai-context-service';
+export type {
+  BuildAIContextProfileInputs,
+  ExerciseBaselineSnapshot,
+  RecoveryLogSnapshot,
+  SetLogSnapshot,
+  UserProfileSnapshot,
+  CurrentBlockSnapshot,
+} from './domain/build-ai-context-profile';
+export { buildAIContextProfile } from './domain/build-ai-context-profile';

@@ -239,9 +239,10 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ### CALIB-01 — `computeE1rm` dupliquée entre `features/import` et `features/progression`
 **Symptôme** : la formule Epley (`load * (1 + reps / 30)`) est déjà implémentée dans `src/features/progression/domain/progression-vs-previous.ts`. ESLint boundaries (`feature-domain` → seul `feature-domain` de la même feature autorisé) interdit un import cross-feature, même pour une fonction pure sans état.
-**Fix** : dupliquer la fonction dans `src/features/import/domain/calibration.ts`. 3 lignes, coût minimal. Si la formule change (ex: Brzycki), il faudra mettre à jour les deux endroits — acceptable car la formule est stable (cf. docs/business-rules.md §7).
-**Règle** : les fonctions pures cross-feature doivent être déplacées dans `src/lib/` ou `src/utils/` pour éviter la duplication. Si l'usage se généralize, migrer vers `src/lib/epley.ts` (shared-lib).
-**Détecté** : TA-127 / 2026-05-12
+**Fix TA-127** : dupliquer la fonction dans `src/features/import/domain/calibration.ts`. 3 lignes, coût minimal.
+**Fix TA-132** : 4e usage détecté (feature `ai`). Migré vers `src/lib/epley.ts` (shared-lib). La feature `ai` importe depuis `@/lib/epley`. Les features `import` et `progression` conservent leur copie locale (coût de migration faible, formule stable).
+**Règle** : si on migre un jour les copies restantes, supprimer la copie inline et pointer vers `@/lib/epley`.
+**Détecté** : TA-127 / 2026-05-12 — **Partiellement résolu** : TA-132 / 2026-05-18
 
 ---
 
@@ -268,13 +269,30 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+---
+
+### SYNC-05 — `safeEnqueue` + SyncService face à une table Supabase inexistante
+**Symptôme** : si la migration Supabase `ai_context_profiles` n'est pas encore déployée et que le client appelle `refreshAIContextProfile`, `safeEnqueue` enfile l'upsert dans `sync_queue`. Lors du prochain `push()`, Supabase retourne une erreur `relation "ai_context_profiles" does not exist` (code `42P01`). `pushEntry` capture l'erreur (bloc `catch`), retourne `{ status: 'failed', error: message }`, et laisse l'entrée avec `synced=0` dans la queue.
+**Comportement** : retry permanent à chaque `push()` jusqu'à ce que la migration soit déployée côté serveur. Pas de dead-letter, pas de TTL, pas d'expiration. L'entrée s'accumule (une par refresh) mais ne bloque pas les autres entrées de la queue (non fail-fast).
+**Impact déploiement** : la migration Supabase `ai_context_profiles` DOIT être déployée avant le premier refresh client en production. Autrement, la queue grossit indéfiniment pour chaque utilisateur qui refresh son profil. Une fois la migration appliquée, les entrées accumulées seront poussées normalement au prochain sync (upsert idempotent via `onConflict: 'id'`).
+**Détecté** : TA-132 review / 2026-05-18
+
+---
+
+### AI-03 — `user_profiles` table non créée en SQLite
+**Symptôme** : `ai-context-service.ts` fait un SELECT sur `user_profiles WHERE user_id = ?` mais cette table n'existe pas encore en SQLite (pas de migration). Le service gère la dégradation gracieuse (null row → fallback values), mais le profil retourné sera toujours avec les defaults (`intermediate`, `hypertrophy`, `kg`).
+**Fix attendu** : quand la saisie du profil utilisateur sera implémentée (écran onboarding/profil), créer la migration SQLite `user_profiles` et alimenter les champs. La signature `readUserProfile` dans `ai-context-service.ts` est déjà prête.
+**Détecté** : TA-132 / 2026-05-18
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
 
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
-| (aucun stub ouvert) | — | — | — |
+| `user_profiles` SQLite | `src/features/ai/api/ai-context-service.ts` | `readUserProfile` | Onboarding/profil utilisateur |
 
 ---
 

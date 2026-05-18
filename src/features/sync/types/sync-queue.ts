@@ -9,6 +9,7 @@ export type SyncAction = 'insert' | 'update' | 'delete';
  * Phase 3 : programs, blocks, workout_days, planned_exercises
  * Phase 4 : sessions, set_logs (TA-72)
  * Phase 5 : recommendations (TA-103)
+ * Phase 7 : ai_context_profiles (TA-132) — exclue de CONFLICT_CHECKED_TABLES (table dérivée recalculable)
  */
 export type SyncTableName =
   | 'exercises'
@@ -19,7 +20,8 @@ export type SyncTableName =
   | 'planned_exercises'
   | 'sessions'
   | 'set_logs'
-  | 'recommendations';
+  | 'recommendations'
+  | 'ai_context_profiles';
 
 export type SyncQueueRecord = {
   id: number;
