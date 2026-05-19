@@ -120,4 +120,11 @@ export type AIContext = {
       e1rm?: number;
     }>;
   }[];
+  recoveryLogs?: Array<{
+    date: string;
+    sleep_quality: number | null;
+    energy: number | null;
+    soreness: number | null;
+    notes: string | null;
+  }>;
 };

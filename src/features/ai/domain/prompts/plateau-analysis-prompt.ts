@@ -1,11 +1,6 @@
 import type { AIContext } from '../../types/ai-context';
 import type { ClaudeMessages } from '../../types/claude-messages';
 
-// 12 séances ici (vs 6 pour session-summary, 8 pour block-summary) car l'analyse de plateau
-// requiert un historique plus long pour distinguer un plateau réel (4-6 semaines) d'une variation
-// passagère. docs/ai-strategy.md §4 cite "8-12 dernières séances" ; on prend le maximum de la
-// fourchette car le coût de tokens reste acceptable sur un seul exercice (pas sur tout l'historique).
-const MAX_PLATEAU_HISTORY_SESSIONS = 12;
 
 const SYSTEM_INSTRUCTIONS = `Tu es un coach sportif expert en hypertrophie et en force.
 Tu analyses les plateaux de progression et fournis des diagnostics structurés.
@@ -41,7 +36,7 @@ export function buildPlateauAnalysisPrompt(
       ? {
           exerciseId: exerciseHistory.exerciseId,
           exerciseName: exerciseHistory.exerciseName,
-          sessions: exerciseHistory.sessions.slice(-MAX_PLATEAU_HISTORY_SESSIONS),
+          sessions: exerciseHistory.sessions,
         }
       : { exerciseId, sessions: [] },
     readinessTrends: ctx.profile.readiness_trends ?? null,
@@ -49,6 +44,7 @@ export function buildPlateauAnalysisPrompt(
     performanceBaseline: exerciseHistory
       ? ctx.profile.performance_baselines[exerciseHistory.exerciseName] ?? null
       : null,
+    recoveryLogs: ctx.recoveryLogs ?? [],
   };
 
   return {
