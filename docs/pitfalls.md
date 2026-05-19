@@ -301,6 +301,28 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### AI-05 — Import transitif `@/features/auth` → `supabase.ts` dans les tests session
+**Symptôme** : après ajout de `useAuthStore` dans `use-complete-session.ts` (ou tout composant session importé via `session/index.ts`), les suites de tests `session-live-screen.test.tsx` et `set-row-log-type-unilateral.test.tsx` échouent avec `SyntaxError: Cannot use import statement outside a module` sur `react-native-url-polyfill/auto`. La chaîne est `session/index.ts → end-session-screen.tsx → features/auth → api/auth.ts → services/supabase.ts`.
+**Fix** : ne jamais importer `@/features/auth` depuis les hooks internes de la feature session (`feature-hooks`). Passer `userId` en paramètre du hook depuis l'appelant (composant ou écran) qui détient déjà la valeur via `useAuthStore`. Ajouter `jest.mock('@/features/auth', ...)` et `jest.mock('@/hooks/use-ai-context-refresh', ...)` dans les tests de composants session qui importent via `live.tsx`.
+**Règle** : si un hook feature-session a besoin du userId, le recevoir en paramètre plutôt que d'importer `useAuthStore`. Cf. pitfall SYNC-01 (même catégorie de problème).
+**Détecté** : TA-134 / 2026-05-19
+
+---
+
+### AI-06 — (supprimé) stub useCompleteBlock retiré (YAGNI)
+`use-complete-block.ts` supprimé lors du patch TA-134 : aucun écran de fin de bloc n'existe. La story qui implémentera la transition Block → completed branchera `triggerAIContextRefresh` directement (pattern identique à `use-complete-session.ts`).
+**Détecté** : TA-134 / 2026-05-19 — **Résolu** : patch TA-134
+
+---
+
+### AI-07 — throw synchrone avant retour de Promise non rattrapé par `.catch()` seul
+**Symptôme** : si `refreshAIContextProfile` lève une exception synchrone (avant de retourner une Promise), le `.catch().finally()` n'est jamais attaché → `isRefreshing.current` reste bloqué à `true` indéfiniment, le hook devient mort.
+**Fix** : wrapper l'appel dans un `try/catch` synchrone. En cas de throw, logger et reset le flag immédiatement. Si la Promise est bien retournée, attacher `.catch().finally()` comme d'habitude.
+**Pattern** : `try { const p = fn(); p.catch(...).finally(...); } catch(e) { log(e); resetFlag(); }`
+**Détecté** : TA-134 (review) / 2026-05-19
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
@@ -308,7 +330,8 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
 | `user_profiles` SQLite | `src/features/ai/api/ai-context-service.ts` | `readUserProfile` | Onboarding/profil utilisateur |
-| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateSessionSummary`, `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-134 (brancher les builders de TA-133) |
+| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateSessionSummary`, `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-135+ (brancher les builders de TA-133) |
+| Fin de bloc → refresh IA | _(stub supprimé — YAGNI)_ | brancher `triggerAIContextRefresh` depuis le futur écran de fin de bloc | Écran fin de bloc (non implémenté) |
 
 ---
 
