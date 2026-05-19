@@ -323,6 +323,14 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### AI-08 — `AIProvider.generateSessionSummary` ne throw jamais : fallback invisible
+**Symptôme** : `ClaudeProvider.generateSessionSummary` catche toutes les erreurs (réseau, 429, parse) et délègue silencieusement au `FallbackProvider`. Depuis l'extérieur, l'appelant ne peut pas distinguer un résumé Claude réel d'un résumé fallback sans inspecter le contenu.
+**Fix** : pour les cas d'usage qui ont besoin de savoir si Claude a été utilisé (ex: décider d'enqueuer un retry IA), appeler directement `supabase.functions.invoke('ai-proxy', ...)` sans passer par `AIProvider`. Le résultat est une erreur explicite si l'appel échoue, permettant d'appeler `FallbackProvider` et d'enqueuer le retry dans le `catch`.
+**Règle** : `AIProvider.generateSessionSummary` convient pour les cas d'usage "je veux juste un résumé, peu importe la source". Pour les cas avec retry queue, contourner l'abstraction et appeler l'Edge Function directement.
+**Détecté** : TA-135 / 2026-05-19
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
@@ -330,8 +338,9 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
 | `user_profiles` SQLite | `src/features/ai/api/ai-context-service.ts` | `readUserProfile` | Onboarding/profil utilisateur |
-| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateSessionSummary`, `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-135+ (brancher les builders de TA-133) |
+| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-136+ (brancher les builders de TA-133 dans les prochains services) |
 | Fin de bloc → refresh IA | _(stub supprimé — YAGNI)_ | brancher `triggerAIContextRefresh` depuis le futur écran de fin de bloc | Écran fin de bloc (non implémenté) |
+| Queue de retry IA | `src/features/ai/api/retry-queue.ts` | `enqueueAIRetry` (INSERT seul) | TA-141 : orchestration retry, UPDATE Recommendation existante, status→done/failed |
 
 ---
 

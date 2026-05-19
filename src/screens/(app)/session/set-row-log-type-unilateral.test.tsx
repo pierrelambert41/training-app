@@ -39,6 +39,10 @@ jest.mock('@/hooks/use-ai-context-refresh', () => ({
   useAIContextRefresh: () => ({ triggerAIContextRefresh: jest.fn() }),
 }));
 
+jest.mock('@/hooks/use-session-summary-trigger', () => ({
+  useSessionSummaryTrigger: () => ({ triggerSessionSummary: jest.fn() }),
+}));
+
 jest.mock('@/hooks/use-db', () => ({
   useDB: () => ({}),
 }));

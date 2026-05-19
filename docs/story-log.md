@@ -6,6 +6,48 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-135 — Génération et persistance du résumé fin de séance (IA)
+
+**Livré** : `generateAndStoreSessionSummary(db, sessionId, userId, supabase)` — génère le résumé IA d'une séance via Edge Function Claude (ou FallbackProvider si offline/profil absent/erreur Claude) et le persiste comme `Recommendation{type='summary', source='ai'}`. Fire-and-forget via `useSessionSummaryTrigger`. Queue de retry pour upgrade fallback→IA (TA-141).
+
+**Fichiers créés** :
+- `src/features/ai/api/session-summary-service.ts` — service principal. Assemble le contexte (profil, set_logs, session précédente, recommandations rules engine), appelle l'Edge Function via Supabase direct (pas via AIProvider pour avoir la visibilité fallback/succès), persiste le résultat.
+- `src/features/ai/api/retry-queue.ts` — `enqueueAIRetry(db, input)` : INSERT dans `ai_retry_queue`. Stub pour TA-141.
+- `src/features/ai/api/session-summary-service.test.ts` — 7 tests couvrant : nominal, échec Claude, profil absent, offline, session introuvable, idempotence UPDATE.
+- `src/hooks/use-session-summary-trigger.ts` — hook partagé `useSessionSummaryTrigger(db)`. Importe `supabase` directement (placé dans shared-hooks pour éviter le pitfall AI-05/SYNC-01).
+
+**Fichiers modifiés** :
+- `src/db/migrations/db-migrations.ts` — migration v11 : table `ai_retry_queue` avec index `status` et `session_id`.
+- `src/features/ai/index.ts` — exports `generateAndStoreSessionSummary`, `enqueueAIRetry`, `AIRetryType`, `AIRetryQueueInput`.
+- `src/services/recommendations.ts` — `clearRecommendationsForSession` filtre désormais uniquement `source='rules_engine'` (préserve les résumés IA). Commentaire explicite sur l'intention.
+- `src/features/session/hooks/use-complete-session.ts` — branche `triggerSessionSummary` après `runRulesEngine`.
+- `src/features/session/hooks/use-complete-session.test.ts` — ajout mock `@/hooks/use-session-summary-trigger`.
+- `src/screens/(app)/session/session-live-screen.test.tsx` — ajout mock `@/hooks/use-session-summary-trigger`.
+- `src/screens/(app)/session/set-row-log-type-unilateral.test.tsx` — idem.
+
+**S'appuie sur** :
+- TA-131 : `FallbackProvider`, pattern Edge Function `ai-proxy`.
+- TA-132 : `getAIContextProfile`, `refreshAIContextProfile`.
+- TA-133 : `buildSessionSummaryPrompt` (utilisé pour construire les messages à envoyer à l'Edge Function).
+- TA-134 : `useSessionSummaryTrigger` suit exactement le même pattern que `useAIContextRefresh`.
+- TA-109 : `runRulesEngine`, `Recommendation`, `saveRecommendation`, `updateRecommendation`.
+
+**Décisions clés** :
+- `generateAndStoreSessionSummary` reçoit `supabase: SupabaseClient | null` plutôt que de l'importer directement : permet le test unitaire sans mock global et signal explicite de l'état réseau (null = offline).
+- Appel direct à `supabase.functions.invoke` (pas via `ClaudeProvider.generateSessionSummary`) pour avoir une visibilité binaire fallback/succès, nécessaire pour décider si enqueue retry.
+- `clearRecommendationsForSession` modifiée pour ne purger que `source='rules_engine'` : ADR-020 (idempotence rules engine) préservé, résumés IA non effacés à chaque re-run.
+- Migration SQLite v11 locale uniquement pour `ai_retry_queue` (pas de migration Supabase nécessaire : la queue est device-local).
+
+**Ouvre** :
+- TA-139 : affichage UI du résumé (Recommendation type='summary' est maintenant persistée).
+- TA-141 : orchestration retry IA — consomme `ai_retry_queue`, met à jour status='done'/'failed', UPDATE la Recommendation existante via `recommendationId`.
+
+**Bugs découverts** : aucun — erreur ESLint `react-hooks/exhaustive-deps` préexistante dans `end-session-screen.tsx` (hors scope).
+
+**Stubs laissés ouverts** : `enqueueAIRetry` dans `retry-queue.ts` — INSERT seul, pas d'orchestration retry (TA-141).
+
+---
+
 ## TA-134 — Auto-refresh AIContextProfile après complétion de séance et fin de bloc
 **Livré** : déclenchement automatique et non-bloquant de `refreshAIContextProfile` après chaque complétion de séance. Guard anti-parallélisme (ref `isRefreshing`). Désactivable via `EXPO_PUBLIC_AI_ENABLED=false`.
 

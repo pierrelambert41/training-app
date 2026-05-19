@@ -42,3 +42,8 @@ export {
   buildBlockSummaryPrompt,
   buildExplainAdjustmentPrompt,
 } from './domain/prompts';
+
+// TA-135 — Génération et persistance du résumé fin de séance
+export { generateAndStoreSessionSummary } from './api/session-summary-service';
+export { enqueueAIRetry } from './api/retry-queue';
+export type { AIRetryType, AIRetryQueueInput } from './api/retry-queue';
