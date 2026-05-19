@@ -51,3 +51,7 @@ export type { AIRetryType, AIRetryQueueInput } from './api/retry-queue';
 // TA-136 — Explication d'ajustement à la demande
 export { explainAdjustment } from './api/explain-adjustment-service';
 export { useExplainAdjustment } from './hooks/use-explain-adjustment';
+
+// TA-137 — Analyse de plateau à la demande
+export { analyzePlateau } from './api/plateau-analysis-service';
+export { usePlateauAnalysis } from './hooks/use-plateau-analysis';

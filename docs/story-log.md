@@ -6,6 +6,42 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-137 — Analyse de plateau à la demande (IA)
+
+**Livré** : `analyzePlateau(db, exerciseId, userId, supabase)` — analyse IA d'un plateau de progression sur un exercice, à la demande uniquement. Récupère les 8 dernières séances complétées contenant l'exercice, construit l'historique (avgLoad, totalVolume, e1RM par séance) + recovery logs sur la même période, appelle Claude via `ai-proxy`, et persiste le résultat comme `Recommendation{type='plateau', source='ai'}`. Fallback : suggestions standards business-rules §6 si offline, Claude indisponible, ou JSON tronqué. Guard explicite si aucune session historique : retourne fallback sans INSERT (sécurité FK).
+
+**Fichiers créés** :
+- `src/features/ai/api/plateau-analysis-service.ts` — service principal. `computeE1rm` importé depuis `@/lib/epley` (CALIB-01). Guard `recentSessions.length === 0` → early-return fallback sans INSERT. Fetch `recovery_logs` sur la période des sessions, passés dans `AIContext.recoveryLogs`. `parsePlateauAnalysis` avec validation (`suggestions` + `probable_causes` requis) → fallback si JSON invalide/tronqué.
+- `src/features/ai/api/plateau-analysis-service.test.ts` — 9 tests couvrant : nominal, metadata.fallback=false, fallback erreur Claude, fallback=true sur erreur, fallback offline (null), profil absent, guard FK (pas d'INSERT si 0 sessions), recovery_logs dans le contexte, JSON tronqué → fallback.
+- `src/features/ai/hooks/use-plateau-analysis.ts` — hook TanStack Query. `enabled: false`, `staleTime: Infinity`, `retry: false`. Expose `{ analysis, isLoading, error, analyze }`.
+
+**Fichiers modifiés** :
+- `src/features/ai/index.ts` — exports `analyzePlateau`, `usePlateauAnalysis`.
+- `src/features/ai/types/ai-context.ts` — ajout champ optionnel `recoveryLogs` dans `AIContext`.
+- `src/features/ai/domain/prompts/plateau-analysis-prompt.ts` — inclut `recoveryLogs` dans `plateauData` envoyé à Claude.
+
+**S'appuie sur** :
+- TA-131 : pattern Edge Function `ai-proxy`.
+- TA-132 : `getAIContextProfile` pour construire le contexte IA.
+- TA-133 : `buildPlateauAnalysisPrompt(ctx, exerciseId)` — déjà existant, utilise `ctx.exerciseHistory`.
+- TA-135/136 : même pattern d'appel direct Edge Function (pas via `AIProvider`), même structure fallback.
+
+**Décisions clés** :
+- Guard `recentSessions.length === 0` → early-return fallback sans INSERT. Évite un crash FK (`session_id NOT NULL REFERENCES sessions(id)`). Cf. reviewers comment bloquant #2.
+- `recovery_logs` : table peut ne pas exister (PROG-02). La query est wrappée dans un try/catch → dégradation gracieuse (`recoveryLogs: []`).
+- `parsePlateauAnalysis` ne throw plus : retourne le fallback si JSON invalide/incomplet.
+- INSERT Recommendation seulement si on a un vrai `referenceSessionId` (sessions non vides).
+- Pas de queue de retry : analyse basse priorité, déclenchée à la demande.
+
+**Ouvre** :
+- UI bouton "Analyser le plateau" (ticket dédié) : consomme `usePlateauAnalysis` depuis l'écran exercice ou progression. Cf. stub "UI Plateau" dans pitfalls.md.
+
+**Bugs découverts** : (review) `computeE1rm` inline → CALIB-01. `referenceSessionId='unknown'` → crash FK potentiel. `parsePlateauAnalysis` sans validation → crash silencieux. `recovery_logs` absents du contexte.
+
+**Stubs laissés ouverts** : "UI Plateau" (cf. pitfalls.md stubs).
+
+---
+
 ## TA-136 — Explication d'ajustement à la demande (IA)
 
 **Livré** : `explainAdjustment(db, recommendationId, userId, supabase)` — génère une explication IA d'une recommandation d'ajustement de charge (ou fallback textuel si offline/Claude indisponible) et persiste le résultat dans `Recommendation.metadata.ai_explanation` (UPDATE). Hook `useExplainAdjustment` TanStack Query à la demande (`enabled: false`, déclenché par `explain()`).

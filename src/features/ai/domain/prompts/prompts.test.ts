@@ -204,17 +204,13 @@ describe('buildPlateauAnalysisPrompt', () => {
     expect(combined).toContain('ex-unknown');
   });
 
-  it('limite l\'historique de l\'exercice à 12 séances maximum (slice appliqué)', () => {
+  it('transmet toutes les sessions reçues sans les tronquer (le cap est appliqué par le service en amont)', () => {
     const ctx = buildContextWithManyExerciseSessions(20);
     const result = buildPlateauAnalysisPrompt(ctx, 'ex-squat');
     const combined = result.messages[0].content.map((b) => b.text).join('');
 
-    // Séances index 0-7 (dates 01-08) ne doivent pas apparaître
-    expect(combined).not.toContain('"2026-01-01"');
-    expect(combined).not.toContain('"2026-01-08"');
-    // La séance index 9 (date 10, dans les 12 dernières) doit apparaître
-    expect(combined).toContain('"2026-01-10"');
-    // La dernière séance (date 20) doit apparaître
+    // Toutes les séances doivent être présentes : la limite est imposée par plateau-analysis-service
+    expect(combined).toContain('"2026-01-01"');
     expect(combined).toContain('"2026-01-20"');
   });
 });

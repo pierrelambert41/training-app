@@ -249,8 +249,9 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 **Symptôme** : la formule Epley (`load * (1 + reps / 30)`) est déjà implémentée dans `src/features/progression/domain/progression-vs-previous.ts`. ESLint boundaries (`feature-domain` → seul `feature-domain` de la même feature autorisé) interdit un import cross-feature, même pour une fonction pure sans état.
 **Fix TA-127** : dupliquer la fonction dans `src/features/import/domain/calibration.ts`. 3 lignes, coût minimal.
 **Fix TA-132** : 4e usage détecté (feature `ai`). Migré vers `src/lib/epley.ts` (shared-lib). La feature `ai` importe depuis `@/lib/epley`. Les features `import` et `progression` conservent leur copie locale (coût de migration faible, formule stable).
-**Règle** : si on migre un jour les copies restantes, supprimer la copie inline et pointer vers `@/lib/epley`.
-**Détecté** : TA-127 / 2026-05-12 — **Partiellement résolu** : TA-132 / 2026-05-18
+**Fix TA-137 (review)** : `plateau-analysis-service.ts` avait une définition inline de `computeE1rm` au lieu d'importer `@/lib/epley`. Supprimée, import partagé branché.
+**Règle** : si on migre un jour les copies restantes (`import`, `progression`), supprimer les copies inline et pointer vers `@/lib/epley`. Toute nouvelle feature qui a besoin d'Epley DOIT importer `@/lib/epley`.
+**Détecté** : TA-127 / 2026-05-12 — **Partiellement résolu** : TA-132 / 2026-05-18 — **Complété pour feature ai** : TA-137 review / 2026-05-19
 
 ---
 
@@ -342,6 +343,7 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Fin de bloc → refresh IA | _(stub supprimé — YAGNI)_ | brancher `triggerAIContextRefresh` depuis le futur écran de fin de bloc | Écran fin de bloc (non implémenté) |
 | Queue de retry IA | `src/features/ai/api/retry-queue.ts` | `enqueueAIRetry` (INSERT seul) | TA-141 : orchestration retry, UPDATE Recommendation existante, status→done/failed |
 | UI "Pourquoi ?" | _(ticket UI dédié)_ | `useExplainAdjustment` depuis `src/features/ai/hooks/use-explain-adjustment.ts` | Écran fin de séance / écran Aujourd'hui |
+| UI "Analyser le plateau" | _(ticket UI dédié)_ | `usePlateauAnalysis` depuis `src/features/ai/hooks/use-plateau-analysis.ts` | Écran exercice / progression — **Note** : dans les tests du composant consommateur, mocker `@/features/ai` (l'index de la feature), pas directement `use-plateau-analysis`. Le hook importe `supabase` via `@/services/supabase` (pattern conforme TA-136) — le composant doit ne pas importer `supabase` directement (cf. SYNC-01). |
 
 ---
 
