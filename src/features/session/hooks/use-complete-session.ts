@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDB } from '@/hooks/use-db';
 import { useAIContextRefresh } from '@/hooks/use-ai-context-refresh';
+import { useSessionSummaryTrigger } from '@/hooks/use-session-summary-trigger';
 import { useSessionStore } from '@/stores/session-store';
 import { runRulesEngine } from '@/features/progression';
 import type { RulesEngineResult } from '@/features/progression';
@@ -21,6 +22,7 @@ export function useCompleteSession(userId: string | undefined) {
   const updateSessionNotes = useSessionStore((s) => s.updateSessionNotes);
   const session = useSessionStore((s) => s.session);
   const { triggerAIContextRefresh } = useAIContextRefresh(db);
+  const { triggerSessionSummary } = useSessionSummaryTrigger(db);
 
   const [state, setState] = useState<CompleteSessionState>('idle');
   const [rulesResult, setRulesResult] = useState<RulesEngineResult | null>(null);
@@ -43,6 +45,7 @@ export function useCompleteSession(userId: string | undefined) {
           ]);
           if (userId) {
             triggerAIContextRefresh(userId);
+            triggerSessionSummary(sessionId, userId);
           }
         } catch (e) {
           console.error('[session/end] runRulesEngine failed', e);
@@ -55,7 +58,7 @@ export function useCompleteSession(userId: string | undefined) {
         throw e;
       }
     },
-    [db, session, completeSession, updateSessionNotes, queryClient, userId, triggerAIContextRefresh]
+    [db, session, completeSession, updateSessionNotes, queryClient, userId, triggerAIContextRefresh, triggerSessionSummary]
   );
 
   return { complete, state, rulesResult, isCompleting: state === 'completing', isCompleted: state === 'completed' };

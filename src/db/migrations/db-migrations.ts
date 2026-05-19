@@ -351,4 +351,25 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_ai_context_profiles_user ON ai_context_profiles(user_id);
     `,
   },
+  // TA-135 — Queue de retry pour les appels IA échoués (offline ou erreur Claude).
+  // Alimentation par session-summary-service (et futures stories plateau/block).
+  // L'orchestration du retry (TA-141) consomme cette table.
+  // status : 'pending' uniquement au INSERT — le retry worker gère 'done'/'failed'.
+  {
+    version: 11,
+    sql: `
+      CREATE TABLE IF NOT EXISTS ai_retry_queue (
+        id TEXT PRIMARY KEY NOT NULL,
+        session_id TEXT,
+        recommendation_id TEXT,
+        type TEXT NOT NULL CHECK (type IN ('session_summary', 'plateau', 'block_summary', 'explain_adjustment')),
+        payload TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'done', 'failed')),
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_retry_queue_status ON ai_retry_queue(status);
+      CREATE INDEX IF NOT EXISTS idx_ai_retry_queue_session ON ai_retry_queue(session_id);
+    `,
+  },
 ];

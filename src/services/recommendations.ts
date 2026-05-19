@@ -193,15 +193,20 @@ export async function getRecommendationsBySession(
 }
 
 /**
- * Supprime toutes les recommandations d'une séance et enqueue les deletes.
- * Utilisé avant de recalculer les recommandations d'une séance terminée.
+ * Supprime les recommandations source='rules_engine' d'une séance et enqueue les deletes.
+ * Utilisé avant de recalculer les recommandations d'une séance terminée (idempotence ADR-020).
+ *
+ * Les recommandations source='ai' (résumé IA, etc.) sont préservées intentionnellement :
+ * l'idempotence du rules engine ne doit pas effacer le résumé IA généré post-complétion.
+ * Cf. TA-135 et pitfalls.md §SYNC-02 pour le discriminant source.
  */
 export async function clearRecommendationsForSession(
   db: SQLiteDatabase,
   sessionId: string
 ): Promise<void> {
   const existing = await getRecommendationsBySession(db, sessionId);
-  for (const rec of existing) {
+  const rulesEngineRecs = existing.filter((rec) => rec.source === 'rules_engine');
+  for (const rec of rulesEngineRecs) {
     await db.runAsync('DELETE FROM recommendations WHERE id = ?', [rec.id]);
     await safeEnqueue(db, TABLE, rec.id, 'delete', { id: rec.id });
   }

@@ -1,9 +1,10 @@
 /**
- * Tests TA-134 — Auto-refresh AIContextProfile après complétion de séance.
+ * Tests TA-134 / TA-135 — Auto-refresh AIContextProfile et session summary après complétion de séance.
  *
  * Vérifie :
  * - triggerAIContextRefresh est appelé après runRulesEngine réussi
- * - une erreur dans runRulesEngine ne propage pas et ne déclenche pas le refresh
+ * - triggerSessionSummary(sessionId, userId) est appelé après runRulesEngine réussi
+ * - une erreur dans runRulesEngine ne propage pas et ne déclenche pas le refresh ni le summary
  * - une erreur dans refreshAIContextProfile ne propage pas vers l'UI
  * - sans userId, le refresh n'est pas déclenché
  */
@@ -53,13 +54,20 @@ jest.mock('@/hooks/use-ai-context-refresh', () => ({
   })),
 }));
 
+const mockTriggerSessionSummary = jest.fn();
+jest.mock('@/hooks/use-session-summary-trigger', () => ({
+  useSessionSummaryTrigger: jest.fn(() => ({
+    triggerSessionSummary: mockTriggerSessionSummary,
+  })),
+}));
+
 // --- Import après mocks ----------------------------------------------------
 
 import { useCompleteSession } from './use-complete-session';
 
 // ---------------------------------------------------------------------------
 
-describe('useCompleteSession — AI context refresh (TA-134)', () => {
+describe('useCompleteSession — AI context refresh + session summary (TA-134 / TA-135)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRunRulesEngine.mockResolvedValue({
@@ -84,6 +92,17 @@ describe('useCompleteSession — AI context refresh (TA-134)', () => {
     expect(mockTriggerAIContextRefresh).toHaveBeenCalledWith('user-1');
   });
 
+  it('appelle triggerSessionSummary(sessionId, userId) après runRulesEngine réussi', async () => {
+    const { result } = renderHook(() => useCompleteSession('user-1'));
+
+    await act(async () => {
+      await result.current.complete('session-1', null, '');
+    });
+
+    expect(mockTriggerSessionSummary).toHaveBeenCalledTimes(1);
+    expect(mockTriggerSessionSummary).toHaveBeenCalledWith('session-1', 'user-1');
+  });
+
   it("ne déclenche pas le refresh si runRulesEngine échoue", async () => {
     mockRunRulesEngine.mockRejectedValueOnce(new Error('rules engine crash'));
 
@@ -94,6 +113,18 @@ describe('useCompleteSession — AI context refresh (TA-134)', () => {
     });
 
     expect(mockTriggerAIContextRefresh).not.toHaveBeenCalled();
+  });
+
+  it("ne déclenche pas triggerSessionSummary si runRulesEngine échoue", async () => {
+    mockRunRulesEngine.mockRejectedValueOnce(new Error('rules engine crash'));
+
+    const { result } = renderHook(() => useCompleteSession('user-1'));
+
+    await act(async () => {
+      await result.current.complete('session-1', null, '');
+    });
+
+    expect(mockTriggerSessionSummary).not.toHaveBeenCalled();
   });
 
   it("ne déclenche pas le refresh si userId est undefined", async () => {
