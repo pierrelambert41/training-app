@@ -6,6 +6,47 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-134 — Auto-refresh AIContextProfile après complétion de séance et fin de bloc
+**Livré** : déclenchement automatique et non-bloquant de `refreshAIContextProfile` après chaque complétion de séance. Guard anti-parallélisme (ref `isRefreshing`). Désactivable via `EXPO_PUBLIC_AI_ENABLED=false`.
+
+**Patch review** (post-livraison) :
+- Fix race condition synchrone dans `useAIContextRefresh` : wrap try/catch autour de l'appel à `refreshAIContextProfile` pour reset `isRefreshing.current` même si la fonction throw avant de retourner une Promise.
+- Ajout test couvrant ce cas (throw synchrone → flag resetté → hook re-déclenchable).
+- Suppression de `src/hooks/use-complete-block.ts` (stub orphelin YAGNI) : aucun écran de fin de bloc n'existe dans le produit. Le critère "refresh après fin de bloc" est reporté à la story qui implémentera la transition Block → completed dans l'UI. À ce moment, `useAIContextRefresh` sera à brancher directement dans ce nouveau hook/écran.
+
+**Fichiers créés** :
+- `src/hooks/use-ai-context-refresh.ts` — hook partagé `useAIContextRefresh(db)` exposant `triggerAIContextRefresh(userId)`. Fire-and-forget, guard (try/catch sync + .catch async), env check, erreur console uniquement.
+- `src/hooks/use-ai-context-refresh.test.ts` — 5 tests : appel nominal, guard anti-doublon, erreur loguée sans propagation, throw synchrone → flag reset + re-déclenchable, EXPO_PUBLIC_AI_ENABLED=false.
+- `src/features/session/hooks/use-complete-session.test.ts` — 4 tests TA-134 : refresh déclenché après runRulesEngine, non déclenché si rules engine échoue, non déclenché si userId undefined, erreur synchrone dans trigger ne propage pas.
+
+**Fichiers modifiés** :
+- `src/features/session/hooks/use-complete-session.ts` — signature étendue `useCompleteSession(userId)`. Import `useAIContextRefresh`. Appel fire-and-forget après invalidation queries (dans le try runRulesEngine).
+- `src/features/session/components/end-session-screen.tsx` — import `useAuthStore`, passe `userId` à `useCompleteSession(userId)`.
+- `src/screens/(app)/session/session-live-screen.test.tsx` — ajout mock `@/features/auth` + `@/hooks/use-ai-context-refresh` pour couper la chaîne d'import transitif vers `supabase.ts`.
+- `src/screens/(app)/session/set-row-log-type-unilateral.test.tsx` — idem.
+
+**S'appuie sur** :
+- TA-132 : `refreshAIContextProfile` implémenté dans `src/features/ai/api/ai-context-service.ts`.
+- TA-117 : `use-complete-session.ts` + pattern `runRulesEngine` fire-in-try-catch.
+- Pitfall SYNC-01 : import transitif supabase.ts → ne jamais importer `@/features/auth` depuis les hooks internes feature-session.
+- Pitfall SYNC-04 : refresh sur données SQLite locales uniquement, pas besoin d'attendre sync Supabase.
+
+**Décisions clés** :
+- `userId` passé en paramètre plutôt qu'importé via `useAuthStore` dans `use-complete-session.ts` — évite la chaîne d'import transitif `features/auth → supabase.ts` qui casse les tests Jest (pitfall AI-05).
+- `use-ai-context-refresh.ts` dans `src/hooks/` (shared-hooks) pour respecter ESLint boundaries : `feature-hooks/session` ne peut pas importer `feature-index/ai`. Les shared-hooks peuvent importer n'importe quel `feature-index`.
+- Guard via `useRef` (pas `useState`) pour ne pas re-render au changement d'état de refresh.
+- `EXPO_PUBLIC_AI_ENABLED` lu dynamiquement dans `triggerAIContextRefresh` (pas constante module-level) pour être testable sans `jest.resetModules()`.
+
+**Ouvre** :
+- Écran de fin de bloc (story future) : implémenter la transition Block → `completed` dans l'UI, puis brancher `triggerAIContextRefresh` directement dans ce hook/composant. Pattern identique à `use-complete-session.ts`.
+- Déclencheur post-bloc dans `runRulesEngine` si la story décide de marquer automatiquement le bloc `completed` (aujourd'hui seulement `deloaded`).
+
+**Bugs découverts** : pitfall AI-05 (import transitif `@/features/auth` → `supabase.ts` dans tests session), AI-07 (throw synchrone avant retour de Promise non rattrapé par `.catch()` seul).
+
+**Stubs laissés ouverts** : aucun — `useCompleteBlock` supprimé (YAGNI : fin de bloc non implémentée dans le produit, critère reporté à la story qui créera l'écran de fin de bloc).
+
+---
+
 ## Fix — tests E2E `rules-engine-integration` cassés depuis TA-114
 **Livré** : mock horloge système dans `rules-engine-integration.test.ts` pour stabiliser les tests E2E du moteur de progression ; ajout de `'setTimeout'` dans `doNotFake` (défensif) ; commentaire inline expliquant la date mockée.
 

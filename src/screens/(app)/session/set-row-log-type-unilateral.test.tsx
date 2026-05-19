@@ -31,6 +31,14 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
+jest.mock('@/features/auth', () => ({
+  useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: 'test-user' } }),
+}));
+
+jest.mock('@/hooks/use-ai-context-refresh', () => ({
+  useAIContextRefresh: () => ({ triggerAIContextRefresh: jest.fn() }),
+}));
+
 jest.mock('@/hooks/use-db', () => ({
   useDB: () => ({}),
 }));

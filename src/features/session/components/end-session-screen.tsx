@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '@/features/auth';
 import { useSessionStore } from '@/stores/session-store';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
 import {
@@ -40,8 +41,9 @@ export function EndSessionScreen() {
   const setLogs = useSessionStore((s) => s.setLogs);
   const plannedExercises = useSessionStore((s) => s.plannedExercises);
   const reset = useSessionStore((s) => s.reset);
+  const userId = useAuthStore((s) => s.user?.id);
 
-  const { complete, isCompleting, isCompleted, rulesResult } = useCompleteSession();
+  const { complete, isCompleting, isCompleted, rulesResult } = useCompleteSession(userId);
   const completionState: CompletionState = isCompleted ? 'completed' : isCompleting ? 'completing' : 'idle';
 
   const [postNotes, setPostNotes] = useState(session?.postSessionNotes ?? '');
