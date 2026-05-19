@@ -47,3 +47,7 @@ export {
 export { generateAndStoreSessionSummary } from './api/session-summary-service';
 export { enqueueAIRetry } from './api/retry-queue';
 export type { AIRetryType, AIRetryQueueInput } from './api/retry-queue';
+
+// TA-136 — Explication d'ajustement à la demande
+export { explainAdjustment } from './api/explain-adjustment-service';
+export { useExplainAdjustment } from './hooks/use-explain-adjustment';

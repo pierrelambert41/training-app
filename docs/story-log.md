@@ -6,6 +6,42 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-136 — Explication d'ajustement à la demande (IA)
+
+**Livré** : `explainAdjustment(db, recommendationId, userId, supabase)` — génère une explication IA d'une recommandation d'ajustement de charge (ou fallback textuel si offline/Claude indisponible) et persiste le résultat dans `Recommendation.metadata.ai_explanation` (UPDATE). Hook `useExplainAdjustment` TanStack Query à la demande (`enabled: false`, déclenché par `explain()`).
+
+**Fichiers créés** :
+- `src/features/ai/api/explain-adjustment-service.ts` — service principal. Récupère la Recommendation, construit le contexte IA, appelle l'Edge Function via Supabase direct (pattern TA-135), parse la réponse JSON, UPDATE metadata.
+- `src/features/ai/api/explain-adjustment-service.test.ts` — 6 tests couvrant : nominal, fallback erreur Claude, fallback offline (null), recommendation introuvable, profil absent, préservation métadonnées existantes.
+- `src/features/ai/hooks/use-explain-adjustment.ts` — hook TanStack Query. `enabled: false`, `staleTime: Infinity`, `retry: false`. Expose `{ explanation, isLoading, error, explain }`.
+- `src/features/ai/hooks/use-explain-adjustment.test.ts` — 3 tests couvrant : pas d'appel avant explain(), explanation non nulle après résolution, error non null sur exception.
+
+**Fichiers modifiés** :
+- `src/features/ai/index.ts` — exports `explainAdjustment`, `useExplainAdjustment`.
+
+**S'appuie sur** :
+- TA-131 : `FallbackProvider`, pattern Edge Function `ai-proxy`.
+- TA-132 : `getAIContextProfile` pour construire le contexte IA.
+- TA-133 : `buildExplainAdjustmentPrompt(ctx, recommendation)` — utilisé pour construire les messages à l'Edge Function.
+- TA-135 : même pattern d'appel direct Edge Function (pas via `AIProvider`) pour visibilité fallback/succès.
+
+**Décisions clés** :
+- Appel direct à `supabase.functions.invoke` (pas via `ClaudeProvider.explainAdjustment`) : cohérent avec pitfall AI-08 (visibilité fallback) et contourne le pitfall AI-04 (signature `AIProvider.explainAdjustment` n'accepte pas `recommendation` en paramètre).
+- Fallback textuel construit depuis `message + action + nextLoad` de la Recommendation (pas de `FallbackProvider.explainAdjustment` qui retourne une string générique sans contexte).
+- UPDATE `metadata.ai_explanation` de la Recommendation existante (pas de nouvel enregistrement) — données dérivées, recalculables. La SyncQueue reçoit l'UPDATE via `updateRecommendation` (service existant avec `safeEnqueue` interne).
+- `supabase` injecté en paramètre du service (pas importé directement) : testable unitairement + signal explicite offline (null).
+- Le hook est dans `src/features/ai/hooks/` (intra-feature) et importe `supabase` depuis `@/services/supabase` — boundary correcte (feature-hooks → shared-lib autorisé).
+
+**Ouvre** :
+- UI bouton "Pourquoi ?" (ticket dédié) : consomme `useExplainAdjustment` depuis l'écran fin de séance ou écran Aujourd'hui.
+- TA-141 : si l'appel Claude échoue (fallback), on pourrait enqueuer un retry — non fait ici car non spécifié (la spec ne demande pas de retry pour `explainAdjustment`).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-135 — Génération et persistance du résumé fin de séance (IA)
 
 **Livré** : `generateAndStoreSessionSummary(db, sessionId, userId, supabase)` — génère le résumé IA d'une séance via Edge Function Claude (ou FallbackProvider si offline/profil absent/erreur Claude) et le persiste comme `Recommendation{type='summary', source='ai'}`. Fire-and-forget via `useSessionSummaryTrigger`. Queue de retry pour upgrade fallback→IA (TA-141).

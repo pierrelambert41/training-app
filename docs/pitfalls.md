@@ -338,9 +338,10 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Stub | Fichier | Fonction | Story cible |
 |------|---------|----------|-------------|
 | `user_profiles` SQLite | `src/features/ai/api/ai-context-service.ts` | `readUserProfile` | Onboarding/profil utilisateur |
-| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateBlockSummary`, `analyzePlateau`, `explainAdjustment` | TA-136+ (brancher les builders de TA-133 dans les prochains services) |
+| Prompts inline `ClaudeProvider` | `src/features/ai/api/claude-provider.ts` | `generateBlockSummary`, `analyzePlateau` | TA-137+ (brancher les builders de TA-133 dans les prochains services) |
 | Fin de bloc → refresh IA | _(stub supprimé — YAGNI)_ | brancher `triggerAIContextRefresh` depuis le futur écran de fin de bloc | Écran fin de bloc (non implémenté) |
 | Queue de retry IA | `src/features/ai/api/retry-queue.ts` | `enqueueAIRetry` (INSERT seul) | TA-141 : orchestration retry, UPDATE Recommendation existante, status→done/failed |
+| UI "Pourquoi ?" | _(ticket UI dédié)_ | `useExplainAdjustment` depuis `src/features/ai/hooks/use-explain-adjustment.ts` | Écran fin de séance / écran Aujourd'hui |
 
 ---
 
