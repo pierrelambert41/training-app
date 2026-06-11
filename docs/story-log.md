@@ -6,6 +6,24 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-151 — Dashboard : progression par exercice (graphe e1RM)
+
+**Livré** : première carte analytics réelle de l'écran Progrès. Sélecteur d'exercices en chips horizontales (exercices `weight_reps` avec historique complété, triés par volume d'historique), courbe e1RM = meilleur set par séance complétée sur 90 jours, dernière valeur + delta sur la période (vert/rouge).
+
+**Fichiers créés** :
+- `src/features/dashboard/domain/e1rm-history.ts` — `buildE1rmHistory` (meilleur e1RM/séance via `src/lib/epley.ts` — CALIB-01 respecté, aucune formule dupliquée) + `e1rmDelta`. Pur, testé.
+- `src/features/dashboard/api/e1rm-history-service.ts` — `getExercisesWithHistory` (JOIN set_logs×sessions×exercises, filtre `weight_reps`/completed) + `getE1rmHistory` (fenêtre 90 j)
+- `src/features/dashboard/hooks/use-e1rm-history.ts` — sélection par défaut = exercice le plus loggé ; query keys `['dashboard-logged-exercises']` / `['dashboard-e1rm-history', userId, exerciseId]`
+- `src/features/dashboard/components/e1rm-card.tsx` (+ tests domain/service/composant)
+
+**Fichiers modifiés** : `progress-screen.tsx` (placeholder e1RM → `E1rmCard`), test écran (mock du hook — pattern TEST-01).
+
+**S'appuie sur** : TA-150 (LineChart), TA-148/TA-105 (données sessions/set_logs).
+
+**Ouvre** : TA-152 (volume), TA-153 (poids), TA-154 (fatigue+compliance) — placeholders restants.
+
+---
+
 ## TA-150 — Fondation dashboard : onglet Progrès, react-native-svg et composants graphes
 
 **Livré** : 5e onglet « Progrès » (tab bar : Aujourd'hui / Programme / Progrès / Bibliothèque / Profil), feature `src/features/dashboard/` (Bulletproof React), deux composants graphes purs (R4 : data en props, zéro I/O) et l'écran squelette avec placeholders des cartes analytics (e1RM, volume, poids, fatigue, compliance).

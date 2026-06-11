@@ -1,6 +1,8 @@
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText, Card } from '@/components/ui';
+import { useE1rmHistory } from '../hooks/use-e1rm-history';
+import { E1rmCard } from './e1rm-card';
 
 type PlaceholderProps = {
   title: string;
@@ -26,6 +28,8 @@ function PlaceholderCard({ title, description, testID }: PlaceholderProps) {
  * remplacée par sa carte analytics au fil des stories du dashboard.
  */
 export function ProgressScreen() {
+  const e1rm = useE1rmHistory();
+
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
       <ScrollView
@@ -40,10 +44,11 @@ export function ProgressScreen() {
           </AppText>
         </View>
 
-        <PlaceholderCard
-          title="Progression par exercice"
-          description="Courbe e1RM — bientôt disponible"
-          testID="placeholder-e1rm"
+        <E1rmCard
+          exercises={e1rm.exercises}
+          selectedExerciseId={e1rm.selectedExerciseId}
+          onSelectExercise={e1rm.selectExercise}
+          points={e1rm.points}
         />
         <PlaceholderCard
           title="Volume par muscle"
