@@ -137,14 +137,16 @@ Architecture complète dès le départ, livraison séquencée. Pas de faux MVP m
 
 **Objectif** : visualiser la progression.
 
-- [ ] Progression par exercice (graphe e1RM)
-- [ ] Volume par groupe musculaire
-- [ ] Progression poids du corps
-- [ ] Score fatigue dans le temps
-- [ ] Compliance au plan (% séances réalisées)
-- [ ] Vue bloc : progression de la semaine
+- [x] Check-in quotidien de récupération (recovery_logs) _(TA-148 ✅ — prérequis fatigue, hors liste initiale)_
+- [x] Onglet « Progrès » + composants graphes (react-native-svg) _(TA-150 ✅)_
+- [x] Progression par exercice (graphe e1RM) _(TA-151 ✅)_
+- [x] Volume par groupe musculaire _(TA-152 ✅ — séries hebdo/muscle, comptage agoniste)_
+- [x] Progression poids du corps _(TA-153 ✅ — saisie + courbe 90 j)_
+- [x] Score fatigue dans le temps _(TA-154 ✅)_
+- [x] Compliance au plan (% séances réalisées) _(TA-154 ✅)_
+- [x] Vue bloc : progression de la semaine _(TA-155 ✅)_
 
-**Livrables** : dashboard analytics fonctionnel.
+**Livrables** : dashboard analytics fonctionnel. ✅ Livré (TA-148..155, 2026-06-11).
 
 ---
 
@@ -155,7 +157,7 @@ Architecture complète dès le départ, livraison séquencée. Pas de faux MVP m
 | **Alpha** | Phases 1-4 : app utilisable en salle (logger offline) | ~7 |
 | **Beta** | Phases 5-6 : moteur intelligent + sync + import | ~10 |
 | **MVP-core** | Phases 1-6 : app complète sans IA | ~10 |
-| **MVP-complet** | Phases 7-8 : IA + dashboard | ~14 |
+| **MVP-complet** | Phases 7-8 : IA + dashboard | ~14 ✅ |
 
 ## 4. Dépendances critiques
 
