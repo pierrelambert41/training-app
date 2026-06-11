@@ -1,7 +1,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_MODEL = 'claude-opus-4-5';
+const ANTHROPIC_MODEL = 'claude-opus-4-8';
 
 // Rate-limit par user_id : max N appels par fenêtre de WINDOW_MS ms
 const RATE_LIMIT_MAX = 20;
@@ -90,7 +90,6 @@ Deno.serve(async (req: Request) => {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'prompt-caching-2024-07-31',
     },
     body: JSON.stringify(anthropicBody),
     // Timeout géré par le caller (timeout_ms dans le body est informatif)
