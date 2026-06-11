@@ -6,6 +6,26 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-150 — Fondation dashboard : onglet Progrès, react-native-svg et composants graphes
+
+**Livré** : 5e onglet « Progrès » (tab bar : Aujourd'hui / Programme / Progrès / Bibliothèque / Profil), feature `src/features/dashboard/` (Bulletproof React), deux composants graphes purs (R4 : data en props, zéro I/O) et l'écran squelette avec placeholders des cartes analytics (e1RM, volume, poids, fatigue, compliance).
+
+**Fichiers créés** :
+- `src/features/dashboard/components/line-chart.tsx` — courbe SVG (react-native-svg) : polyline + points, bornes min/max Y, premier/dernier label X, plage plate gérée, état vide < 2 points. Largeur mesurée par `onLayout`.
+- `src/features/dashboard/components/bar-chart.tsx` — barres **horizontales** (Views pures, pas de SVG nécessaire) : les labels type groupe musculaire restent lisibles sur écran étroit (déviation assumée vs ticket qui disait « verticales »). Échelle relative au max.
+- `src/features/dashboard/components/progress-screen.tsx` + `index.ts` + tests (+ test écran dans `src/screens/(app)/progress-screen.test.tsx`)
+- `app/(app)/(tabs)/progress.tsx` — route R1 (3 lignes)
+
+**Fichiers modifiés** : `src/components/navigation/tabs-layout.tsx` (onglet 📈), `package.json` (react-native-svg 15.12.1 — version SDK 54, incluse dans Expo Go).
+
+**Pièges documentés** : NPM-01 (`npm install` ERESOLVE react-dom 19.2 vs react 19.1 → `--legacy-peer-deps`), TOOL-01 (`jira issue create -b` multiligne pend sans TTY → `--template`).
+
+**S'appuie sur** : design system (`Card`, `AppText`, tokens), TabIcon/TabsLayout (TA-116).
+
+**Ouvre** : TA-151 (e1RM), TA-152 (volume/muscle), TA-153 (poids du corps), TA-154 (fatigue+compliance) consommeront `LineChart`/`BarChart` et remplaceront les placeholders un par un.
+
+---
+
 ## TA-148 — Check-in quotidien de récupération (saisie UI des recovery_logs) — ouverture Phase 8
 
 **Livré** : la table `recovery_logs` n'était lue qu'en dégradation gracieuse (vide depuis toujours). Désormais : migration SQLite v14 (miroir du schéma Supabase, `UNIQUE(user_id, date)`), service `src/services/recovery-logs.ts` (upsert idempotent par date — réutilise id/created_at existants → la sync pousse un update sur le même row), carte `DailyCheckinCard` sur l'écran Aujourd'hui (3 sliders 1-10 sommeil/énergie/courbatures + note ≤200 car., résumé compact éditable après saisie), et branchement des RecoveryLogs (fenêtre 7 jours) dans `runRulesEngine` → `computeFatigueScore` — le détecteur de surcharge n'est plus « borgne ».

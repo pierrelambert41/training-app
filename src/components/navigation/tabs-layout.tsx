@@ -31,6 +31,14 @@ export function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="progress"
+        options={{
+          title: 'Progrès',
+          headerShown: false,
+          tabBarIcon: ({ focused }) => <TabIcon symbol="📈" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
         name="library"
         options={{
           title: 'Bibliothèque',
