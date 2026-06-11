@@ -1,5 +1,6 @@
 import { Pressable, View } from 'react-native';
 import { AppText } from '@/components/ui';
+import type { WeightUnit } from '@/lib/units';
 
 type ExerciseHeaderProps = {
   name: string;
@@ -8,7 +9,9 @@ type ExerciseHeaderProps = {
   repRangeMin: number;
   repRangeMax: number;
   targetRir: number | null;
+  /** Déjà converti dans l'unité d'affichage par l'appelant. */
   targetLoad: number | null;
+  unit: WeightUnit;
 };
 
 function TargetStat({ value, unit }: { value: string; unit: string }) {
@@ -35,6 +38,7 @@ export function ExerciseHeader({
   repRangeMax,
   targetRir,
   targetLoad,
+  unit,
 }: ExerciseHeaderProps) {
   const musclesLabel = primaryMuscles.slice(0, 3).join(' · ');
 
@@ -63,7 +67,7 @@ export function ExerciseHeader({
       </View>
 
       <View className="flex-row gap-2">
-        <TargetStat value={targetLoad !== null ? String(targetLoad) : '—'} unit="kg" />
+        <TargetStat value={targetLoad !== null ? String(targetLoad) : '—'} unit={unit} />
         <TargetStat
           value={`${sets}×${repRangeMin}${repRangeMin !== repRangeMax ? `–${repRangeMax}` : ''}`}
           unit="sets × reps"

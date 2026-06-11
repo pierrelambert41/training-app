@@ -69,6 +69,10 @@ tags            TEXT[]
 is_custom       BOOLEAN DEFAULT false
 created_by      UUID REFERENCES users(id) -- NULL si exercice standard
 created_at      TIMESTAMPTZ DEFAULT now()
+-- Colonnes locales SQLite uniquement (TA-158..160, pas encore dans le schéma Supabase) :
+display_unit    TEXT CHECK (display_unit IN ('kg','lb')) -- override d'affichage (machine en lb), NULL = préférence globale
+bar_weight_kg   REAL           -- poids de barre pour le plate calculator (kg)
+bodyweight_factor REAL         -- fraction du poids du corps déplacée (tonnage), NULL = 1.0 par convention
 ```
 
 #### Notes sur les champs Exercise enrichis
@@ -175,7 +179,7 @@ target_load     NUMERIC
 target_reps     INTEGER
 target_rir      INTEGER
 -- Données réalisées
-load            NUMERIC        -- poids en unité utilisateur
+load            NUMERIC        -- poids en KG CANONIQUE, toujours (la conversion kg/lb n'existe qu'à l'affichage — src/lib/units.ts)
 reps            INTEGER
 rir             INTEGER        -- RIR réel
 duration_seconds INTEGER       -- pour exercices en durée

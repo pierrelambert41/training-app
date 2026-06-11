@@ -3,9 +3,11 @@ import { TextInput, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { LogType } from '@/types';
+import type { WeightUnit } from '@/lib/units';
 
 type InlineSetEditorFieldsProps = {
   logType: LogType;
+  unit: WeightUnit;
   load: string;
   reps: string;
   durationSeconds: string;
@@ -24,6 +26,7 @@ const inputStyle = { fontSize: 22, fontWeight: '700' as const };
 
 export function InlineSetEditorFields({
   logType,
+  unit,
   load,
   reps,
   durationSeconds,
@@ -41,7 +44,7 @@ export function InlineSetEditorFields({
       {logType === 'weight_reps' && (
         <>
           <View className="flex-1 gap-1">
-            <AppText className="text-label text-content-secondary text-center">Charge (kg)</AppText>
+            <AppText className="text-label text-content-secondary text-center">Charge ({unit})</AppText>
             <TextInput
               ref={field1Ref}
               value={load}
@@ -55,7 +58,7 @@ export function InlineSetEditorFields({
               style={inputStyle}
               placeholderTextColor={colors.contentMuted}
               placeholder="—"
-              accessibilityLabel="Charge en kg"
+              accessibilityLabel={`Charge en ${unit}`}
               testID="edit-load-input"
             />
           </View>
@@ -102,7 +105,7 @@ export function InlineSetEditorFields({
             />
           </View>
           <View className="flex-1 gap-1">
-            <AppText className="text-label text-content-secondary text-center">Lest (kg)</AppText>
+            <AppText className="text-label text-content-secondary text-center">Lest ({unit})</AppText>
             <TextInput
               ref={field2Ref}
               value={load}
@@ -115,7 +118,7 @@ export function InlineSetEditorFields({
               style={inputStyle}
               placeholderTextColor={colors.contentMuted}
               placeholder="0"
-              accessibilityLabel="Lest optionnel en kg"
+              accessibilityLabel={`Lest optionnel en ${unit}`}
               testID="edit-load-input"
             />
           </View>

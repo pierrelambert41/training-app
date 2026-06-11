@@ -7,7 +7,9 @@ import { AppText, Card } from '@/components/ui';
 import { muscleLabel } from '@/lib/muscle-labels';
 import { colors } from '@/theme/tokens';
 import type { Exercise } from '@/types';
-import { useExerciseHistory, ExerciseHistorySection, ExerciseRecommendationBadges } from '@/features/exercise';
+import { useExerciseHistory, ExerciseHistorySection, ExerciseRecommendationBadges, ExerciseSettingsSection } from '@/features/exercise';
+import { resolveExerciseUnit } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 
 type Props = {
   exerciseId: string;
@@ -94,6 +96,7 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
   const { data, isLoading } = useExerciseDetail(exerciseId);
   const { isFavorite, toggle, isPending } = useFavorite(exerciseId);
   const { data: historyData } = useExerciseHistory(exerciseId);
+  const preferredUnit = usePreferredUnit();
 
   const handleAlternativePress = (exercise: Exercise) => {
     const href: Href = { pathname: '/(app)/exercise/[id]', params: { id: exercise.id } };
@@ -193,8 +196,15 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
         </SectionCard>
       )}
 
+      <SectionCard title="Réglages">
+        <ExerciseSettingsSection key={exercise.id} exercise={exercise} />
+      </SectionCard>
+
       <SectionCard title="Historique (5 dernières séances)">
-        <ExerciseHistorySection history={historyData?.history ?? []} />
+        <ExerciseHistorySection
+          history={historyData?.history ?? []}
+          unit={resolveExerciseUnit(exercise, preferredUnit)}
+        />
       </SectionCard>
 
       {exercise.coachingNotes && (

@@ -10,6 +10,8 @@ import {
 } from './session-recommendation-cards';
 import { RecommendationWhy } from './recommendation-why';
 import { colors } from '@/theme/tokens';
+import { formatWeight, roundToLoadableIncrement } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 
 // ---------------------------------------------------------------------------
 // Load change row
@@ -36,11 +38,17 @@ function actionArrow(action: Recommendation['action']): {
 
 function LoadChangeRow({ recommendation, exerciseName }: LoadChangeRowProps) {
   const arrow = actionArrow(recommendation.action);
+  const unit = usePreferredUnit();
   const currentLoad =
     typeof recommendation.metadata?.currentLoad === 'number'
       ? recommendation.metadata.currentLoad
       : null;
-  const nextLoad = recommendation.nextLoad;
+  // nextLoad (kg canonique) arrondi pour tomber sur un incrément chargeable
+  // dans l'unité affichée (sinon « 92.6 lb », inchargeable en salle).
+  const nextLoad =
+    recommendation.nextLoad !== null
+      ? roundToLoadableIncrement(recommendation.nextLoad, unit)
+      : null;
 
   return (
     <View
@@ -60,13 +68,13 @@ function LoadChangeRow({ recommendation, exerciseName }: LoadChangeRowProps) {
         {exerciseName}
       </AppText>
       <AppText style={{ fontSize: 13, color: colors.contentSecondary }}>
-        {currentLoad !== null ? `${currentLoad}kg` : '—'}
+        {currentLoad !== null ? formatWeight(currentLoad, unit) : '—'}
       </AppText>
       <AppText style={{ fontSize: 14, fontWeight: '700', color: arrow.color }}>
         {arrow.symbol}
       </AppText>
       <AppText style={{ fontSize: 13, fontWeight: '600', color: colors.contentPrimary }}>
-        {nextLoad !== null ? `${nextLoad}kg` : '—'}
+        {nextLoad !== null ? formatWeight(nextLoad, unit) : '—'}
       </AppText>
     </View>
   );

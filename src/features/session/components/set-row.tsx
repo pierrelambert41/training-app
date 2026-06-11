@@ -3,6 +3,8 @@ import { Check, MessageSquare } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { repsColor } from '../lib/reps-color';
+import { toDisplayWeight } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
 import { SetRowInlineForm } from './set-row-inline-form';
 import type { InlineLogValues } from './set-row-inline-form';
 import type { LogType, SetLog, SetLogSide } from '@/types';
@@ -12,6 +14,8 @@ export type SetRowProps = {
   side: SetLogSide | null;
   log: SetLog | null;
   logType: LogType;
+  /** Unité d'affichage de l'exercice — log.load (kg canonique) est converti pour l'affichage. */
+  unit: WeightUnit;
   targetLoad: number | null;
   targetReps: number | null;
   targetRir: number | null;
@@ -31,6 +35,7 @@ export function SetRow({
   side,
   log,
   logType,
+  unit,
   targetLoad,
   targetReps,
   targetRir,
@@ -61,19 +66,21 @@ export function SetRow({
     ? (() => {
         if (logType === 'duration') return log.durationSeconds !== null ? String(log.durationSeconds) : '—';
         if (logType === 'distance_duration') return log.distanceMeters !== null ? String(log.distanceMeters) : '—';
-        return log.load !== null ? String(log.load) : '—';
+        // log.load est en kg canonique → conversion vers l'unité d'affichage.
+        return log.load !== null ? String(toDisplayWeight(log.load, unit)) : '—';
       })()
     : (() => {
         if (logType === 'duration') return '—';
         if (logType === 'distance_duration') return '—';
+        // targetLoad arrive déjà converti en unité d'affichage (prefill).
         return targetLoad !== null ? String(targetLoad) : '—';
       })();
 
   const col1Label = (() => {
     if (logType === 'duration') return 's';
     if (logType === 'distance_duration') return 'm';
-    if (logType === 'bodyweight_reps') return 'lest';
-    return 'kg';
+    if (logType === 'bodyweight_reps') return `lest (${unit})`;
+    return unit;
   })();
 
   const col2Display = isLogged
@@ -121,6 +128,7 @@ export function SetRow({
         </View>
         <SetRowInlineForm
           logType={logType}
+          unit={unit}
           side={side}
           prefillLoad={prefillLoad}
           prefillReps={prefillReps}

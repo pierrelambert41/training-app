@@ -1,5 +1,7 @@
 import { Pressable, ScrollView, View } from 'react-native';
 import { AppText, Card } from '@/components/ui';
+import { formatWeight, toDisplayWeight } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import type { E1rmPoint, LoggedExercise } from '../domain/e1rm-history';
 import { e1rmDelta } from '../domain/e1rm-history';
 import { LineChart } from './line-chart';
@@ -16,10 +18,6 @@ function formatDateLabel(isoDate: string): string {
   return `${day}/${month}`;
 }
 
-function formatKg(value: number): string {
-  return `${value} kg`;
-}
-
 /**
  * Carte "Progression par exercice" : sélecteur (chips) + courbe e1RM
  * (meilleur set par séance, fenêtre 90 jours) + dernière valeur et delta.
@@ -30,6 +28,7 @@ export function E1rmCard({
   onSelectExercise,
   points,
 }: Props) {
+  const unit = usePreferredUnit();
   const last = points.length > 0 ? points[points.length - 1]!.e1rm : null;
   const delta = e1rmDelta(points);
 
@@ -80,7 +79,7 @@ export function E1rmCard({
           {last !== null ? (
             <View className="flex-row items-baseline gap-2">
               <AppText variant="heading" testID="e1rm-last-value">
-                {formatKg(last)}
+                {formatWeight(last, unit)}
               </AppText>
               {delta !== null ? (
                 <AppText
@@ -90,7 +89,7 @@ export function E1rmCard({
                   }
                   testID="e1rm-delta"
                 >
-                  {delta >= 0 ? `+${delta}` : `${delta}`} kg sur la période
+                  {delta >= 0 ? '+' : ''}{toDisplayWeight(delta, unit)} {unit} sur la période
                 </AppText>
               ) : null}
             </View>
@@ -99,9 +98,9 @@ export function E1rmCard({
           <LineChart
             points={points.map((p) => ({
               label: formatDateLabel(p.date),
-              value: p.e1rm,
+              value: toDisplayWeight(p.e1rm, unit),
             }))}
-            formatValue={formatKg}
+            formatValue={(v) => `${v} ${unit}`}
             emptyMessage="Pas encore assez de séances sur cet exercice (minimum 2)."
             testID="e1rm-chart"
           />

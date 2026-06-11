@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { AppText, Button, Card, Input } from '@/components/ui';
+import { formatWeight, fromDisplayWeight, toDisplayWeight } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import type { BodyMetric } from '@/types';
 import { LineChart } from './line-chart';
 
@@ -18,45 +21,46 @@ function formatDateLabel(isoDate: string): string {
   return `${day}/${month}`;
 }
 
-function formatKg(value: number): string {
-  return `${value} kg`;
-}
-
 /**
- * Parse une saisie décimale FR ou EN ("82,5" / "82.5"). null si invalide
- * ou hors bornes plausibles (30-300 kg).
+ * Parse une saisie décimale FR ou EN ("82,5" / "82.5") dans l'unité
+ * d'affichage, retourne des KG canoniques. null si invalide ou hors bornes
+ * plausibles (30-300 kg).
  */
-export function parseWeightInput(raw: string): number | null {
+export function parseWeightInput(raw: string, unit: WeightUnit = 'kg'): number | null {
   const normalized = raw.trim().replace(',', '.');
   if (normalized === '' || !/^\d+(\.\d+)?$/.test(normalized)) return null;
-  const value = Number(normalized);
-  if (value < MIN_WEIGHT_KG || value > MAX_WEIGHT_KG) return null;
-  return Math.round(value * 10) / 10;
+  const kg = fromDisplayWeight(Number(normalized), unit);
+  if (kg < MIN_WEIGHT_KG || kg > MAX_WEIGHT_KG) return null;
+  return Math.round(kg * 10) / 10;
 }
 
 /**
  * Carte "Poids du corps" : pesée rapide du jour (upsert par date) + courbe
  * sur 90 jours. Une seule pesée par jour, re-saisie = correction.
+ * Stockage kg canonique, affichage/saisie dans l'unité préférée.
  */
 export function BodyWeightCard({ metrics, onSaveWeight, isSaving }: Props) {
+  const unit = usePreferredUnit();
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | undefined>(undefined);
 
   const points = metrics
     .filter((m) => m.weightKg !== null)
-    .map((m) => ({ label: formatDateLabel(m.date), value: m.weightKg! }));
+    .map((m) => ({ label: formatDateLabel(m.date), value: toDisplayWeight(m.weightKg!, unit) }));
 
-  const last = points.length > 0 ? points[points.length - 1]!.value : null;
+  const lastKg = metrics.filter((m) => m.weightKg !== null).at(-1)?.weightKg ?? null;
 
   function handleSave() {
-    const parsed = parseWeightInput(input);
-    if (parsed === null) {
-      setError(`Poids invalide (entre ${MIN_WEIGHT_KG} et ${MAX_WEIGHT_KG} kg)`);
+    const parsedKg = parseWeightInput(input, unit);
+    if (parsedKg === null) {
+      const min = toDisplayWeight(MIN_WEIGHT_KG, unit);
+      const max = toDisplayWeight(MAX_WEIGHT_KG, unit);
+      setError(`Poids invalide (entre ${min} et ${max} ${unit})`);
       return;
     }
     setError(undefined);
     setInput('');
-    onSaveWeight(parsed);
+    onSaveWeight(parsedKg);
   }
 
   return (
@@ -65,9 +69,9 @@ export function BodyWeightCard({ metrics, onSaveWeight, isSaving }: Props) {
         <AppText variant="body" className="font-semibold">
           Poids du corps
         </AppText>
-        {last !== null ? (
+        {lastKg !== null ? (
           <AppText variant="heading" testID="body-weight-last">
-            {formatKg(last)}
+            {formatWeight(lastKg, unit)}
           </AppText>
         ) : null}
       </View>
@@ -77,7 +81,7 @@ export function BodyWeightCard({ metrics, onSaveWeight, isSaving }: Props) {
           <Input
             value={input}
             onChangeText={setInput}
-            placeholder="Poids du jour (kg)"
+            placeholder={`Poids du jour (${unit})`}
             keyboardType="decimal-pad"
             error={error}
             testID="body-weight-input"
@@ -94,7 +98,7 @@ export function BodyWeightCard({ metrics, onSaveWeight, isSaving }: Props) {
 
       <LineChart
         points={points}
-        formatValue={formatKg}
+        formatValue={(v) => `${v} ${unit}`}
         emptyMessage="Logge ton poids régulièrement pour voir la tendance (minimum 2 pesées)."
         testID="body-weight-chart"
       />

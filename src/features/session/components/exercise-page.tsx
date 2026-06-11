@@ -3,6 +3,8 @@ import { ActionSheetIOS, Platform, Pressable, ScrollView, View } from 'react-nat
 import { CircleCheck } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
+import { fromDisplayWeight, resolveExerciseUnit, toDisplayWeight } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useLastSetForExerciseSide } from '@/hooks/use-last-set-for-exercise-side';
 import { useSessionStore } from '@/stores/session-store';
@@ -50,6 +52,12 @@ export function ExercisePage({
   const logType: LogType = exerciseMeta?.logType ?? 'weight_reps';
   const isUnilateral = exerciseMeta?.isUnilateral ?? false;
 
+  // Unité d'affichage : override de l'exercice, sinon préférence globale.
+  // Les charges restent en kg partout (store, DB) — la conversion ne vit
+  // qu'à cette frontière (prefill → affichage, saisie → kg).
+  const preferredUnit = usePreferredUnit();
+  const unit = resolveExerciseUnit(exerciseMeta, preferredUnit);
+
   const exerciseSetLogs = useMemo(
     () => setLogs.filter((sl) => sl.exerciseId === plannedExercise.exerciseId),
     [setLogs, plannedExercise.exerciseId]
@@ -81,7 +89,7 @@ export function ExercisePage({
   const currentSide = nextVirtual?.side ?? null;
   const currentSetNumber = nextVirtual?.setNumber ?? plannedExercise.sets + 1;
 
-  const { prefillLoad, prefillReps, prefillRir, prefillDuration, prefillDistance } =
+  const { prefillLoad: prefillLoadKg, prefillReps, prefillRir, prefillDuration, prefillDistance } =
     useExercisePagePrefill({
       exerciseSetLogs,
       editingSetId,
@@ -93,13 +101,18 @@ export function ExercisePage({
       targetRir: plannedExercise.targetRir ?? null,
     });
 
+  // Prefill exposé aux champs dans l'unité d'affichage de l'exercice.
+  const prefillLoad =
+    prefillLoadKg !== null ? toDisplayWeight(prefillLoadKg, unit) : null;
+
   const handleInlineLog = useCallback(
     (values: InlineLogValues) => {
       logSet(db, {
         plannedExerciseId: plannedExercise.id,
         exerciseId: plannedExercise.exerciseId,
         setNumber: currentSetNumber,
-        load: values.load,
+        // La saisie est dans l'unité d'affichage — stockage kg canonique.
+        load: values.load !== null ? fromDisplayWeight(values.load, unit) : null,
         reps: values.reps,
         rir: values.rir ?? (plannedExercise.targetRir ?? null),
         durationSeconds: values.durationSeconds,
@@ -109,7 +122,7 @@ export function ExercisePage({
       });
       startRestTimer(plannedExercise.restSeconds ?? 90, exerciseName);
     },
-    [db, plannedExercise, logSet, currentSetNumber, startRestTimer, exerciseName]
+    [db, plannedExercise, logSet, currentSetNumber, startRestTimer, exerciseName, unit]
   );
 
   const handleEditSave = useCallback(
@@ -168,6 +181,7 @@ export function ExercisePage({
         repRangeMax={plannedExercise.repRangeMax}
         targetRir={plannedExercise.targetRir}
         targetLoad={logType === 'weight_reps' ? prefillLoad : null}
+        unit={unit}
       />
 
       <SetRowList
@@ -175,6 +189,7 @@ export function ExercisePage({
         allSetsLogged={allSetsLogged}
         nextVirtual={nextVirtual}
         logType={logType}
+        unit={unit}
         prefillLoad={prefillLoad}
         targetReps={plannedExercise.repRangeMin}
         targetRir={plannedExercise.targetRir}
