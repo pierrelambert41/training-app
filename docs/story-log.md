@@ -6,6 +6,23 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-152 — Dashboard : volume hebdomadaire par groupe musculaire
+
+**Livré** : carte « Volume par muscle » sur l'écran Progrès — séries complétées par groupe musculaire pour la semaine sélectionnée (lundi→dimanche, convention WeekCalendar), navigation semaine précédente/suivante (futur verrouillé). **Comptage agoniste** : un set compte pour chaque muscle de `primary_muscles` (cohérent avec le moteur de génération TA-95/96). Comptages bruts uniquement, aucun seuil MEV/MAV/MRV non sourcé (evidence-only).
+
+**Fichiers créés** :
+- `src/lib/muscle-labels.ts` — mapping FR des groupes musculaires extrait de `exercise-detail-screen` (dédupliqué, même logique que CALIB-01)
+- `src/features/dashboard/domain/weekly-volume.ts` — `weekBounds` (lundi UTC, offset semaines) + `countWeeklySetsByMuscle` (agoniste, JSON défensif)
+- `src/features/dashboard/api/weekly-volume-service.ts`, `hooks/use-weekly-volume.ts`, `components/volume-card.tsx` (+ tests domain/service/composant)
+
+**Fichiers modifiés** : `progress-screen.tsx` (placeholder volume → `VolumeCard`), `exercise-detail-screen.tsx` (import du lib partagé), test écran.
+
+**S'appuie sur** : TA-150 (BarChart horizontal), doctrine volume-first (séries/muscle, jamais tonnage).
+
+**Ouvre** : TA-153 (poids), TA-154 (fatigue+compliance).
+
+---
+
 ## TA-151 — Dashboard : progression par exercice (graphe e1RM)
 
 **Livré** : première carte analytics réelle de l'écran Progrès. Sélecteur d'exercices en chips horizontales (exercices `weight_reps` avec historique complété, triés par volume d'historique), courbe e1RM = meilleur set par séance complétée sur 90 jours, dernière valeur + delta sur la période (vert/rouge).
