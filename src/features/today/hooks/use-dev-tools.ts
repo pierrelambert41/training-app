@@ -33,6 +33,19 @@ export function useDevTools(db: SQLiteDatabase, userId: string | undefined) {
     );
   }
 
+  async function removeAnalyticsSeedData() {
+    if (!userId) return;
+    const { removeAnalyticsSeed } = await import('@/dev/seed-analytics-history');
+    const { restoredProgramTitle } = await removeAnalyticsSeed(db, userId);
+    await queryClient.invalidateQueries();
+    Alert.alert(
+      'Mock retiré',
+      restoredProgramTitle
+        ? `Programme réactivé : « ${restoredProgramTitle} ».`
+        : 'Données mock supprimées.'
+    );
+  }
+
   async function cleanInactivePrograms() {
     if (!userId) return;
     const inactivePrograms = await db.getAllAsync<{ id: string }>(
@@ -75,5 +88,11 @@ export function useDevTools(db: SQLiteDatabase, userId: string | undefined) {
     );
   }
 
-  return { seedTestData, seedAnalytics, cleanInactivePrograms, fullReset };
+  return {
+    seedTestData,
+    seedAnalytics,
+    removeAnalyticsSeedData,
+    cleanInactivePrograms,
+    fullReset,
+  };
 }

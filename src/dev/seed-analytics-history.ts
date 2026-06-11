@@ -82,6 +82,10 @@ const DAYS: SeedDay[] = [
   },
 ];
 
+export const MOCK_PROGRAM_TITLE = 'Programme mock analytics (PPL)';
+/** Marqueur des rows body_metrics / recovery_logs créés par le seed. */
+export const SEED_MARKER = '[seed]';
+
 const WEEKS_OF_HISTORY = 9;
 /** Semaine 5 du seed = deload : charges -10 %, fatigue qui retombe. */
 const DELOAD_WEEK_INDEX = 4;
@@ -115,7 +119,7 @@ export async function seedAnalyticsHistory(
   await insertProgram(db, {
     id: programId,
     userId,
-    title: 'Programme mock analytics (PPL)',
+    title: MOCK_PROGRAM_TITLE,
     goal: 'hypertrophy',
     frequency: 3,
     level: 'intermediate',
@@ -247,8 +251,8 @@ export async function seedAnalyticsHistory(
       Math.round((84 - (90 - daysAgo) * 0.028 + noise(0.35)) * 10) / 10;
     await db.runAsync(
       `INSERT OR REPLACE INTO body_metrics (id, user_id, date, weight_kg, notes, created_at)
-       VALUES (?, ?, ?, ?, NULL, ?)`,
-      [devUuid(), userId, date, weight, `${date}T07:30:00.000Z`]
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [devUuid(), userId, date, weight, SEED_MARKER, `${date}T07:30:00.000Z`]
     );
     weighIns++;
   }
@@ -261,7 +265,7 @@ export async function seedAnalyticsHistory(
     await db.runAsync(
       `INSERT OR REPLACE INTO recovery_logs (
         id, user_id, date, sleep_quality, energy, soreness, notes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         devUuid(),
         userId,
@@ -269,6 +273,7 @@ export async function seedAnalyticsHistory(
         5 + Math.floor(Math.random() * 4),
         4 + Math.floor(Math.random() * 5),
         2 + Math.floor(Math.random() * 5),
+        SEED_MARKER,
         `${date}T08:00:00.000Z`,
       ]
     );
@@ -276,4 +281,82 @@ export async function seedAnalyticsHistory(
   }
 
   return { sessions: sessionCount, sets: setCount, weighIns, checkins };
+}
+
+/**
+ * Retire toutes les données du seed analytics et réactive le programme réel
+ * le plus récent de l'utilisateur (le seed désactive les programmes existants
+ * sans les supprimer).
+ *
+ * Couvre aussi les rows seedés avant l'introduction de SEED_MARKER via les
+ * created_at synthétiques (T07:30/T08:00 pile — un enregistrement réel passe
+ * par new Date().toISOString(), collision pratiquement impossible).
+ */
+export async function removeAnalyticsSeed(
+  db: SQLiteDatabase,
+  userId: string
+): Promise<{ restoredProgramTitle: string | null }> {
+  const mockPrograms = await db.getAllAsync<{ id: string }>(
+    `SELECT id FROM programs WHERE user_id = ? AND title IN (?, ?)`,
+    [userId, MOCK_PROGRAM_TITLE, 'Programme test Push/Pull/Legs']
+  );
+
+  for (const { id: programId } of mockPrograms) {
+    const blocks = await db.getAllAsync<{ id: string }>(
+      'SELECT id FROM blocks WHERE program_id = ?',
+      [programId]
+    );
+    for (const { id: blockId } of blocks) {
+      const sessions = await db.getAllAsync<{ id: string }>(
+        'SELECT id FROM sessions WHERE block_id = ?',
+        [blockId]
+      );
+      for (const { id: sessionId } of sessions) {
+        await db.runAsync('DELETE FROM recommendations WHERE session_id = ?', [sessionId]);
+        await db.runAsync('DELETE FROM set_logs WHERE session_id = ?', [sessionId]);
+      }
+      await db.runAsync('DELETE FROM sessions WHERE block_id = ?', [blockId]);
+
+      const days = await db.getAllAsync<{ id: string }>(
+        'SELECT id FROM workout_days WHERE block_id = ?',
+        [blockId]
+      );
+      for (const { id: dayId } of days) {
+        await db.runAsync('DELETE FROM planned_exercises WHERE workout_day_id = ?', [dayId]);
+      }
+      await db.runAsync('DELETE FROM workout_days WHERE block_id = ?', [blockId]);
+    }
+    await db.runAsync('DELETE FROM blocks WHERE program_id = ?', [programId]);
+    await db.runAsync('DELETE FROM programs WHERE id = ?', [programId]);
+  }
+
+  await db.runAsync(
+    `DELETE FROM body_metrics
+     WHERE user_id = ? AND (notes = ? OR created_at LIKE '%T07:30:00.000Z')`,
+    [userId, SEED_MARKER]
+  );
+  await db.runAsync(
+    `DELETE FROM recovery_logs
+     WHERE user_id = ? AND (notes = ? OR created_at LIKE '%T08:00:00.000Z')`,
+    [userId, SEED_MARKER]
+  );
+
+  // Réactive le programme réel le plus récent si plus aucun programme actif.
+  const active = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM programs WHERE user_id = ? AND is_active = 1',
+    [userId]
+  );
+  if (active) return { restoredProgramTitle: null };
+
+  const latest = await db.getFirstAsync<{ id: string; title: string }>(
+    'SELECT id, title FROM programs WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+    [userId]
+  );
+  if (!latest) return { restoredProgramTitle: null };
+
+  await db.runAsync('UPDATE programs SET is_active = 1, updated_at = ? WHERE id = ?', [
+    new Date().toISOString(),
+    latest.id,
+  ]);
+  return { restoredProgramTitle: latest.title };
 }
