@@ -6,6 +6,35 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-142 — ClaudeProvider.generateProgram (prompt, schéma JSON, transport ai-proxy)
+
+**Livré** : la génération initiale de programme par IA, de bout en bout (ADR-028). `ClaudeProvider.generateProgram(context, catalogSnapshot, validationCtx)` → schéma intermédiaire validé ; `transformAIOutputToProgram` (domain, pur) → structure interne complète ; `generateProgramWithAI(db, userId, questionnaire, supabase)` (service orchestrateur, ne persiste rien — ADR-013).
+
+**Fichiers créés** :
+- `src/features/ai/domain/transform-ai-output.ts` — transformer partagé (TA-144/145 le réutiliseront). **Dépendances injectées** (`generateId`, `buildProgressionConfig`) : feature-domain ne peut pas importer services/ (boundaries R4). `TransformInput.dayOrderSlots` : les slots hebdo viennent du caller via `spreadDayOrders` — préserve l'espacement des jours (TA-91). Rôles inférés (1er = main, compound = secondary, sinon accessory), reps "6-8" parsées, restSeconds par rôle (180/120/90), durée estimée alignée moteur (8 + 6/4/3 min par set), `start_weight_kg` IA conservé dans le progressionConfig (calibration initiale — PlannedExercise ne porte pas de charge). Retour `AIGenerationResult = GenerationResult & { generationSource: 'ai' | 'fallback' }`.
+- `src/features/ai/domain/default-profile.ts` — buildDefaultProfile partagé (les 3 copies existantes dans les services TA-135/137/138 restent à factoriser).
+- `src/features/ai/api/generate-program-service.ts` — orchestrateur : catalogue SQLite (`searchExercises`) → `buildFilterContext`/`filterCatalogue` (mêmes règles que le moteur Phase 3, désormais exportées) → ClaudeProvider → transformer.
+- Tests : `transform-ai-output.test.ts` (7), `generate-program-service.test.ts` (6 — nominal, system en blocs avec cache_control transmis, retry avec feedback, AIValidationExhaustedError, 429 → rate_limited sans retry, réponse vide).
+
+**Fichiers modifiés** :
+- `claude-provider.ts` — `generateProgram` + `generateValidated` (protected, partagé avec le futur regenerateBlock TA-144) : cycle génération → validation TA-143 → 1 retry avec feedback (sortie fautive rejouée en message assistant + feedback en user) → `AIValidationExhaustedError`. `invokeGeneration` : transport ai-proxy avec system en blocs (catalogue cache_control), max_tokens 4000, timeout 60s. `classifyTransportError` : 429 → rate_limited, FunctionsFetchError → network, timeout → timeout, sinon http_error — `AIProviderError` typée, **aucun fallback silencieux** (contrairement aux méthodes d'interprétation), erreurs loguées (console.warn) pour amélioration des prompts.
+- `src/services/program-generation.ts` — export de `buildFilterContext` + type `FilterContext` (réutilisés par la génération IA, une seule source de filtrage).
+
+**S'appuie sur** : TA-143 (validateur + erreurs typées), TA-147 (buildGenerateProgramPrompt), moteur Phase 3 (filtrage, progressionConfig, spreadDayOrders).
+
+**Décisions clés** :
+- Le provider retourne le **schéma intermédiaire** (pas un Program) ; la transformation est dans le service — même pipeline prévu pour FallbackProvider (TA-145).
+- `generateProgram` n'est pas encore dans l'interface `AIProvider` : il y entrera en TA-145 quand FallbackProvider l'implémentera aussi (sinon TS casse).
+- L'Edge Function ai-proxy doit transmettre `system` en tableau de blocs à Anthropic (pass-through) — à vérifier côté Edge Function au premier test réel.
+
+**Ouvre** : TA-144 (regenerateBlock réutilise generateValidated + transformer), TA-145 (FallbackProvider + interface), TA-146 (UX, consomme generateProgramWithAI).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : factorisation des 3 buildDefaultProfile dupliqués (non-bloquant) ; vérif pass-through system-blocs dans l'Edge Function ai-proxy.
+
+---
+
 ## TA-147 — Prompts versionnés génération de programme (generateProgram + regenerateBlock)
 
 **Livré** : les 2 builders de prompts de génération (ADR-028) — fonctions pures, catalogue passé pré-filtré en paramètre. `buildGenerateProgramPrompt(context, catalogSnapshot)` et `buildRegenerateBlockPrompt(context, catalogSnapshot)` → `ClaudeMessages`.
