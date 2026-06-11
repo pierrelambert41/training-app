@@ -61,6 +61,7 @@ jest.mock('@/features/today/hooks/use-dev-tools', () => ({
   useDevTools: jest.fn(() => ({
     seedTestData: jest.fn(),
     seedAnalytics: jest.fn(),
+    removeAnalyticsSeedData: jest.fn(),
     cleanInactivePrograms: jest.fn(),
     fullReset: jest.fn(),
   })),
