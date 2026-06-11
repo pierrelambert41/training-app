@@ -6,6 +6,18 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## Fix — Comptage agoniste des séries + budget temps impératif (échec retry constaté)
+
+**Constaté en test réel** : avec la règle volume-first, les 2 tentatives IA ont échoué en `session_too_long` → bascule fallback. Cause arithmétique : ≥10 séries directes × 8-10 muscles ≈ 80-100 séries/semaine vs budget temps ~80 séries (4×60 min) — infaisable si chaque muscle exige des séries *directes*. Or les méta-analyses comptent une série pour **chaque muscle agoniste** (un développé couché compte pecs + deltoïdes antérieurs + triceps).
+
+**Livré** (`program-rules-block.ts`) :
+- Règle de comptage explicite (méthodologie des méta-analyses) : exploiter les polyarticulaires pour couvrir plusieurs muscles.
+- Budget temps rendu **impératif et chiffré** : « maximum floor((durée-8)/3) séries par séance — compte tes séries avant de répondre ». Résolution de conflit : restreindre les groupes ciblés directement (priorités d'abord), jamais dépasser la durée.
+
+**Note** : `rebuildQuestionnaireFromProgram` (bannière TA-146) met `maxSessionDurationMin: null` — le retry via bannière n'est donc pas contraint en durée (approximation existante, documentée).
+
+---
+
 ## Fix — Repères de volume sourcés uniquement (suppression des tranches par niveau inventées)
 
 **Retour utilisateur** : les tranches 8-12/10-16/14-20 séries/semaine par niveau étaient un « choix pragmatique » non sourcé — inacceptable. Règle produit actée : **toute valeur métier d'entraînement doit être attribuable à une méta-analyse / revue systématique de référence ; sinon, formuler une contrainte ouverte et laisser l'IA positionner en justifiant.**

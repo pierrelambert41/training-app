@@ -147,7 +147,9 @@ describe('buildGenerateProgramPrompt', () => {
     expect(text).toContain('Baz-Valle et al. 2022');
     expect(text).toContain('Muscles prioritaires');
     expect(text).toContain('Pectoraux');
-    expect(text).toContain('plafond secondaire');
+    expect(text).toContain('plafond IMPÉRATIF');
+    expect(text).toContain('maximum 17 séries par séance'); // (60-8)/3
+    expect(text).toContain('motrice principale'); // comptage agoniste
     expect(text).not.toMatch(/8-12|10-16|14-20/); // pas de coupures par niveau inventées
 
     const userText = messages[0].content.map((c) => c.text).join('\n');
