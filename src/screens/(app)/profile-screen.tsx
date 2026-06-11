@@ -3,14 +3,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { FileUp, LogOut, UserRound } from 'lucide-react-native';
 import { useAuthStore, useAuth } from '@/features/auth';
+import { useDB } from '@/hooks/use-db';
+import { useSettingsStore } from '@/stores/settings-store';
 import { colors } from '@/theme/tokens';
-import { AppText, ListGroup, ListRow, SectionHeader } from '@/components/ui';
+import { AppText, ListGroup, ListRow, SectionHeader, SegmentedControl } from '@/components/ui';
 import { SyncStatusSection } from '@/features/sync';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const db = useDB();
   const user = useAuthStore((s) => s.user);
   const { logout, isLoading } = useAuth();
+  const preferredUnit = useSettingsStore((s) => s.preferredUnit);
+  const setPreferredUnit = useSettingsStore((s) => s.setPreferredUnit);
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -27,6 +32,27 @@ export default function ProfileScreen() {
             </AppText>
           </View>
         )}
+      </View>
+
+      <View className="gap-3">
+        <SectionHeader title="Préférences" />
+        <View className="bg-background-surface rounded-card p-4 gap-3">
+          <View className="gap-0.5">
+            <AppText variant="body" className="font-medium">Unité de poids</AppText>
+            <AppText variant="caption" muted>
+              Unité d'affichage par défaut — modifiable par exercice pour les machines en lb.
+            </AppText>
+          </View>
+          <SegmentedControl
+            options={[
+              { value: 'kg', label: 'kg' },
+              { value: 'lb', label: 'lb' },
+            ]}
+            value={preferredUnit}
+            onChange={(unit) => setPreferredUnit(db, unit)}
+            testID="preferred-unit-control"
+          />
+        </View>
       </View>
 
       <View className="gap-3">

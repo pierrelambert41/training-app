@@ -6,6 +6,7 @@ import { InlineSetEditor } from './inline-set-editor';
 import type { InlineLogValues } from './set-row-inline-form';
 import type { EditSetPayload } from '@/stores/session-store';
 import type { LogType, SetLog } from '@/types';
+import type { WeightUnit } from '@/lib/units';
 import type { VirtualSetRow } from '../types/session-ui';
 import type { SQLiteDatabase } from 'expo-sqlite';
 
@@ -13,6 +14,7 @@ type SetRowListProps = {
   virtualRows: VirtualSetRow[];
   allSetsLogged: boolean;
   nextVirtual: VirtualSetRow | null;
+  unit: WeightUnit;
   logType: LogType;
   prefillLoad: number | null;
   targetReps: number | null;
@@ -51,6 +53,7 @@ export function SetRowList({
   allSetsLogged,
   nextVirtual,
   logType,
+  unit,
   prefillLoad,
   targetReps,
   targetRir,
@@ -110,6 +113,7 @@ export function SetRowList({
               side={vr.side}
               log={vr.log}
               logType={logType}
+              unit={unit}
               targetLoad={logType === 'weight_reps' ? prefillLoad : null}
               targetReps={targetReps}
               targetRir={targetRir}
@@ -131,6 +135,7 @@ export function SetRowList({
               <InlineSetEditor
                 log={vr.log}
                 logType={logType}
+                unit={unit}
                 targetReps={targetReps}
                 onSave={(payload) => onEditSave(vr.log!.id, payload)}
                 onDelete={() => onEditDelete(vr.log!.id)}

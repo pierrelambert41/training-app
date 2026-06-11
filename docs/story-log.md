@@ -6,6 +6,24 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-158/TA-159 — Unités kg/lb : fondation + override par exercice
+
+**Livré** : gestion des unités mixtes (cas salle canadienne : machines en lb, barres en kg).
+
+**Règle d'or actée** : le stockage est TOUJOURS en kg canonique (set_logs.load, recommendations, baselines, body_metrics). La conversion kg/lb n'existe qu'à l'affichage/saisie. La doc data-model (« load en unité utilisateur ») a été corrigée — elle était fausse/dangereuse.
+
+- `src/lib/units.ts` (domaine pur, 15 tests) : kgToLb/lbToKg, `toDisplayWeight`/`fromDisplayWeight` (affichage 0.1, canonique 0.001), `formatWeight`, `roundToLoadableIncrement` (les recos tombent sur des multiples de 2.5 kg ou 5 lb selon l'unité affichée), `resolveExerciseUnit` (override exercice sinon préférence).
+- **Préférence globale** : `useSettingsStore` (zustand) persistée dans `app_meta` (clé `preferred_unit`), hydratée dans DBProvider à l'ouverture. UI : SegmentedControl kg/lb dans Profil.
+- **Override par exercice** : migration SQLite **v16** (`display_unit`, `bar_weight_kg`, `bodyweight_factor` sur exercises — colonnes locales, PAS dans le schéma Supabase, sync ouverte). Section « Réglages » dans la fiche exercice (`ExerciseSettingsSection` : Auto/kg/lb + poids de barre) via `updateExerciseSettings`.
+- **Logger unit-aware** : la frontière de conversion vit dans `ExercisePage` (prefill kg→affichage, saisie affichage→kg). `SetRow`/`SetRowList`/`SetRowInlineForm`/`InlineSetEditor(+Fields)`/`ExerciseHeader` reçoivent `unit` ; labels et accessibilityLabels dynamiques. `InlineLogValues.load` est documenté comme valeur d'AFFICHAGE.
+- **Affichages convertis** : recommandations fin de séance (+ arrondi chargeable), WorkoutCard/ExerciseLoadRow (unité par exercice), historique fiche exercice, cibles workout-day-detail, e1RM card (valeur, delta, courbe), poids du corps (saisie bornée 30–300 kg convertis). Services IA : `preferred_unit` lu depuis le store (plus hardcodé).
+
+**S'appuie sur** : app_meta (v5), tokens, fiche exercice.
+
+**Ouvre** : TA-160 (plate calculator — bar_weight_kg déjà en base), TA-161 (tonnage — bodyweight_factor déjà en base) ; sync Supabase des 3 colonnes exercises ; messages `reason` du moteur de progression encore libellés en kg (texte FR, non bloquant).
+
+---
+
 ## TA-157 — Refonte UX v2 : recomposition des écrans (hero, stats, listes groupées)
 
 **Livré** : suite de TA-156 (qui ne changeait que palette/icônes/nav — feedback : « j'ai toujours la même expérience »). Cette passe recompose la **structure** des écrans.

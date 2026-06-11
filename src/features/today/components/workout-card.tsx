@@ -2,6 +2,8 @@ import { View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Clock, Dumbbell, Layers, Play } from 'lucide-react-native';
 import { AppText, Button, Chip, SessionStatusBadge } from '@/components/ui';
+import { resolveExerciseUnit } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import type { TodayWorkoutData } from '@/hooks/use-today-workout';
 import type { TodayRecommendations } from '../types/today-recommendations';
 import { ExerciseLoadRow } from './exercise-load-row';
@@ -29,6 +31,7 @@ type Props = {
  */
 export function WorkoutCard({ data, recommendations, isInProgress, onStart, onResume }: Props) {
   const { workoutDay, plannedExercises } = data;
+  const preferredUnit = usePreferredUnit();
 
   const displayStatus = recommendations?.sessionStatus ?? data.sessionStatus;
 
@@ -102,6 +105,7 @@ export function WorkoutCard({ data, recommendations, isInProgress, onStart, onRe
                   exerciseName={name}
                   nextLoad={rec.nextLoad}
                   action={rec.action}
+                  unit={resolveExerciseUnit(exercise, preferredUnit)}
                 />
               );
             })}

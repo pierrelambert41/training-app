@@ -3,6 +3,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { AppText, Button, EmptyState } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { useWorkoutDayDetail, type PlannedExerciseWithExercise } from '@/hooks/use-workout-day-detail';
+import { formatWeight, resolveExerciseUnit, toDisplayWeight } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import type { PlannedExerciseRole } from '@/types/planned-exercise';
 
 const SPLIT_LABELS: Record<string, string> = {
@@ -46,18 +49,18 @@ function RoleBadge({ role }: { role: PlannedExerciseRole }) {
   );
 }
 
-function resolveTargetLoad(pe: PlannedExerciseWithExercise): string {
+function resolveTargetLoad(pe: PlannedExerciseWithExercise, unit: WeightUnit): string {
   if (pe.progressionConfig === null || typeof pe.progressionConfig !== 'object') {
     return 'À calibrer';
   }
   const config = pe.progressionConfig as Record<string, unknown>;
   const target = config['target_load'];
-  if (typeof target === 'number') return `${target} kg`;
+  if (typeof target === 'number') return formatWeight(target, unit);
 
   const targetMin = config['target_load_min'];
   const targetMax = config['target_load_max'];
   if (typeof targetMin === 'number' && typeof targetMax === 'number') {
-    return `${targetMin}–${targetMax} kg`;
+    return `${toDisplayWeight(targetMin, unit)}–${toDisplayWeight(targetMax, unit)} ${unit}`;
   }
 
   return 'À calibrer';
@@ -108,9 +111,10 @@ type PlannedExerciseCardProps = {
 
 function PlannedExerciseCard({ item, onExercisePress, onReplacePress }: PlannedExerciseCardProps) {
   const { exercise } = item;
+  const preferredUnit = usePreferredUnit();
   const displayName = exercise.nameFr ?? exercise.name;
   const primaryMuscles = formatMuscles(exercise.primaryMuscles);
-  const targetLoad = resolveTargetLoad(item);
+  const targetLoad = resolveTargetLoad(item, resolveExerciseUnit(exercise, preferredUnit));
   const repRange =
     item.repRangeMin === item.repRangeMax
       ? `${item.repRangeMin}`

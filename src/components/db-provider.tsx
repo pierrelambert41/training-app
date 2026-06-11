@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { openDatabase } from '@/services/db';
+import { useSettingsStore } from '@/stores/settings-store';
 import { DBContext } from '@/hooks/use-db';
 
 interface DBProviderProps {
@@ -14,6 +15,10 @@ export function DBProvider({ children }: DBProviderProps) {
 
   useEffect(() => {
     openDatabase()
+      .then(async (database) => {
+        await useSettingsStore.getState().hydrate(database);
+        return database;
+      })
       .then(setDb)
       .catch((e: unknown) => {
         const message = e instanceof Error ? e.message : 'Unknown DB error';

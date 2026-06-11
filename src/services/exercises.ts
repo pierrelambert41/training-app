@@ -97,6 +97,9 @@ type ExerciseRow = {
   is_custom: number;
   created_by: string | null;
   created_at: string;
+  display_unit: string | null;
+  bar_weight_kg: number | null;
+  bodyweight_factor: number | null;
 };
 
 function rowToExercise(row: ExerciseRow): Exercise {
@@ -121,7 +124,30 @@ function rowToExercise(row: ExerciseRow): Exercise {
     isCustom: row.is_custom === 1,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    displayUnit: row.display_unit === 'lb' || row.display_unit === 'kg' ? row.display_unit : null,
+    barWeightKg: row.bar_weight_kg,
+    bodyweightFactor: row.bodyweight_factor,
   };
+}
+
+export type ExerciseSettingsInput = {
+  displayUnit: 'kg' | 'lb' | null;
+  barWeightKg: number | null;
+};
+
+/**
+ * Réglages locaux d'un exercice (unité d'affichage, poids de barre).
+ * Local uniquement — pas de sync Supabase (colonnes absentes du schéma remote).
+ */
+export async function updateExerciseSettings(
+  db: SQLiteDatabase,
+  exerciseId: string,
+  settings: ExerciseSettingsInput
+): Promise<void> {
+  await db.runAsync(
+    'UPDATE exercises SET display_unit = ?, bar_weight_kg = ? WHERE id = ?',
+    [settings.displayUnit, settings.barWeightKg, exerciseId]
+  );
 }
 
 export async function getExerciseById(

@@ -4,7 +4,9 @@ import * as Haptics from 'expo-haptics';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { LogType, SetLogSide } from '@/types';
+import type { WeightUnit } from '@/lib/units';
 
+/** Valeurs dans l'unité d'AFFICHAGE de l'exercice — converties en kg par l'appelant (ExercisePage). */
 export type InlineLogValues = {
   load: number | null;
   reps: number | null;
@@ -16,6 +18,7 @@ export type InlineLogValues = {
 
 type SetRowInlineFormProps = {
   logType: LogType;
+  unit: WeightUnit;
   side: SetLogSide | null;
   prefillLoad: string;
   prefillReps: string;
@@ -47,6 +50,7 @@ const rirInputStyle = {
 
 export function SetRowInlineForm({
   logType,
+  unit,
   side,
   prefillLoad,
   prefillReps,
@@ -106,11 +110,11 @@ export function SetRowInlineForm({
             selectTextOnFocus
             style={inputBase}
             placeholderTextColor={colors.contentMuted}
-            placeholder="kg"
-            accessibilityLabel="Charge en kg"
+            placeholder={unit}
+            accessibilityLabel={`Charge en ${unit}`}
             testID="inline-load-input"
           />
-          <AppText className="text-caption text-content-muted">kg</AppText>
+          <AppText className="text-caption text-content-muted">{unit}</AppText>
           <TextInput
             ref={field2Ref}
             value={reps}

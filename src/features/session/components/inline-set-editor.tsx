@@ -4,24 +4,30 @@ import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { RirSelector } from './rir-selector';
 import { InlineSetEditorFields } from './inline-set-editor-fields';
+import { fromDisplayWeight, toDisplayWeight } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
 import type { EditSetPayload } from '@/stores/session-store';
 import type { LogType, SetLog } from '@/types';
 
 export type InlineSetEditorProps = {
   log: SetLog;
   logType: LogType;
+  unit: WeightUnit;
   targetReps: number | null;
   onSave: (payload: EditSetPayload) => void;
   onDelete: () => void;
   onCancel: () => void;
 };
 
-export function InlineSetEditor({ log, logType, onSave, onDelete, onCancel }: InlineSetEditorProps) {
+export function InlineSetEditor({ log, logType, unit, onSave, onDelete, onCancel }: InlineSetEditorProps) {
   const field1Ref = useRef<TextInput>(null);
   const field2Ref = useRef<TextInput>(null);
   const notesRef = useRef<TextInput>(null);
 
-  const [load, setLoad] = useState(log.load !== null ? String(log.load) : '');
+  // log.load est en kg canonique — l'édition se fait dans l'unité d'affichage.
+  const [load, setLoad] = useState(
+    log.load !== null ? String(toDisplayWeight(log.load, unit)) : ''
+  );
   const [reps, setReps] = useState(log.reps !== null ? String(log.reps) : '');
   const [durationSeconds, setDurationSeconds] = useState(log.durationSeconds !== null ? String(log.durationSeconds) : '');
   const [distanceMeters, setDistanceMeters] = useState(log.distanceMeters !== null ? String(log.distanceMeters) : '');
@@ -41,9 +47,13 @@ export function InlineSetEditor({ log, logType, onSave, onDelete, onCancel }: In
     return false;
   })();
 
+  // Saisie en unité d'affichage → kg canonique pour le store.
+  const parsedLoadKg =
+    parsedLoad !== null && !isNaN(parsedLoad) ? fromDisplayWeight(parsedLoad, unit) : null;
+
   function buildPayload(): EditSetPayload {
-    if (logType === 'weight_reps') return { load: parsedLoad, reps: parsedReps, rir, notes: notes.trim() || null };
-    if (logType === 'bodyweight_reps') return { load: parsedLoad ?? null, reps: parsedReps, rir, notes: notes.trim() || null };
+    if (logType === 'weight_reps') return { load: parsedLoadKg, reps: parsedReps, rir, notes: notes.trim() || null };
+    if (logType === 'bodyweight_reps') return { load: parsedLoadKg ?? null, reps: parsedReps, rir, notes: notes.trim() || null };
     if (logType === 'duration') return { durationSeconds: parsedDuration, rir, notes: notes.trim() || null };
     if (logType === 'distance_duration') return { distanceMeters: parsedDistance, durationSeconds: parsedDuration, rir, notes: notes.trim() || null };
     return {};
@@ -70,6 +80,7 @@ export function InlineSetEditor({ log, logType, onSave, onDelete, onCancel }: In
     <View className="bg-background-elevated border border-accent rounded-card px-4 py-4 mb-2 gap-3">
       <InlineSetEditorFields
         logType={logType}
+        unit={unit}
         load={load}
         reps={reps}
         durationSeconds={durationSeconds}

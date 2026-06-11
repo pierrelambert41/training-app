@@ -1,3 +1,4 @@
+import { useSettingsStore } from '@/stores/settings-store'; 
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getAIContextProfile, refreshAIContextProfile } from './ai-context-service';
@@ -134,7 +135,7 @@ function buildDefaultProfile(): AIContextProfile {
       level: 'intermediate',
       goals: { primary: 'hypertrophy' },
       training_frequency: 3,
-      preferred_unit: 'kg',
+      preferred_unit: useSettingsStore.getState().preferredUnit,
     },
     morphology: { strong_points: [], weak_points: [], injury_history: [] },
     exercise_preferences: { preferred: [], avoided: [], constraints: [] },

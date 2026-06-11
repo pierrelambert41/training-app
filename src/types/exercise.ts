@@ -30,6 +30,8 @@ export type MovementStability = 'stable' | 'moderate' | 'variable';
 
 import type { ProgressionType } from './planned-exercise';
 
+export type WeightUnit = 'kg' | 'lb';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -51,4 +53,10 @@ export interface Exercise {
   isCustom: boolean;
   createdBy: string | null;
   createdAt: string;
+  /** Override d'unité d'affichage (machine en lb). NULL = préférence globale. Stockage toujours en kg. */
+  displayUnit?: WeightUnit | null;
+  /** Poids de barre pour le plate calculator (kg). NULL = défaut 20 kg si equipment contient 'barbell'. */
+  barWeightKg?: number | null;
+  /** Fraction du poids du corps déplacée (tonnage bodyweight_reps). NULL = 1.0 par convention. */
+  bodyweightFactor?: number | null;
 }

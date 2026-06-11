@@ -445,4 +445,21 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_body_metrics_user_date ON body_metrics(user_id, date);
     `,
   },
+  // TA-158/159/160 — Unités et équipement par exercice.
+  // display_unit : override d'affichage kg/lb (machines en lb au Canada),
+  //   NULL = suivre la préférence globale. Le stockage reste TOUJOURS en kg.
+  // bar_weight_kg : poids de la barre pour le plate calculator (NULL = pas
+  //   de barre ou défaut 20 kg si equipment contient 'barbell').
+  // bodyweight_factor : fraction du poids du corps déplacée (tonnage des
+  //   exos bodyweight_reps). NULL = 1.0 par convention (suspension).
+  //   Ne renseigner d'autres valeurs que sourcées (doctrine evidence-only).
+  // Colonnes locales uniquement (pas de sync Supabase pour l'instant).
+  {
+    version: 16,
+    sql: `
+      ALTER TABLE exercises ADD COLUMN display_unit TEXT CHECK (display_unit IN ('kg', 'lb'));
+      ALTER TABLE exercises ADD COLUMN bar_weight_kg REAL;
+      ALTER TABLE exercises ADD COLUMN bodyweight_factor REAL;
+    `,
+  },
 ];
