@@ -6,6 +6,7 @@ const colors = {
   contentPlaceholder: '#6b7280',
   contentOnAccent: '#ffffff',
   accent: '#3b82f6',
+  border: '#1e2d4a',
 } as const;
 
 export { colors };

@@ -57,6 +57,15 @@ jest.mock('@/features/today/hooks/use-today-recommendations', () => ({
   useTodayRecommendations: jest.fn(() => ({ data: null })),
 }));
 
+jest.mock('@/features/today/hooks/use-daily-checkin', () => ({
+  useDailyCheckin: jest.fn(() => ({
+    todayLog: null,
+    isLoading: true,
+    save: jest.fn(),
+    isSaving: false,
+  })),
+}));
+
 const fakeUser = { id: 'u1', email: 'test@example.com', createdAt: '2026-04-23T10:00:00Z' };
 
 beforeEach(() => {

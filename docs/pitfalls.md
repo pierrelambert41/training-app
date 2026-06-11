@@ -75,6 +75,7 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 **Symptôme** : `computeFatigueScore` utilise des types locaux `RecoveryLogSnapshot` et `CardioSessionSnapshot` définis dans `fatigue-score.ts` car la saisie UI et les types globaux de ces entités n'ont pas été implémentés en Phase 4.
 **Fix attendu** : quand les types globaux `RecoveryLog` et `CardioSession` seront définis dans `src/types/`, migrer `RecoveryLogSnapshot` et `CardioSessionSnapshot` vers ces types (ou les aligner). La dégradation gracieuse existante (champs optionnels) reste valide.
 **Détecté** : TA-105 / 2026-04-29 — stub dans `fatigue-score.ts` (types locaux).
+**Résolu partiellement (TA-148 / 2026-06-11)** : `RecoveryLog` existe désormais dans `src/types/recovery-log.ts`, la table SQLite `recovery_logs` est créée (migration v14) et alimentée par le check-in quotidien (`DailyCheckinCard`). `runRulesEngine` passe les RecoveryLogs (fenêtre 7 jours) à `computeFatigueScore`. Les snapshots locaux de `fatigue-score.ts` restent les interfaces de consommation (domaine pur). Reste ouvert : `CardioSession` (type + saisie) et `sleep_hours` (le check-in capture `sleep_quality`, pas la durée — l'indicateur 3 du fatigue score ne s'appuie que sur `energy` tant que `sleep_hours` est null).
 
 ---
 

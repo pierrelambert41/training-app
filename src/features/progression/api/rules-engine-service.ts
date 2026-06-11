@@ -28,6 +28,7 @@ import {
   computeSessionScores,
   type SessionScores,
 } from '@/services/session-scores';
+import { getRecoveryLogsSince } from '@/services/recovery-logs';
 import { getSessionById, getSessionsByUserId, updateSession } from '@/services/sessions';
 import { getSetLogsBySessionId } from '@/services/set-logs';
 import type { PlannedExercise, Recommendation, Session, SetLog } from '@/types';
@@ -42,6 +43,7 @@ import type {
   RecentSessionSnapshot,
 } from '../domain/deload-rules';
 import { computeFatigueScore } from '../domain/fatigue-score';
+import type { RecoveryLogSnapshot } from '../domain/fatigue-score';
 import {
   buildFatigueHistory,
   detectPlateauPerExercise,
@@ -121,17 +123,19 @@ export async function runRulesEngine(
     : [];
 
   // -- fatigue score de la séance courante ----------------------------------
-  // RecoveryLog/CardioSession non disponibles (PROG-02) → on ne passe que
-  // les setLogs récents et la readiness pré-séance.
+  // RecoveryLogs des 7 derniers jours saisis via le check-in quotidien
+  // (TA-148). CardioSession reste indisponible (PROG-02).
   const recentSetLogsByCompletedSession = [
     ...previousCompletedSessions.map((s) => previousSetLogsBySession.get(s.id) ?? []),
     currentSetLogs,
   ];
 
   const preSessionReadiness = buildPreSessionReadiness(session);
+  const recoveryLogs = await fetchRecoverySnapshots(db, session.userId, session.date);
 
   const currentFatigue = computeFatigueScore({
     recentSetLogs: recentSetLogsByCompletedSession,
+    recoveryLogs,
     preSessionReadiness,
   });
 
@@ -349,6 +353,34 @@ function computeAvgLoadByPlannedExercise(
     result[id] = count > 0 ? total / count : null;
   }
   return result;
+}
+
+/**
+ * RecoveryLogs de la fenêtre 7 jours précédant la séance (incluse), réduits
+ * au snapshot consommé par computeFatigueScore. try/catch défensif : un échec
+ * de lecture ne doit jamais bloquer le moteur (dégradation gracieuse, même
+ * contrat que les autres consommateurs de recovery_logs).
+ */
+async function fetchRecoverySnapshots(
+  db: SQLiteDatabase,
+  userId: string,
+  sessionDate: string,
+): Promise<RecoveryLogSnapshot[]> {
+  const since = new Date(`${sessionDate}T00:00:00.000Z`);
+  since.setUTCDate(since.getUTCDate() - 7);
+  try {
+    const logs = await getRecoveryLogsSince(db, userId, since.toISOString().slice(0, 10));
+    return logs
+      .filter((l) => l.date <= sessionDate)
+      .map((l) => ({
+        date: l.date,
+        sleepHours: l.sleepHours,
+        energy: l.energy,
+        soreness: l.soreness,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 function buildPreSessionReadiness(session: Session) {
