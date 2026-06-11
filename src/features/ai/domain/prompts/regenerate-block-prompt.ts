@@ -34,6 +34,9 @@ export function buildRegenerateBlockPrompt(
     maxSessionDurationMin: null,
     injuries: context.profile.morphology.injury_history.join(', '),
     sportsParallel: context.profile.parallel_sports.join(', '),
+    level: context.profile.user.level,
+    volumeTolerance: null,
+    priorityMuscles: [],
   });
 
   const continuity = `CONTINUITÉ INTER-BLOCS (règle produit) :

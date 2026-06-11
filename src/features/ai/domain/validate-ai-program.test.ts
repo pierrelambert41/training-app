@@ -89,6 +89,14 @@ function makeOutput(overrides: Partial<AIIntermediateOutput> = {}): AIIntermedia
         start_weight_kg: 100,
         progression: 'strength_fixed',
       },
+      {
+        exercise_id: 'row',
+        sets: 3,
+        reps: '8-12',
+        rir: 2,
+        start_weight_kg: 60,
+        progression: 'accessory_linear',
+      },
     ],
   });
   return {
@@ -204,6 +212,18 @@ describe('validateAIGeneratedProgram', () => {
 
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.code === 'forbidden_exercise')).toBe(true);
+  });
+
+  it('séance trop clairsemée (< 3 exercices) → rejet', () => {
+    const output = makeOutput();
+    output.days[0].exercises = output.days[0].exercises.slice(0, 2);
+
+    const result = validateAIGeneratedProgram(output, makeContext());
+
+    expect(result.valid).toBe(false);
+    const error = result.errors.find((e) => e.code === 'session_too_sparse');
+    expect(error).toBeDefined();
+    expect(error!.message).toContain('2 exercice');
   });
 
   it('séance trop longue vs maxSessionDurationMin → rejet', () => {

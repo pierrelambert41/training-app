@@ -120,9 +120,9 @@ function validAIOutput() {
     weeks: 6,
     reasoning: 'continuité',
     days: [
-      day('Full Body A', ['bench_press', 'squat']),
-      day('Full Body B', ['row', 'squat']),
-      day('Full Body C', ['bench_press', 'ohp']),
+      day('Full Body A', ['bench_press', 'squat', 'row']),
+      day('Full Body B', ['row', 'squat', 'ohp']),
+      day('Full Body C', ['bench_press', 'ohp', 'squat']),
     ],
   };
 }

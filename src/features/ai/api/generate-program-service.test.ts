@@ -89,6 +89,7 @@ function validAIOutput() {
     exercises: [
       { exercise_id: 'bench_press', sets: 4, reps: '6-8', rir: 2, start_weight_kg: 80, progression: 'double_progression' },
       { exercise_id: 'squat', sets: 3, reps: '5', rir: 2, start_weight_kg: 100, progression: 'strength_fixed' },
+      { exercise_id: 'row', sets: 3, reps: '8-12', rir: 2, start_weight_kg: 60, progression: 'accessory_linear' },
     ],
   });
   return {
@@ -137,7 +138,7 @@ describe('generateProgramWithAI', () => {
     expect(result.program.title).toContain('Hypertrophie');
     expect(result.block.durationWeeks).toBe(6);
     expect(result.days).toHaveLength(3);
-    expect(result.days[0].plannedExercises).toHaveLength(2);
+    expect(result.days[0].plannedExercises).toHaveLength(3);
     expect(result.days[0].plannedExercises[0].progressionType).toBe('double_progression');
     expect(result.split).toBe('full_body_abc');
     expect((supabase.functions.invoke as jest.Mock)).toHaveBeenCalledTimes(1);

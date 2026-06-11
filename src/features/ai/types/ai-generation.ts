@@ -100,7 +100,8 @@ export type ValidationErrorCode =
   | 'day_count_mismatch'
   | 'equipment_unavailable'
   | 'forbidden_exercise'
-  | 'session_too_long';
+  | 'session_too_long'
+  | 'session_too_sparse';
 
 export type ValidationError = {
   code: ValidationErrorCode;

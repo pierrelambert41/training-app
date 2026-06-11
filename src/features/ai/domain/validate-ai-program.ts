@@ -36,11 +36,14 @@ const MAX_REPS = 30;
 const MIN_RIR = 0;
 const MAX_RIR = 4;
 
-// Heuristique durée (alignée moteur Phase 3 : 8 min warm-up + 3-6 min/set selon rôle).
-// Le schéma intermédiaire ne porte pas le rôle → moyenne 5 min/set.
+// Heuristique durée : 8 min warm-up + ~3 min par série effective (repos inclus).
+// 5 min/set (version initiale) forçait des séances de 3 exercices pour 60 min —
+// trop pessimiste vs réalité (15-18 séries tiennent dans 60 min).
 const WARMUP_MIN = 8;
-const MIN_PER_SET = 5;
+const MIN_PER_SET = 3;
 const DURATION_TOLERANCE_MIN = 10;
+// Plancher de densité (docs §5.2 : min 1 main + 1 secondary + 2 accessoires).
+const MIN_EXERCISES_PER_DAY = 3;
 
 function err(
   code: ValidationError['code'],
@@ -233,6 +236,21 @@ function validateStructure(
         `${output.days.length} séances générées pour une fréquence de ${ctx.frequencyDays} jours/semaine — générer exactement ${ctx.frequencyDays} séances.`
       )
     );
+  }
+
+  if (Array.isArray(output.days)) {
+    output.days.forEach((day, dayIdx) => {
+      const count = (day.exercises ?? []).length;
+      if (count > 0 && count < MIN_EXERCISES_PER_DAY) {
+        errors.push(
+          err(
+            'session_too_sparse',
+            `days[${dayIdx}]`,
+            `Séance "${day.name}" ne contient que ${count} exercice(s) — minimum ${MIN_EXERCISES_PER_DAY}, vise 5 à 7 (1-2 polyarticulaires + secondaires + isolations).`
+          )
+        );
+      }
+    });
   }
 
   const maxDuration = ctx.userConstraints.maxSessionDurationMin;
