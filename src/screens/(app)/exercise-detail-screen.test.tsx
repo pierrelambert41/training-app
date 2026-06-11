@@ -170,7 +170,7 @@ describe('ExerciseDetailScreen', () => {
     await waitFor(() => {
       expect(screen.getByTestId('exercise-detail-favorite-button')).toBeTruthy();
     });
-    expect(screen.getByText('☆')).toBeTruthy();
+    expect(screen.getByLabelText('Ajouter aux favoris')).toBeTruthy();
   });
 
   it('affiche le bouton favori actif si l\'exercice est en favori', async () => {
@@ -178,7 +178,7 @@ describe('ExerciseDetailScreen', () => {
     renderWithProviders(db);
 
     await waitFor(() => {
-      expect(screen.getByText('★')).toBeTruthy();
+      expect(screen.getByLabelText('Retirer des favoris')).toBeTruthy();
     });
   });
 

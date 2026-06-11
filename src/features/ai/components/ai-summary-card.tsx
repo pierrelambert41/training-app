@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { Sparkles, Star } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import type { BlockSummary, SessionSummary } from '../types/ai-responses';
+import { colors } from '@/theme/tokens';
 
 const COLLAPSE_THRESHOLD_CHARS = 140;
 const MAX_CONDENSED_HIGHLIGHTS = 2;
-const AI_ACCENT = '#8b5cf6';
+const AI_ACCENT = colors.aiAccent;
 
 type AISummaryCardProps =
   | { type: 'session'; summary: SessionSummary | null }
@@ -18,13 +20,13 @@ function ratingStyle(rating: SessionSummary['overall_rating']): {
 } {
   switch (rating) {
     case 'excellent':
-      return { bg: '#14532d', text: '#4ade80', label: 'Excellente' };
+      return { bg: colors.tintSuccess, text: colors.statusSuccess, label: 'Excellente' };
     case 'good':
-      return { bg: '#1e3a5f', text: '#60a5fa', label: 'Bonne' };
+      return { bg: colors.tintInfo, text: colors.statusInfo, label: 'Bonne' };
     case 'poor':
-      return { bg: '#431407', text: '#fb923c', label: 'Difficile' };
+      return { bg: colors.tintWarning, text: colors.statusWarning, label: 'Difficile' };
     default:
-      return { bg: '#3b2f10', text: '#fbbf24', label: 'Correcte' };
+      return { bg: colors.tintWarning, text: colors.statusWarning, label: 'Correcte' };
   }
 }
 
@@ -54,7 +56,7 @@ function CollapsibleText({ text }: { text: string }) {
   return (
     <View style={{ gap: 4 }}>
       <AppText
-        style={{ fontSize: 14, color: '#e5e7eb', lineHeight: 20 }}
+        style={{ fontSize: 14, color: colors.contentPrimary, lineHeight: 20 }}
         numberOfLines={expanded || !needsToggle ? undefined : 3}
       >
         {text}
@@ -82,9 +84,11 @@ function CondensedHighlights({ items }: { items: string[] }) {
     <View style={{ gap: 4 }} testID="ai-summary-card-highlights">
       {items.slice(0, MAX_CONDENSED_HIGHLIGHTS).map((item, idx) => (
         <View key={idx} style={{ flexDirection: 'row', gap: 6, alignItems: 'flex-start' }}>
-          <AppText style={{ fontSize: 13, color: '#4ade80', lineHeight: 18 }}>★</AppText>
+          <View style={{ marginTop: 2 }}>
+            <Star size={13} color={colors.statusSuccess} fill={colors.statusSuccess} />
+          </View>
           <AppText
-            style={{ flex: 1, fontSize: 13, color: '#cbd5e1', lineHeight: 18 }}
+            style={{ flex: 1, fontSize: 13, color: colors.contentSecondary, lineHeight: 18 }}
             numberOfLines={1}
           >
             {item}
@@ -112,7 +116,7 @@ export function AISummaryCard(props: AISummaryCardProps) {
   return (
     <View
       style={{
-        backgroundColor: '#111827',
+        backgroundColor: colors.backgroundSurface,
         borderRadius: 12,
         borderCurve: 'continuous',
         borderLeftWidth: 3,
@@ -131,9 +135,9 @@ export function AISummaryCard(props: AISummaryCardProps) {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-          <AppText style={{ fontSize: 12, color: AI_ACCENT }}>✦</AppText>
+          <Sparkles size={13} color={AI_ACCENT} />
           <AppText
-            style={{ fontSize: 12, fontWeight: '600', color: '#9ca3af', letterSpacing: 0.6 }}
+            style={{ fontSize: 12, fontWeight: '600', color: colors.contentSecondary, letterSpacing: 0.6 }}
             numberOfLines={1}
           >
             {headerLabel.toUpperCase()}
@@ -147,7 +151,7 @@ export function AISummaryCard(props: AISummaryCardProps) {
       <CondensedHighlights items={highlights} />
 
       {footnote !== null && footnote !== '' && (
-        <AppText style={{ fontSize: 12, color: '#6b7280' }}>{footnote}</AppText>
+        <AppText style={{ fontSize: 12, color: colors.contentMuted }}>{footnote}</AppText>
       )}
     </View>
   );

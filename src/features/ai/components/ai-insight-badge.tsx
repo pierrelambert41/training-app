@@ -1,5 +1,8 @@
 import { View } from 'react-native';
+import { Sparkles, TrendingUp, TriangleAlert } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
+import { colors } from '@/theme/tokens';
 import type { InsightSentiment } from '../domain/highlight-sentiment';
 
 type AIInsightBadgeProps = {
@@ -10,15 +13,15 @@ type AIInsightBadgeProps = {
 function sentimentStyle(sentiment: InsightSentiment): {
   bg: string;
   text: string;
-  icon: string;
+  icon: LucideIcon;
 } {
   switch (sentiment) {
     case 'positive':
-      return { bg: '#14532d', text: '#4ade80', icon: '↗' };
+      return { bg: colors.tintSuccess, text: colors.statusSuccess, icon: TrendingUp };
     case 'warning':
-      return { bg: '#3b2f10', text: '#fbbf24', icon: '⚠' };
+      return { bg: colors.tintWarning, text: colors.statusWarning, icon: TriangleAlert };
     default:
-      return { bg: '#1f2937', text: '#9ca3af', icon: '✦' };
+      return { bg: colors.backgroundElevated, text: colors.contentSecondary, icon: Sparkles };
   }
 }
 
@@ -28,6 +31,7 @@ function sentimentStyle(sentiment: InsightSentiment): {
  */
 export function AIInsightBadge({ text, sentiment }: AIInsightBadgeProps) {
   const style = sentimentStyle(sentiment);
+  const Icon = style.icon;
   return (
     <View
       style={{
@@ -36,13 +40,13 @@ export function AIInsightBadge({ text, sentiment }: AIInsightBadgeProps) {
         gap: 5,
         paddingHorizontal: 10,
         paddingVertical: 5,
-        borderRadius: 14,
+        borderRadius: 999,
         backgroundColor: style.bg,
         alignSelf: 'flex-start',
       }}
       testID={`ai-insight-badge-${sentiment}`}
     >
-      <AppText style={{ fontSize: 11, color: style.text }}>{style.icon}</AppText>
+      <Icon size={12} color={style.text} strokeWidth={2.4} />
       <AppText style={{ fontSize: 12, fontWeight: '600', color: style.text }} numberOfLines={1}>
         {text}
       </AppText>

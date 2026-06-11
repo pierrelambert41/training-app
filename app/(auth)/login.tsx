@@ -25,7 +25,7 @@ export default function LoginScreen() {
 
         <View className="w-full gap-3">
           <TextInput
-            className="w-full bg-background-surface border border-border rounded-button h-tap px-4 text-body text-content-primary"
+            className="w-full bg-background-surface border border-border rounded-field h-tap px-4 text-body text-content-primary"
             placeholder="Email"
             placeholderTextColor={colors.contentPlaceholder}
             autoCapitalize="none"
@@ -36,7 +36,7 @@ export default function LoginScreen() {
             editable={!isLoading}
           />
           <TextInput
-            className="w-full bg-background-surface border border-border rounded-button h-tap px-4 text-body text-content-primary"
+            className="w-full bg-background-surface border border-border rounded-field h-tap px-4 text-body text-content-primary"
             placeholder="Mot de passe"
             placeholderTextColor={colors.contentPlaceholder}
             secureTextEntry

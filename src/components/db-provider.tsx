@@ -25,7 +25,7 @@ export function DBProvider({ children }: DBProviderProps) {
   if (error) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
-        <Text className="text-red-500 text-center px-4">
+        <Text className="text-status-danger text-center px-4">
           Erreur base de données locale : {error}
         </Text>
       </View>

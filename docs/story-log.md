@@ -6,6 +6,26 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-156 — Refonte design & UX : thème dark volt, fix double header, icônes lucide
+
+**Livré** : refonte visuelle complète de l'app, sans changement fonctionnel.
+
+- **Nouvelle palette** (tailwind.config.js + `src/theme/tokens.ts`, synchronisés) : fond neutre quasi-noir (`#0a0a0c` / surface `#151519` / elevated `#1f1f25`) au lieu du navy bleuté, accent **volt** `#a3e635` avec texte sombre sur les CTA (`content-on-accent: #0a0a0c`), statuts adoucis (success/warning/danger 400), nouveaux tokens `status.info` (sky), `ai` (violet IA) et teintes `tint*` (badges translucides).
+- **Typo** : display 34/800 + letterSpacing négatif, logger 28/700, heading 20/700.
+- **Radius** : cartes 20px, boutons capsule (`rounded-button: 999`), nouveau `rounded-field` 14px pour les inputs.
+- **Double top bar corrigée** : la route `programs` n'était pas déclarée dans `app/(app)/_layout.tsx` → le Stack parent ajoutait son header au-dessus de celui du Stack imbriqué (pitfall NAV-03). Headers harmonisés partout : `headerShadowVisible: false`, `headerBackButtonDisplayMode: 'minimal'`.
+- **Icônes** : `lucide-react-native` (s'appuie sur react-native-svg déjà présent, OK Expo Go). Tab bar (House/CalendarDays/ChartNoAxesCombined/Dumbbell/UserRound), `TabIcon` prend désormais un composant `LucideIcon` (plus d'emoji), `CardChoice.icon: LucideIcon` (pastille teintée), `StatRow.icon: LucideIcon`, et remplacement des glyphes dans session-header, set-row, RestTimer, exercise-row, fallback-upgrade-banner, ai-summary-card, ai-insight-badge, import, profil, bibliothèque (FAB).
+- **Migration couleurs hardcodées → tokens** : ~15 fichiers features (session, AI, import) utilisaient des hex de l'ancienne palette (`#111827`, `#1e2a45`, `#3b82f6`…) ; tout passe par `colors.*`. Plus aucun hex ni classe Tailwind hors-palette (`red-950`, `yellow-400`…) dans `src/` hors tokens.
+- **Écrans retouchés** : Aujourd'hui (header display + date, suppression email/logout dupliqués — déjà dans Profil), Profil (carte user, logout en danger), Bibliothèque (FAB avec glow volt), SegmentedControl en pill, Button lg 56px (au lieu de 72px) + feedback press.
+
+**Tests** : 1019 verts (3 suites mises à jour : assertions sur glyphes ★/✦ remplacées par accessibilityLabel, tests email/logout du Home inversés en non-régression).
+
+**S'appuie sur** : tokens centralisés existants (le renommage n'a pas été nécessaire — seules les valeurs changent, la palette se propage via les classes existantes).
+
+**Ouvre** : `BulletList` (session-ai-summary) accepte encore des glyphes string (★/⚠ colorés — acceptable) ; `login.tsx`/`register.tsx` dépassent la règle R1 (≤30 lignes, préexistant) et dupliquent les inputs au lieu d'utiliser `<Input>` ; charts du dashboard non retouchés (déjà sur tokens).
+
+---
+
 ## TA-155 — Vue bloc : progression de la semaine courante
 
 **Livré** : états par jour sur le calendrier du bloc actif (✓ fait / aujourd'hui / à venir / ✗ manqué) et compteur « Séances cette semaine » désormais exact à la semaine. **Bug corrigé au passage** : l'ancien compteur du header (`sessionCountsByDayId`) comptait les séances de *tout le bloc* — un jour réalisé en semaine 1 restait « fait » en semaine 4.

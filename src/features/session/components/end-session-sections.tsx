@@ -27,7 +27,7 @@ export function PerExerciseList({
   if (plannedExercises.length === 0) return null;
 
   return (
-    <View className="rounded-card overflow-hidden" style={{ backgroundColor: '#111827' }}>
+    <View className="rounded-card overflow-hidden" style={{ backgroundColor: colors.backgroundSurface }}>
       <View className="px-4 pt-4 pb-2">
         <AppText className="text-label font-semibold text-content-secondary tracking-wide">
           PAR EXERCICE
@@ -46,7 +46,7 @@ export function PerExerciseList({
             className="flex-row items-center px-4 py-3 gap-3"
             style={
               idx < plannedExercises.length - 1
-                ? { borderBottomWidth: 1, borderBottomColor: '#1e2a45' }
+                ? { borderBottomWidth: 1, borderBottomColor: colors.border }
                 : undefined
             }
           >
@@ -89,10 +89,10 @@ export function PostNotesInput({ value, onChange }: PostNotesInputProps) {
           minHeight: 80,
           fontSize: 15,
           color: colors.contentPrimary,
-          backgroundColor: '#111827',
+          backgroundColor: colors.backgroundSurface,
           borderRadius: 12,
           borderWidth: 1,
-          borderColor: '#1e2a45',
+          borderColor: colors.border,
           paddingHorizontal: 12,
           paddingVertical: 10,
           textAlignVertical: 'top',

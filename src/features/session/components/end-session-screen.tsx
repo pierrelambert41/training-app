@@ -131,14 +131,14 @@ export function EndSessionScreen() {
   const label = performanceScoreLabel(scores.performance_score);
   const scoreColor =
     scores.performance_score >= 8
-      ? '#22c55e'
+      ? colors.statusSuccess
       : scores.performance_score >= 6
-        ? '#3b82f6'
+        ? colors.statusInfo
         : scores.performance_score >= 4
-          ? '#f59e0b'
+          ? colors.statusWarning
           : scores.performance_score >= 2
-            ? '#f97316'
-            : '#ef4444';
+            ? colors.statusWarning
+            : colors.statusDanger;
 
   const fallbackSummaryText = `Séance complétée — ${completedSets} série${completedSets > 1 ? 's' : ''}, ${plannedExercises.length} exercice${plannedExercises.length > 1 ? 's' : ''}.`;
 
@@ -206,7 +206,7 @@ export function EndSessionScreen() {
         )}
       </ScrollView>
 
-      <View className="px-4 pb-8 pt-3 border-t" style={{ borderTopColor: '#1e2a45' }}>
+      <View className="px-4 pb-8 pt-3 border-t" style={{ borderTopColor: colors.border }}>
         {isCompleted ? (
           <Pressable
             onPress={handleGoHome}
@@ -215,7 +215,7 @@ export function EndSessionScreen() {
             accessibilityLabel="Terminer"
             testID="go-home-button"
           >
-            <AppText style={{ fontSize: 17, fontWeight: '700', color: '#ffffff' }}>
+            <AppText style={{ fontSize: 17, fontWeight: '700', color: colors.contentPrimary }}>
               Terminer
             </AppText>
           </Pressable>
@@ -228,7 +228,7 @@ export function EndSessionScreen() {
             accessibilityLabel="Terminer la séance"
             testID="finish-session-button"
           >
-            <AppText style={{ fontSize: 17, fontWeight: '700', color: '#ffffff' }}>
+            <AppText style={{ fontSize: 17, fontWeight: '700', color: colors.contentPrimary }}>
               {isCompleting ? 'Enregistrement…' : 'Terminer'}
             </AppText>
           </Pressable>

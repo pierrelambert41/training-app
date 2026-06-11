@@ -1,7 +1,7 @@
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useAuthStore, useAuth } from '@/features/auth';
+import { useAuthStore } from '@/features/auth';
 import {
   AISummaryCard,
   AIInsightBadge,
@@ -28,13 +28,13 @@ import { RestDayCard } from './rest-day-card';
 import { NoProgramCard } from './no-program-card';
 import { CompletedTodayCard } from './completed-today-card';
 import { DevToolsSection } from './dev-tools-section';
+import { colors } from '@/theme/tokens';
 
 const MAX_VISIBLE_HIGHLIGHTS = 4;
 
 export function TodayScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { logout, isLoading } = useAuth();
   const db = useDB();
 
   const { isLoading: isProgramLoading } = useActiveProgram();
@@ -47,10 +47,6 @@ export function TodayScreen() {
   const dailyCheckin = useDailyCheckin();
 
   useActiveSession();
-
-  async function handleLogout() {
-    await logout();
-  }
 
   function handleStartSession() {
     const workoutDayId =
@@ -110,10 +106,10 @@ export function TodayScreen() {
       testID="home-screen"
     >
       <View className="mt-4 gap-1">
-        <AppText variant="heading">Aujourd'hui</AppText>
-        {user?.email ? (
-          <AppText variant="body" muted>{user.email}</AppText>
-        ) : null}
+        <AppText variant="caption" muted className="uppercase tracking-widest">
+          {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </AppText>
+        <AppText className="text-display text-content-primary">Aujourd'hui</AppText>
       </View>
 
       {highlights.length > 0 ? (
@@ -163,7 +159,7 @@ export function TodayScreen() {
 
         {isProgramLoading ? (
           <View className="items-center py-8">
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={colors.contentPrimary} />
           </View>
         ) : !todayData || todayData.state === 'no_program' ? (
           <NoProgramCard onGenerate={handleGenerateProgram} />
@@ -205,16 +201,6 @@ export function TodayScreen() {
       ) : null}
 
       {__DEV__ ? <DevToolsSection db={db} userId={user?.id} /> : null}
-
-      <View className="mt-4">
-        <Button
-          label="Se deconnecter"
-          onPress={handleLogout}
-          variant="ghost"
-          loading={isLoading}
-          testID="logout-button"
-        />
-      </View>
     </ScrollView>
     </SafeAreaView>
   );

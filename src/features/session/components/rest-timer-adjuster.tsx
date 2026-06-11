@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
+import { ChevronDown, ChevronUp, Timer } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 
@@ -55,9 +56,13 @@ export function RestTimerAdjuster({ currentRestSeconds, onAdjust }: RestTimerAdj
         accessibilityRole="button"
         testID="rest-timer-adjuster-toggle"
       >
-        <AppText className="text-caption text-content-muted">⏱</AppText>
+        <Timer size={14} color={colors.contentMuted} />
         <AppText className="text-label font-semibold text-content-secondary">{displayLabel}</AppText>
-        <AppText className="text-caption text-content-muted">{expanded ? '▲' : '▼'}</AppText>
+        {expanded ? (
+          <ChevronUp size={14} color={colors.contentMuted} />
+        ) : (
+          <ChevronDown size={14} color={colors.contentMuted} />
+        )}
       </Pressable>
 
       {expanded && (
@@ -99,8 +104,8 @@ export function RestTimerAdjuster({ currentRestSeconds, onAdjust }: RestTimerAdj
                 width: 52,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: '#1e2d4a',
-                backgroundColor: '#0f1628',
+                borderColor: colors.border,
+                backgroundColor: colors.backgroundSurface,
                 color: colors.contentPrimary,
                 fontSize: 14,
                 fontWeight: '600',

@@ -18,16 +18,16 @@ export function MappingRow({ mapping, onEdit, onIgnore }: Props) {
     >
       <View className="flex-row items-center gap-2">
         {!isMapped && !isIgnored ? (
-          <View className="bg-red-600 rounded-chip px-2 py-0.5">
-            <Text className="text-caption text-white font-semibold">Non mappé</Text>
+          <View className="bg-status-danger/15 border border-status-danger/40 rounded-chip px-2 py-0.5">
+            <Text className="text-caption text-status-danger font-semibold">Non mappé</Text>
           </View>
         ) : isIgnored ? (
-          <View className="bg-content-muted rounded-chip px-2 py-0.5">
-            <Text className="text-caption text-white font-semibold">Ignoré</Text>
+          <View className="bg-background-elevated rounded-chip px-2 py-0.5">
+            <Text className="text-caption text-content-secondary font-semibold">Ignoré</Text>
           </View>
         ) : (
-          <View className="bg-green-800 rounded-chip px-2 py-0.5">
-            <Text className="text-caption text-green-200 font-semibold">OK</Text>
+          <View className="bg-status-success/15 border border-status-success/40 rounded-chip px-2 py-0.5">
+            <Text className="text-caption text-status-success font-semibold">OK</Text>
           </View>
         )}
         <Text className="text-body font-medium text-content-primary flex-1" numberOfLines={1}>

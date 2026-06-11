@@ -66,7 +66,7 @@ describe('FallbackUpgradeBanner', () => {
       <FallbackUpgradeBanner program={makeProgram('fallback')} userId="user-1" />
     );
     expect(getByTestId('fallback-upgrade-banner')).toBeTruthy();
-    expect(getByText('✦ Programme amélioré disponible')).toBeTruthy();
+    expect(getByText('Programme amélioré disponible')).toBeTruthy();
     expect(getByText('Mettre à jour')).toBeTruthy();
   });
 

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
+import { Sparkles, X } from 'lucide-react-native';
 import type { Program } from '@/types';
 import { AppText } from '@/components/ui';
 import { useNetworkStatus } from '@/features/sync';
 import { useUpgradeProgram } from '../hooks/use-upgrade-program';
 import { useUpgradeBannerStore } from '../stores/upgrade-banner-store';
+import { colors } from '@/theme/tokens';
 
-const AI_ACCENT = '#8b5cf6';
+const AI_ACCENT = colors.aiAccent;
 
 const WHY_TEXT =
   "Ce programme a été généré hors-ligne par le moteur de base. L'IA peut le personnaliser davantage : volume par muscle selon ton profil, choix d'exercices affinés, progression adaptée à ton historique. Ton bloc en cours n'est pas modifié.";
@@ -41,7 +43,7 @@ export function FallbackUpgradeBanner({ program, userId }: FallbackUpgradeBanner
   return (
     <View
       style={{
-        backgroundColor: '#1e1b34',
+        backgroundColor: colors.tintAi,
         borderRadius: 12,
         borderCurve: 'continuous',
         borderLeftWidth: 3,
@@ -53,10 +55,13 @@ export function FallbackUpgradeBanner({ program, userId }: FallbackUpgradeBanner
     >
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
         <View style={{ flex: 1, gap: 2 }}>
-          <AppText style={{ fontSize: 15, fontWeight: '700', color: '#e5e7eb' }}>
-            ✦ Programme amélioré disponible
-          </AppText>
-          <AppText style={{ fontSize: 13, color: '#9ca3af', lineHeight: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={14} color={AI_ACCENT} />
+            <AppText style={{ fontSize: 15, fontWeight: '700', color: colors.contentPrimary }}>
+              Programme amélioré disponible
+            </AppText>
+          </View>
+          <AppText style={{ fontSize: 13, color: colors.contentSecondary, lineHeight: 18 }}>
             Ton programme a été généré hors-ligne. L&apos;IA peut maintenant le personnaliser.
           </AppText>
         </View>
@@ -67,18 +72,18 @@ export function FallbackUpgradeBanner({ program, userId }: FallbackUpgradeBanner
           accessibilityLabel="Masquer la bannière"
           testID="upgrade-banner-dismiss"
         >
-          <AppText style={{ fontSize: 16, color: '#6b7280' }}>✕</AppText>
+          <X size={16} color={colors.contentMuted} />
         </Pressable>
       </View>
 
       {showWhy && (
-        <AppText style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 19 }} testID="upgrade-banner-why-text">
+        <AppText style={{ fontSize: 13, color: colors.contentSecondary, lineHeight: 19 }} testID="upgrade-banner-why-text">
           {WHY_TEXT}
         </AppText>
       )}
 
       {error !== null && (
-        <AppText style={{ fontSize: 13, color: '#fb923c' }} testID="upgrade-banner-error">
+        <AppText style={{ fontSize: 13, color: colors.statusWarning }} testID="upgrade-banner-error">
           {error}
         </AppText>
       )}
@@ -89,8 +94,8 @@ export function FallbackUpgradeBanner({ program, userId }: FallbackUpgradeBanner
           disabled={isUpgrading}
           style={{
             minHeight: 44,
-            paddingHorizontal: 16,
-            borderRadius: 10,
+            paddingHorizontal: 18,
+            borderRadius: 999,
             backgroundColor: AI_ACCENT,
             alignItems: 'center',
             justifyContent: 'center',
@@ -102,8 +107,8 @@ export function FallbackUpgradeBanner({ program, userId }: FallbackUpgradeBanner
           accessibilityLabel="Mettre à jour le programme avec l'IA"
           testID="upgrade-banner-cta"
         >
-          {isUpgrading && <ActivityIndicator size="small" color="#ffffff" />}
-          <AppText style={{ fontSize: 14, fontWeight: '700', color: '#ffffff' }}>
+          {isUpgrading && <ActivityIndicator size="small" color={colors.contentOnAccent} />}
+          <AppText style={{ fontSize: 14, fontWeight: '700', color: colors.contentOnAccent }}>
             {isUpgrading ? 'Génération en cours…' : 'Mettre à jour'}
           </AppText>
         </Pressable>

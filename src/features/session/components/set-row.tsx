@@ -1,4 +1,5 @@
 import { Pressable, View } from 'react-native';
+import { Check, MessageSquare } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { repsColor } from '../lib/reps-color';
@@ -54,7 +55,7 @@ export function SetRow({
     : 'bg-background-surface';
 
   const sideLabel = side === 'left' ? 'G' : side === 'right' ? 'D' : null;
-  const sideColor = side === 'left' ? '#60a5fa' : '#f97316';
+  const sideColor = side === 'left' ? colors.statusInfo : colors.statusWarning;
 
   const col1Display = isLogged
     ? (() => {
@@ -180,7 +181,7 @@ export function SetRow({
   const rowContent = (
     <View className={`flex-row items-center rounded-card px-4 py-3 ${rowBg}`}>
       <View className="w-8 items-center">
-        <AppText className="text-status-success text-body font-semibold">✓</AppText>
+        <Check size={18} color={colors.statusSuccess} strokeWidth={3} />
       </View>
 
       <View className="flex-1 items-center">
@@ -216,9 +217,11 @@ export function SetRow({
         testID={`set-note-button-${testIdSuffix}`}
         hitSlop={4}
       >
-        <AppText style={{ fontSize: 18, color: hasNote ? colors.accent : colors.contentMuted }}>
-          {hasNote ? '💬' : '○'}
-        </AppText>
+        <MessageSquare
+          size={18}
+          color={hasNote ? colors.accent : colors.contentMuted}
+          fill={hasNote ? colors.accent : 'transparent'}
+        />
       </Pressable>
     </View>
   );

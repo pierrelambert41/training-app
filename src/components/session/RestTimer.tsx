@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Audio } from 'expo-av';
 import { useSessionStore } from '@/stores/session-store';
+import { colors } from '@/theme/tokens';
 import { AppText } from '@/components/ui';
 
 const REST_TIMER_READY_DISPLAY_MS = 5000;
@@ -14,9 +15,9 @@ function formatMmSs(totalSeconds: number): string {
 }
 
 function timerColor(remainingSeconds: number): string {
-  if (remainingSeconds > 30) return '#3b82f6';
-  if (remainingSeconds > 10) return '#f97316';
-  return '#ef4444';
+  if (remainingSeconds > 30) return colors.statusInfo;
+  if (remainingSeconds > 10) return colors.statusWarning;
+  return colors.statusDanger;
 }
 
 async function playShortBeep(): Promise<void> {

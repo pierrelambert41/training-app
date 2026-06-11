@@ -46,18 +46,18 @@ export function StepExerciseMapping({
         </Text>
 
         {unmappedCount > 0 ? (
-          <View className="bg-red-950 border border-red-800 rounded-card px-3 py-2 flex-row items-center gap-2">
-            <Text className="text-base">⚠️</Text>
-            <Text className="text-caption text-red-400 flex-1">
+          <View className="bg-status-danger/10 border border-status-danger/40 rounded-card px-3 py-2 flex-row items-center gap-2">
+            <Text className="text-base text-status-danger">⚠</Text>
+            <Text className="text-caption text-status-danger flex-1">
               {unmappedCount} exercice{unmappedCount > 1 ? 's' : ''} non mappé{unmappedCount > 1 ? 's' : ''} — mappez-les ou ignorez-les pour continuer.
             </Text>
           </View>
         ) : null}
 
         {warnings > 0 ? (
-          <View className="bg-yellow-950 border border-yellow-800 rounded-card px-3 py-2 flex-row items-center gap-2">
-            <Text className="text-base">ℹ️</Text>
-            <Text className="text-caption text-yellow-400 flex-1">
+          <View className="bg-status-warning/10 border border-status-warning/40 rounded-card px-3 py-2 flex-row items-center gap-2">
+            <Text className="text-base text-status-warning">ℹ</Text>
+            <Text className="text-caption text-status-warning flex-1">
               {warnings} avertissement{warnings > 1 ? 's' : ''} dans le fichier (non bloquant{warnings > 1 ? 's' : ''}).
             </Text>
           </View>

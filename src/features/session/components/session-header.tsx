@@ -1,4 +1,5 @@
 import { Pressable, View } from 'react-native';
+import { NotebookPen, Plus } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 
@@ -41,11 +42,10 @@ export function SessionHeader({
           accessibilityRole="button"
           testID="session-notes-button"
         >
-          <AppText
-            style={{ fontSize: 18, color: hasSessionNotes ? colors.accent : colors.contentMuted }}
-          >
-            {'📝'}
-          </AppText>
+          <NotebookPen
+            size={20}
+            color={hasSessionNotes ? colors.accent : colors.contentMuted}
+          />
         </Pressable>
         <Pressable
           onPress={onAddExercise}
@@ -54,9 +54,7 @@ export function SessionHeader({
           accessibilityRole="button"
           testID="add-exercise-button"
         >
-          <AppText className="text-heading font-bold text-accent" style={{ fontSize: 24, lineHeight: 28 }}>
-            +
-          </AppText>
+          <Plus size={24} color={colors.accent} strokeWidth={2.4} />
         </Pressable>
       </View>
     </View>

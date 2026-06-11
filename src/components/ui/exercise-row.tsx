@@ -1,5 +1,7 @@
 import { TouchableOpacity, View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import type { Exercise } from '@/types';
+import { colors } from '@/theme/tokens';
 import { AppText } from './text';
 
 type Props = {
@@ -26,9 +28,9 @@ export function ExerciseRow({ exercise, onPress }: Props) {
           </AppText>
         ) : null}
       </View>
-      <AppText variant="caption" muted className="ml-3">
-        ›
-      </AppText>
+      <View className="ml-3">
+        <ChevronRight size={18} color={colors.contentMuted} />
+      </View>
     </TouchableOpacity>
   );
 }

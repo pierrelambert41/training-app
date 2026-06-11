@@ -7,6 +7,9 @@ export default function ProgramIdLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.background },
         headerTintColor: colors.contentPrimary,
+        headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
+        headerTitleStyle: { fontWeight: '600' },
         contentStyle: { backgroundColor: colors.background },
       }}
     >

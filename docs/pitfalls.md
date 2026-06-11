@@ -180,6 +180,13 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### NAV-03 — Dossier avec `_layout.tsx` imbriqué non déclaré dans le Stack parent → double top bar
+**Symptôme** : un sous-dossier de routes possédant son propre `<Stack>` (ex : `app/(app)/programs/`) mais non déclaré dans le Stack parent reçoit le header par défaut du parent **en plus** du header de son Stack imbriqué → deux top bars, chacune avec son bouton retour.
+**Fix** : déclarer `<Stack.Screen name="programs" options={{ headerShown: false }} />` dans le layout parent pour chaque sous-dossier qui gère ses propres headers. Variante du NAV-01 : NAV-01 concerne un écran feuille (header fantôme), NAV-03 un groupe avec layout (header dupliqué).
+**Détecté** : TA-156 / 2026-06-11
+
+---
+
 ---
 
 ### QUERY-01 — Invalidation `today-workout` manquante après complétion de séance
