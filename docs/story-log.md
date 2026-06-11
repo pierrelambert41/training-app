@@ -6,6 +6,31 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-144 — ClaudeProvider.regenerateBlock — prompt continuité inter-blocs
+
+**Livré** : la régénération IA du bloc suivant (ADR-028). `ClaudeProvider.regenerateBlock(context, catalogSnapshot, validationCtx)` réutilise le cycle `generateValidated` de TA-142 (validation TA-143 + 1 retry feedback) avec `buildRegenerateBlockPrompt` (TA-147, continuité 60-80%). `regenerateBlockWithAI(db, previousBlockId, userId, reason, supabase)` orchestre de bout en bout, ne persiste rien.
+
+**Fichiers créés** :
+- `src/features/ai/domain/compute-block-stats.ts` — `computeBlockStats` (pur) : compliance globale (sessions complétées/total) et par exercice (sets complétés/loggés), tendance e1RM par exercice (moyenne 1ère vs 2nde moitié du bloc, seuil ±2.5%, plateau si ≥ 4 séances plates), top 3 PR formatés pour le prompt. SetLogs chargés par le service (`BlockStatsSetLog`).
+- `src/features/ai/api/regenerate-block-service.ts` — charge bloc précédent + SetLogs (JOIN sessions) + compteurs + fatigue moyenne (try/catch si colonne absente), calcule les stats, appelle le provider, transforme via `transformAIOutputToBlock`. Le bloc retourné est **'planned'** (le bloc actif n'est jamais remplacé, TA-146), `weekNumber` en continuité (weekNumber + durationWeeks du précédent), goal hérité (ou `profile.user.goals.primary` si `goal_change` et valide).
+- Tests : `compute-block-stats.test.ts` (5), `regenerate-block-service.test.ts` (4 — nominal avec ≥ 60% communs, stats dans le prompt, validation exhaustée, bloc introuvable).
+
+**Fichiers modifiés** :
+- `claude-provider.ts` — méthode `regenerateBlock` (jamais enqueuée dans la queue TA-141 : retry piloté utilisateur TA-146).
+- `transform-ai-output.ts` — `transformAIOutputToBlock` (variante Block du transformer partagé : rattache au programme existant, pas de nouveau Program) ; `transformDay` découplé de TransformInput (réutilisable).
+
+**Décisions clés** :
+- Post-onboarding il n'y a plus de questionnaire : le `ValidationContext` du regenerate est plus permissif (équipement = union du catalogue, pas de morphoTags interdits) — les règles dures (catalogue fermé, progressions, split×fréquence, day count) restent entières ; les contraintes fines passent par le prompt (profil).
+- `daysPerWeek` dérivé du COUNT de workout_days du bloc précédent.
+
+**Ouvre** : TA-145 (FallbackProvider.regenerateBlock + interface AIProvider), TA-146 (déclenchement UX).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-142 — ClaudeProvider.generateProgram (prompt, schéma JSON, transport ai-proxy)
 
 **Livré** : la génération initiale de programme par IA, de bout en bout (ADR-028). `ClaudeProvider.generateProgram(context, catalogSnapshot, validationCtx)` → schéma intermédiaire validé ; `transformAIOutputToProgram` (domain, pur) → structure interne complète ; `generateProgramWithAI(db, userId, questionnaire, supabase)` (service orchestrateur, ne persiste rien — ADR-013).
