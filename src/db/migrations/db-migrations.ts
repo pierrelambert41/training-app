@@ -423,4 +423,26 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_recovery_logs_user_date ON recovery_logs(user_id, date);
     `,
   },
+  // TA-153 — Suivi du poids du corps (dashboard Phase 8). Sous-ensemble utile
+  // de la table Supabase body_metrics (déployée — vérifié) : les mensurations
+  // (chest/waist/…) et photo_urls restent hors scope MVP, l'upsert remote
+  // partiel les laisse à NULL. UNIQUE(user_id, date) : une pesée par jour,
+  // l'upsert du service réutilise l'id existant (même pattern que
+  // recovery_logs v14). Pas d'updated_at : absent du schéma Supabase.
+  {
+    version: 15,
+    sql: `
+      CREATE TABLE IF NOT EXISTS body_metrics (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        weight_kg REAL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE (user_id, date)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_body_metrics_user_date ON body_metrics(user_id, date);
+    `,
+  },
 ];

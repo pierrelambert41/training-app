@@ -3,8 +3,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText, Card } from '@/components/ui';
 import { useE1rmHistory } from '../hooks/use-e1rm-history';
 import { useWeeklyVolume } from '../hooks/use-weekly-volume';
+import { useBodyWeight } from '../hooks/use-body-weight';
 import { E1rmCard } from './e1rm-card';
 import { VolumeCard } from './volume-card';
+import { BodyWeightCard } from './body-weight-card';
 
 type PlaceholderProps = {
   title: string;
@@ -32,6 +34,7 @@ function PlaceholderCard({ title, description, testID }: PlaceholderProps) {
 export function ProgressScreen() {
   const e1rm = useE1rmHistory();
   const volume = useWeeklyVolume();
+  const bodyWeight = useBodyWeight();
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -60,10 +63,10 @@ export function ProgressScreen() {
           onPreviousWeek={volume.goToPreviousWeek}
           onNextWeek={volume.goToNextWeek}
         />
-        <PlaceholderCard
-          title="Poids du corps"
-          description="Saisie et courbe de progression — bientôt disponible"
-          testID="placeholder-bodyweight"
+        <BodyWeightCard
+          metrics={bodyWeight.metrics}
+          onSaveWeight={bodyWeight.saveWeight}
+          isSaving={bodyWeight.isSaving}
         />
         <PlaceholderCard
           title="Fatigue"

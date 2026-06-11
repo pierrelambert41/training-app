@@ -6,6 +6,22 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-153 — Dashboard : progression du poids du corps (saisie + courbe)
+
+**Livré** : carte « Poids du corps » sur Progrès — saisie rapide de la pesée du jour (input décimal FR/EN « 82,5 »/« 82.5 », validation 30-300 kg) + dernière valeur + courbe 90 jours. Migration SQLite v15 `body_metrics` (sous-ensemble MVP du schéma Supabase : id, user_id, date, weight_kg, notes, created_at, `UNIQUE(user_id, date)`), table ajoutée à `SyncTableName` (hors conflict-check, même raison que recovery_logs).
+
+**Fichiers créés** : `src/types/body-metric.ts`, `src/services/body-metrics.ts` (+ test — upsert idempotent par date réutilisant id/created_at, payload SYNC-03 clean), `src/features/dashboard/hooks/use-body-weight.ts`, `components/body-weight-card.tsx` (+ test, `parseWeightInput` exporté et testé).
+
+**Fichiers modifiés** : `db-migrations.ts` (v15), `sync-queue.ts` (body_metrics), `progress-screen.tsx` (placeholder poids → `BodyWeightCard`), test écran.
+
+**Note** : l'upsert remote est partiel — les mensurations (chest/waist/…) et photo_urls restent NULL côté Supabase, hors scope MVP.
+
+**S'appuie sur** : TA-150 (LineChart), pattern upsert par date de TA-148.
+
+**Ouvre** : TA-154 (fatigue + compliance — derniers placeholders), saisie des mensurations (post-MVP).
+
+---
+
 ## TA-152 — Dashboard : volume hebdomadaire par groupe musculaire
 
 **Livré** : carte « Volume par muscle » sur l'écran Progrès — séries complétées par groupe musculaire pour la semaine sélectionnée (lundi→dimanche, convention WeekCalendar), navigation semaine précédente/suivante (futur verrouillé). **Comptage agoniste** : un set compte pour chaque muscle de `primary_muscles` (cohérent avec le moteur de génération TA-95/96). Comptages bruts uniquement, aucun seuil MEV/MAV/MRV non sourcé (evidence-only).

@@ -23,17 +23,26 @@ jest.mock('@/features/dashboard/hooks/use-weekly-volume', () => ({
   })),
 }));
 
+jest.mock('@/features/dashboard/hooks/use-body-weight', () => ({
+  useBodyWeight: jest.fn(() => ({
+    metrics: [],
+    isLoading: false,
+    saveWeight: jest.fn(),
+    isSaving: false,
+  })),
+}));
+
 describe('ProgressScreen', () => {
   it('affiche le titre Progrès', () => {
     render(<ProgressRoute />);
     expect(screen.getByText('Progrès')).toBeTruthy();
   });
 
-  it('affiche les cartes e1RM et volume, et les placeholders restants', () => {
+  it('affiche les cartes e1RM, volume et poids, et les placeholders restants', () => {
     render(<ProgressRoute />);
     expect(screen.getByTestId('e1rm-card')).toBeTruthy();
     expect(screen.getByTestId('volume-card')).toBeTruthy();
-    expect(screen.getByTestId('placeholder-bodyweight')).toBeTruthy();
+    expect(screen.getByTestId('body-weight-card')).toBeTruthy();
     expect(screen.getByTestId('placeholder-fatigue')).toBeTruthy();
     expect(screen.getByTestId('placeholder-compliance')).toBeTruthy();
   });
