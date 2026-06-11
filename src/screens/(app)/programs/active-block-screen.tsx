@@ -1,12 +1,13 @@
 import { View, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { CalendarX2, Check, ChevronRight, Play, Target } from 'lucide-react-native';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { AISummaryCard, FallbackUpgradeBanner, useStoredBlockSummary } from '@/features/ai';
 import { useAuthStore } from '@/features/auth';
 import { useWeekProgress } from '@/hooks/use-week-progress';
-import { Button, AppText, EmptyState, WeekCalendar } from '@/components/ui';
+import { Button, AppText, Chip, EmptyState, SectionHeader, WeekCalendar } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { WorkoutDay } from '@/types/workout-day';
 
@@ -29,12 +30,12 @@ const GOAL_LABELS: Record<string, string> = {
 function WeekProgressBar({ done, total }: { done: number; total: number }) {
   const pct = total === 0 ? 0 : Math.min(done / total, 1);
   return (
-    <View className="gap-1">
+    <View className="gap-2">
       <View className="flex-row justify-between">
-        <AppText variant="caption">
+        <AppText variant="caption" muted>
           Séances cette semaine
         </AppText>
-        <AppText variant="caption" className="text-content-primary font-semibold">
+        <AppText variant="caption" className="text-content-primary font-bold">
           {done} / {total}
         </AppText>
       </View>
@@ -48,10 +49,28 @@ function WeekProgressBar({ done, total }: { done: number; total: number }) {
   );
 }
 
+/** Indicateur de progression du bloc : un segment par semaine. */
+function WeekSegments({ current, total }: { current: number; total: number }) {
+  return (
+    <View className="flex-row gap-1.5">
+      {Array.from({ length: total }, (_, i) => {
+        const week = i + 1;
+        const cls =
+          week < current
+            ? 'bg-accent/40'
+            : week === current
+              ? 'bg-accent'
+              : 'bg-background-elevated';
+        return <View key={week} className={`flex-1 h-1.5 rounded-chip ${cls}`} />;
+      })}
+    </View>
+  );
+}
+
 function DeloadBadge() {
   return (
-    <View className="self-start bg-status-warning/20 border border-status-warning/40 rounded-chip px-3 py-1">
-      <AppText variant="caption" className="text-status-warning font-semibold">
+    <View className="self-start bg-status-warning/15 rounded-chip px-3 py-1">
+      <AppText variant="caption" className="text-status-warning font-bold">
         DELOAD
       </AppText>
     </View>
@@ -67,20 +86,21 @@ function dayStatus(day: WorkoutDay, sessionCount: number): DayStatus {
 
 type WorkoutDayRowProps = {
   day: WorkoutDay;
+  dayIndex: number;
   sessionCount: number;
   onPress: (day: WorkoutDay) => void;
 };
 
-function WorkoutDayRow({ day, sessionCount, onPress }: WorkoutDayRowProps) {
+function WorkoutDayRow({ day, dayIndex, sessionCount, onPress }: WorkoutDayRowProps) {
   const status = dayStatus(day, sessionCount);
 
   return (
     <Pressable
       onPress={() => onPress(day)}
-      className="flex-row items-center gap-3 py-3 px-4 bg-background-surface border border-border rounded-card active:opacity-70"
-      style={{ minHeight: 72 }}
+      className="flex-row items-center gap-3 py-3 px-4 bg-background-surface rounded-card active:opacity-70"
+      style={{ minHeight: 72, borderCurve: 'continuous' }}
     >
-      <StatusIcon status={status} />
+      <StatusIcon status={status} dayIndex={dayIndex} />
 
       <View className="flex-1 gap-0.5">
         <AppText variant="body" className="font-semibold">
@@ -88,7 +108,7 @@ function WorkoutDayRow({ day, sessionCount, onPress }: WorkoutDayRowProps) {
         </AppText>
         <View className="flex-row items-center gap-2">
           {day.splitType && (
-            <AppText variant="caption">
+            <AppText variant="caption" muted>
               {SPLIT_LABELS[day.splitType] ?? day.splitType}
             </AppText>
           )}
@@ -97,7 +117,7 @@ function WorkoutDayRow({ day, sessionCount, onPress }: WorkoutDayRowProps) {
               {day.splitType && (
                 <AppText variant="caption" muted>·</AppText>
               )}
-              <AppText variant="caption">
+              <AppText variant="caption" muted>
                 ~{day.estimatedDurationMin} min
               </AppText>
             </>
@@ -105,24 +125,28 @@ function WorkoutDayRow({ day, sessionCount, onPress }: WorkoutDayRowProps) {
         </View>
       </View>
 
-      {status === 'scheduled' && (
-        <AppText variant="body" className="text-content-secondary">›</AppText>
+      {status === 'done' ? (
+        <AppText variant="caption" className="text-status-success font-semibold">
+          Fait
+        </AppText>
+      ) : (
+        <ChevronRight size={18} color={colors.contentMuted} />
       )}
     </Pressable>
   );
 }
 
-function StatusIcon({ status }: { status: DayStatus }) {
+function StatusIcon({ status, dayIndex }: { status: DayStatus; dayIndex: number }) {
   if (status === 'done') {
     return (
-      <View className="w-8 h-8 rounded-full bg-status-success/20 items-center justify-center">
-        <AppText className="text-label text-status-success font-bold">✓</AppText>
+      <View className="w-10 h-10 rounded-full bg-status-success/15 items-center justify-center">
+        <Check size={18} color={colors.statusSuccess} strokeWidth={2.6} />
       </View>
     );
   }
   return (
-    <View className="w-8 h-8 rounded-full bg-background-elevated border border-border-strong items-center justify-center">
-      <AppText variant="caption">○</AppText>
+    <View className="w-10 h-10 rounded-full bg-background-elevated items-center justify-center">
+      <AppText className="text-label font-bold text-content-secondary">{dayIndex + 1}</AppText>
     </View>
   );
 }
@@ -147,28 +171,30 @@ function BlockHeader({
   totalDays,
 }: BlockHeaderProps) {
   return (
-    <View className="gap-4 px-4 pt-4 pb-5 bg-background-surface border-b border-border">
+    <View className="gap-4 px-4 pt-5 pb-2">
       <View className="gap-2">
-        <View className="flex-row items-start justify-between gap-2">
-          <View className="flex-1 gap-0.5">
-            <AppText variant="heading" className="font-semibold">
-              {title}
-            </AppText>
-            <AppText className="text-label text-content-secondary">
-              {GOAL_LABELS[goal] ?? goal}
-            </AppText>
-          </View>
-          <View className="items-end gap-1">
-            <AppText className="text-display text-accent font-bold leading-none">
-              {weekNumber}
-            </AppText>
-            <AppText variant="caption" muted>
-              / {durationWeeks} sem.
-            </AppText>
-          </View>
+        <View className="flex-row items-center gap-2">
+          <Chip label={GOAL_LABELS[goal] ?? goal} icon={Target} />
+          {isDeload && <DeloadBadge />}
         </View>
-        {isDeload && <DeloadBadge />}
+        <AppText
+          className="text-content-primary font-bold"
+          style={{ fontSize: 27, lineHeight: 32, letterSpacing: -0.5 }}
+        >
+          {title}
+        </AppText>
       </View>
+
+      <View className="gap-2">
+        <View className="flex-row justify-between">
+          <AppText variant="caption" muted>Progression du bloc</AppText>
+          <AppText variant="caption" className="text-content-primary font-bold">
+            Semaine {weekNumber} / {durationWeeks}
+          </AppText>
+        </View>
+        <WeekSegments current={weekNumber} total={durationWeeks} />
+      </View>
+
       <WeekProgressBar done={daysDone} total={totalDays} />
     </View>
   );
@@ -311,29 +337,27 @@ export default function ActiveBlockScreen() {
         />
 
         {blockSummary ? (
-          <View className="px-4 pt-5 gap-3">
-            <AppText variant="caption" muted>
-              BILAN DU BLOC
-            </AppText>
+          <View className="px-4 pt-6 gap-3">
+            <SectionHeader title="Bilan du bloc" />
             <AISummaryCard type="block" summary={blockSummary} />
           </View>
         ) : null}
 
-        <View className="px-4 pt-5 gap-3">
-          <AppText variant="caption" muted>
-            JOURS D'ENTRAÎNEMENT
-          </AppText>
+        <View className="px-4 pt-6 gap-3">
+          <SectionHeader title="Jours d'entraînement" />
 
           {workoutDays.length === 0 ? (
             <EmptyState
+              icon={CalendarX2}
               title="Aucun jour configuré"
               description="Ce bloc ne contient pas encore de jours d'entraînement."
             />
           ) : (
-            workoutDays.map((day) => (
+            workoutDays.map((day, index) => (
               <WorkoutDayRow
                 key={day.id}
                 day={day}
+                dayIndex={index}
                 sessionCount={sessionCountsByDayId[day.id] ?? 0}
                 onPress={handleDayPress}
               />
@@ -342,13 +366,14 @@ export default function ActiveBlockScreen() {
         </View>
       </ScrollView>
 
-      <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-4 bg-background border-t border-border gap-3">
+      <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-4 bg-background gap-3">
         <Button
           label={
             todayDay
               ? `Démarrer — ${todayDay.title}`
               : 'Toutes les séances complétées'
           }
+          icon={todayDay ? Play : undefined}
           onPress={handleStartSession}
           size="lg"
           disabled={!todayDay}

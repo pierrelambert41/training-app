@@ -1,6 +1,7 @@
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Play } from 'lucide-react-native';
 import { useAuthStore } from '@/features/auth';
 import {
   AISummaryCard,
@@ -15,15 +16,14 @@ import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveSession } from '@/hooks/use-active-session';
 import { useTodayWorkout } from '@/hooks/use-today-workout';
 import { useSessionStore } from '@/stores/session-store';
-import { AppText, Button } from '@/components/ui';
+import { AppText, Button, Card, SectionHeader } from '@/components/ui';
 import { useTodayRecommendations } from '../hooks/use-today-recommendations';
 import { useDailyCheckin } from '../hooks/use-daily-checkin';
 import { DailyCheckinCard } from './daily-checkin-card';
 import { WorkoutCard } from './workout-card';
-import { FatigueCard } from './fatigue-card';
 import { PlateauCard } from './plateau-card';
 import { DeloadCard } from './deload-card';
-import { MiniSummary } from './mini-summary';
+import { TodayStatsRow } from './today-stats-row';
 import { RestDayCard } from './rest-day-card';
 import { NoProgramCard } from './no-program-card';
 import { CompletedTodayCard } from './completed-today-card';
@@ -76,7 +76,6 @@ export function TodayScreen() {
   const inProgressFromStore = session?.status === 'in_progress';
 
   const fatigueScore = recommendations?.fatigueScore ?? null;
-  const showFatigueCard = fatigueScore !== null && fatigueScore >= 4;
   const plateauCount = recommendations?.plateauRecommendations.length ?? 0;
   const deloadRec = recommendations?.deloadRecommendation ?? null;
 
@@ -97,6 +96,8 @@ export function TodayScreen() {
         : todayData?.state === 'completed_today'
           ? todayData.data.streak
           : 0;
+
+  const hasProgram = todayData && todayData.state !== 'no_program';
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -128,75 +129,72 @@ export function TodayScreen() {
         <DeloadCard message={deloadRec.message} />
       ) : null}
 
-      {!dailyCheckin.isLoading ? (
-        <DailyCheckinCard
-          todayLog={dailyCheckin.todayLog}
-          onSave={dailyCheckin.save}
-          isSaving={dailyCheckin.isSaving}
+      {inProgressFromStore &&
+      (todayData?.state === 'rest_day' ||
+        todayData?.state === 'no_program' ||
+        !todayData) ? (
+        <Card elevation="elevated" className="gap-3">
+          <AppText variant="body" className="text-content-secondary">
+            Une séance est en cours
+          </AppText>
+          <Button
+            label="Reprendre la séance"
+            icon={Play}
+            onPress={handleResumeSession}
+            variant="primary"
+            size="lg"
+            testID="resume-session-button"
+          />
+        </Card>
+      ) : null}
+
+      {isProgramLoading ? (
+        <View className="items-center py-8">
+          <ActivityIndicator color={colors.contentPrimary} />
+        </View>
+      ) : !todayData || todayData.state === 'no_program' ? (
+        <NoProgramCard onGenerate={handleGenerateProgram} />
+      ) : todayData.state === 'rest_day' ? (
+        <RestDayCard onViewProgram={handleViewProgram} />
+      ) : todayData.state === 'completed_today' ? (
+        <CompletedTodayCard data={todayData.data} />
+      ) : todayData.state === 'workout' || todayData.state === 'in_progress' ? (
+        <WorkoutCard
+          data={todayData.data}
+          recommendations={recommendations ?? null}
+          onStart={handleStartSession}
+          onResume={handleResumeSession}
+          isInProgress={inProgressFromStore || todayData.state === 'in_progress'}
         />
       ) : null}
 
-      <View className="gap-3">
-        <AppText variant="caption" muted>SEANCE DU JOUR</AppText>
-
-        {inProgressFromStore &&
-        (todayData?.state === 'rest_day' ||
-          todayData?.state === 'no_program' ||
-          !todayData) ? (
-          <View className="bg-background-elevated rounded-card p-4 gap-3 border border-border-strong">
-            <AppText variant="body" className="text-content-secondary">
-              Une seance est en cours
-            </AppText>
-            <Button
-              label="Reprendre la seance en cours"
-              onPress={handleResumeSession}
-              variant="primary"
-              size="lg"
-              testID="resume-session-button"
-            />
-          </View>
-        ) : null}
-
-        {isProgramLoading ? (
-          <View className="items-center py-8">
-            <ActivityIndicator color={colors.contentPrimary} />
-          </View>
-        ) : !todayData || todayData.state === 'no_program' ? (
-          <NoProgramCard onGenerate={handleGenerateProgram} />
-        ) : todayData.state === 'rest_day' ? (
-          <RestDayCard onViewProgram={handleViewProgram} />
-        ) : todayData.state === 'completed_today' ? (
-          <CompletedTodayCard data={todayData.data} />
-        ) : todayData.state === 'workout' || todayData.state === 'in_progress' ? (
-          <WorkoutCard
-            data={todayData.data}
-            recommendations={recommendations ?? null}
-            onStart={handleStartSession}
-            onResume={handleResumeSession}
-            isInProgress={inProgressFromStore || todayData.state === 'in_progress'}
-          />
-        ) : null}
-      </View>
-
-      {showFatigueCard ? (
-        <FatigueCard fatigueScore={fatigueScore!} />
+      {hasProgram ? (
+        <TodayStatsRow
+          streak={streak}
+          fatigueScore={fatigueScore}
+          lastSession={lastSession}
+        />
       ) : null}
 
       {plateauCount > 0 ? (
         <PlateauCard count={plateauCount} />
       ) : null}
 
+      <View className="gap-3">
+        <SectionHeader title="Check-in du jour" />
+        {!dailyCheckin.isLoading ? (
+          <DailyCheckinCard
+            todayLog={dailyCheckin.todayLog}
+            onSave={dailyCheckin.save}
+            isSaving={dailyCheckin.isSaving}
+          />
+        ) : null}
+      </View>
+
       {latestAISummary ? (
         <View className="gap-3">
-          <AppText variant="caption" muted>DERNIÈRE SÉANCE</AppText>
+          <SectionHeader title="Dernière séance" />
           <AISummaryCard type="session" summary={latestAISummary.summary} />
-        </View>
-      ) : null}
-
-      {todayData && todayData.state !== 'no_program' ? (
-        <View className="gap-3">
-          <AppText variant="caption" muted>PROGRESSION</AppText>
-          <MiniSummary lastSession={lastSession} streak={streak} />
         </View>
       ) : null}
 

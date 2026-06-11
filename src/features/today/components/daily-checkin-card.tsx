@@ -22,6 +22,17 @@ type ScaleRowProps = {
   testID: string;
 };
 
+function CheckinValue({ label, value }: { label: string; value: number | null }) {
+  return (
+    <View className="flex-1 items-center gap-0.5 bg-background-elevated rounded-card py-3">
+      <AppText className="text-content-primary font-bold" style={{ fontSize: 20, lineHeight: 24 }}>
+        {value ?? '–'}
+      </AppText>
+      <AppText variant="caption" muted>{label}</AppText>
+    </View>
+  );
+}
+
 function ScaleRow({ label, value, onChange, testID }: ScaleRowProps) {
   return (
     <View className="gap-1">
@@ -79,47 +90,36 @@ export function DailyCheckinCard({ todayLog, onSave, isSaving }: Props) {
 
   if (!showForm) {
     return (
-      <Card elevation="default" testID="daily-checkin-summary">
-        <View className="flex-row items-center justify-between">
-          <View className="gap-1">
-            <AppText variant="caption" muted>
-              Check-in du jour
-            </AppText>
-            <AppText variant="body" className="font-semibold">
-              Sommeil {todayLog.sleepQuality ?? '–'} · Énergie {todayLog.energy ?? '–'} ·
-              Courbatures {todayLog.soreness ?? '–'}
-            </AppText>
-            {todayLog.notes ? (
-              <AppText variant="caption" muted numberOfLines={2}>
-                {todayLog.notes}
-              </AppText>
-            ) : null}
-          </View>
-          <Pressable
-            onPress={handleEdit}
-            className="h-tap items-center justify-center px-3"
-            accessibilityLabel="Modifier le check-in du jour"
-            testID="daily-checkin-edit"
-          >
-            <AppText variant="caption" className="text-accent font-semibold">
-              Modifier
-            </AppText>
-          </Pressable>
+      <Card elevation="default" className="gap-3" testID="daily-checkin-summary">
+        <View className="flex-row gap-3">
+          <CheckinValue label="Sommeil" value={todayLog.sleepQuality} />
+          <CheckinValue label="Énergie" value={todayLog.energy} />
+          <CheckinValue label="Courbatures" value={todayLog.soreness} />
         </View>
+        {todayLog.notes ? (
+          <AppText variant="caption" muted numberOfLines={2}>
+            {todayLog.notes}
+          </AppText>
+        ) : null}
+        <Pressable
+          onPress={handleEdit}
+          className="h-tap items-center justify-center self-start active:opacity-70"
+          accessibilityLabel="Modifier le check-in du jour"
+          testID="daily-checkin-edit"
+        >
+          <AppText variant="caption" className="text-accent font-semibold">
+            Modifier
+          </AppText>
+        </Pressable>
       </Card>
     );
   }
 
   return (
     <Card elevation="default" className="gap-4" testID="daily-checkin-form">
-      <View className="gap-1">
-        <AppText variant="body" className="font-semibold">
-          Check-in du jour
-        </AppText>
-        <AppText variant="caption" muted>
-          Comment tu te sens aujourd'hui ? (10 secondes)
-        </AppText>
-      </View>
+      <AppText variant="caption" muted>
+        Comment tu te sens aujourd'hui ? (10 secondes)
+      </AppText>
 
       <ScaleRow
         label="Sommeil"

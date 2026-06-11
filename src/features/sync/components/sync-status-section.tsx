@@ -47,7 +47,7 @@ export function SyncStatusSection() {
   return (
     <View
       testID="sync-status-section"
-      className="bg-background-surface border border-border rounded-card p-4 gap-3"
+      className="bg-background-surface rounded-card p-4 gap-3"
     >
       <View className="flex-row items-center justify-between">
         <Text className="text-label text-content-primary font-semibold">Synchronisation</Text>
@@ -74,7 +74,7 @@ export function SyncStatusSection() {
         testID="sync-manual-button"
         onPress={() => triggerPush()}
         disabled={isButtonDisabled}
-        className="bg-background-elevated border border-border rounded-button h-tap items-center justify-center disabled:opacity-40"
+        className="bg-background-elevated rounded-button h-tap items-center justify-center disabled:opacity-40"
       >
         {isSyncing ? (
           <ActivityIndicator size="small" color={colors.contentSecondary} />

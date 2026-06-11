@@ -29,10 +29,10 @@ export function ProgressScreen() {
         testID="progress-screen"
       >
         <View className="mt-4 gap-1">
-          <AppText variant="heading">Progrès</AppText>
-          <AppText variant="body" muted>
+          <AppText variant="caption" muted className="uppercase tracking-widest">
             Ta progression en un coup d'œil
           </AppText>
+          <AppText className="text-display text-content-primary">Progrès</AppText>
         </View>
 
         <E1rmCard

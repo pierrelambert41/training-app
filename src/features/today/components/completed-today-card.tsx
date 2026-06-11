@@ -1,5 +1,7 @@
 import { View } from 'react-native';
+import { Check, Clock, Target } from 'lucide-react-native';
 import { Card, AppText } from '@/components/ui';
+import { colors } from '@/theme/tokens';
 import type { CompletedTodayData } from '@/features/today/types/completed-today-data';
 
 type Props = {
@@ -25,29 +27,35 @@ export function CompletedTodayCard({ data }: Props) {
   const score = formatScore(completedSession.completionScore);
 
   return (
-    <Card elevation="elevated" className="gap-3 border border-status-success">
-      <View className="flex-row items-center justify-between gap-2">
-        <View className="flex-1 gap-1">
-          <AppText variant="heading">{workoutDay.title}</AppText>
-          <AppText variant="caption" className="text-status-success">
-            Séance du jour — Terminée
-          </AppText>
+    <Card elevation="elevated" className="gap-4">
+      <View className="flex-row items-center gap-3">
+        <View className="items-center justify-center w-11 h-11 rounded-full bg-status-success/15">
+          <Check size={22} color={colors.statusSuccess} strokeWidth={2.6} />
         </View>
-        <View className="items-center justify-center w-10 h-10 rounded-full bg-status-success/20">
-          <AppText variant="body" className="text-status-success">✓</AppText>
+        <View className="flex-1 gap-0.5">
+          <AppText variant="caption" className="text-status-success font-bold uppercase" style={{ letterSpacing: 1.2 }}>
+            Séance terminée
+          </AppText>
+          <AppText variant="heading">{workoutDay.title}</AppText>
         </View>
       </View>
 
-      <View className="flex-row gap-4">
+      <View className="flex-row gap-3">
         {duration ? (
-          <View className="gap-0.5">
-            <AppText variant="caption" muted>Durée</AppText>
-            <AppText variant="body" className="font-semibold">{duration}</AppText>
+          <View className="flex-1 flex-row items-center gap-2 bg-background/60 rounded-card px-3 py-2.5">
+            <Clock size={15} color={colors.contentMuted} />
+            <View>
+              <AppText variant="body" className="font-bold">{duration}</AppText>
+              <AppText variant="caption" muted>durée</AppText>
+            </View>
           </View>
         ) : null}
-        <View className="gap-0.5">
-          <AppText variant="caption" muted>Complétion</AppText>
-          <AppText variant="body" className="font-semibold">{score}</AppText>
+        <View className="flex-1 flex-row items-center gap-2 bg-background/60 rounded-card px-3 py-2.5">
+          <Target size={15} color={colors.contentMuted} />
+          <View>
+            <AppText variant="body" className="font-bold">{score}</AppText>
+            <AppText variant="caption" muted>complétion</AppText>
+          </View>
         </View>
       </View>
     </Card>

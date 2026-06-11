@@ -59,9 +59,12 @@ describe('DailyCheckinCard', () => {
     );
     expect(getByTestId('daily-checkin-summary')).toBeTruthy();
     expect(queryByTestId('daily-checkin-form')).toBeNull();
-    expect(
-      getByText(/Sommeil 7 · Énergie 6 ·\s*Courbatures 3/)
-    ).toBeTruthy();
+    expect(getByText('Sommeil')).toBeTruthy();
+    expect(getByText('7')).toBeTruthy();
+    expect(getByText('Énergie')).toBeTruthy();
+    expect(getByText('6')).toBeTruthy();
+    expect(getByText('Courbatures')).toBeTruthy();
+    expect(getByText('3')).toBeTruthy();
     expect(getByText('note du matin')).toBeTruthy();
   });
 
