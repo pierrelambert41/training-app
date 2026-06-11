@@ -11,6 +11,22 @@ type ExerciseHeaderProps = {
   targetLoad: number | null;
 };
 
+function TargetStat({ value, unit }: { value: string; unit: string }) {
+  return (
+    <View className="flex-1 items-center gap-0.5 bg-background-surface rounded-card py-3">
+      <AppText
+        className="font-bold text-content-primary"
+        style={{ fontSize: 24, lineHeight: 28, letterSpacing: -0.3, fontVariant: ['tabular-nums'] }}
+      >
+        {value}
+      </AppText>
+      <AppText className="text-caption text-content-muted uppercase" style={{ letterSpacing: 0.8 }}>
+        {unit}
+      </AppText>
+    </View>
+  );
+}
+
 export function ExerciseHeader({
   name,
   primaryMuscles,
@@ -20,51 +36,39 @@ export function ExerciseHeader({
   targetRir,
   targetLoad,
 }: ExerciseHeaderProps) {
-  const musclesLabel = primaryMuscles.slice(0, 3).join(', ');
+  const musclesLabel = primaryMuscles.slice(0, 3).join(' · ');
 
   return (
-    <View className="gap-2 pb-4 border-b border-border">
-      <Pressable
-        onPress={() => console.warn('TODO TA-15: ouvrir fiche exercice en modal')}
-        accessibilityLabel={`Voir la fiche de ${name}`}
-        accessibilityRole="button"
-      >
-        <AppText
-          className="text-heading font-bold text-content-primary"
-          numberOfLines={2}
+    <View className="gap-3 pb-1">
+      <View className="gap-1">
+        <Pressable
+          onPress={() => console.warn('TODO TA-15: ouvrir fiche exercice en modal')}
+          accessibilityLabel={`Voir la fiche de ${name}`}
+          accessibilityRole="button"
         >
-          {name}
-        </AppText>
-      </Pressable>
-
-      {musclesLabel ? (
-        <AppText className="text-caption text-content-secondary uppercase tracking-wide">
-          {musclesLabel}
-        </AppText>
-      ) : null}
-
-      <View className="flex-row gap-4 mt-1">
-        <View className="flex-row items-baseline gap-1">
-          <AppText className="text-logger font-bold text-content-primary">
-            {targetLoad ?? '—'}
+          <AppText
+            className="font-bold text-content-primary"
+            style={{ fontSize: 25, lineHeight: 30, letterSpacing: -0.4 }}
+            numberOfLines={2}
+          >
+            {name}
           </AppText>
-          <AppText className="text-caption text-content-muted">kg</AppText>
-        </View>
+        </Pressable>
 
-        <View className="flex-row items-baseline gap-1">
-          <AppText className="text-logger font-bold text-content-primary">
-            {sets}×{repRangeMin}
-            {repRangeMin !== repRangeMax ? `–${repRangeMax}` : ''}
+        {musclesLabel ? (
+          <AppText className="text-caption text-content-muted uppercase" style={{ letterSpacing: 1 }}>
+            {musclesLabel}
           </AppText>
-        </View>
-
-        {targetRir !== null ? (
-          <View className="flex-row items-baseline gap-1">
-            <AppText className="text-body font-semibold text-accent">
-              RIR {targetRir}
-            </AppText>
-          </View>
         ) : null}
+      </View>
+
+      <View className="flex-row gap-2">
+        <TargetStat value={targetLoad !== null ? String(targetLoad) : '—'} unit="kg" />
+        <TargetStat
+          value={`${sets}×${repRangeMin}${repRangeMin !== repRangeMax ? `–${repRangeMax}` : ''}`}
+          unit="sets × reps"
+        />
+        {targetRir !== null ? <TargetStat value={String(targetRir)} unit="RIR cible" /> : null}
       </View>
     </View>
   );

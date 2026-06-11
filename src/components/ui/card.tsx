@@ -6,15 +6,17 @@ type Props = ViewProps & {
   elevation?: Elevation;
 };
 
+// Borderless : l'élévation passe par le contraste de fond, pas par une bordure.
 const elevationClasses: Record<Elevation, string> = {
-  default: 'bg-background-surface border border-border',
-  elevated: 'bg-background-elevated border border-border-strong',
+  default: 'bg-background-surface',
+  elevated: 'bg-background-elevated',
 };
 
-export function Card({ elevation = 'default', className = '', children, ...rest }: Props) {
+export function Card({ elevation = 'default', className = '', children, style, ...rest }: Props) {
   return (
     <View
-      className={`rounded-card p-4 ${elevationClasses[elevation]} ${className}`.trim()}
+      className={`rounded-card p-5 ${elevationClasses[elevation]} ${className}`.trim()}
+      style={[{ borderCurve: 'continuous' }, style]}
       {...rest}
     >
       {children}

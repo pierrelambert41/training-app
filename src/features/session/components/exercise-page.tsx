@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActionSheetIOS, Platform, Pressable, ScrollView, View } from 'react-native';
+import { CircleCheck } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
+import { colors } from '@/theme/tokens';
 import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useLastSetForExerciseSide } from '@/hooks/use-last-set-for-exercise-side';
 import { useSessionStore } from '@/stores/session-store';
@@ -201,8 +203,11 @@ export function ExercisePage({
       />
 
       {allSetsLogged ? (
-        <View className="bg-background-elevated rounded-card px-4 py-4 items-center gap-2">
-          <AppText className="text-status-success text-heading font-bold">
+        <View className="bg-status-success/10 rounded-card px-4 py-5 items-center gap-2">
+          <View className="w-10 h-10 rounded-full bg-status-success/15 items-center justify-center">
+            <CircleCheck size={22} color={colors.statusSuccess} strokeWidth={2.2} />
+          </View>
+          <AppText className="text-status-success text-body font-bold">
             Tous les sets terminés
           </AppText>
           <AppText className="text-caption text-content-secondary">
@@ -218,7 +223,7 @@ export function ExercisePage({
         accessibilityLabel="Passer cet exercice"
         testID="skip-exercise-button"
       >
-        <AppText className="text-label text-content-muted underline">
+        <AppText className="text-caption text-content-muted">
           Passer cet exercice
         </AppText>
       </Pressable>

@@ -1,4 +1,5 @@
-import { Card, AppText } from '@/components/ui';
+import { BatteryLow } from 'lucide-react-native';
+import { AlertBanner } from '@/components/ui';
 
 type Props = {
   message: string;
@@ -6,13 +7,11 @@ type Props = {
 
 export function DeloadCard({ message }: Props) {
   return (
-    <Card elevation="elevated" className="border border-status-danger gap-2 py-4">
-      <AppText variant="heading" className="text-status-danger">
-        Semaine de deload
-      </AppText>
-      <AppText variant="body" muted numberOfLines={2}>
-        {message}
-      </AppText>
-    </Card>
+    <AlertBanner
+      tone="danger"
+      icon={BatteryLow}
+      title="Semaine de deload"
+      message={message}
+    />
   );
 }

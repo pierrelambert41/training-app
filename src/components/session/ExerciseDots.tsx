@@ -1,5 +1,4 @@
 import { Pressable, View } from 'react-native';
-import { AppText } from '@/components/ui';
 
 type DotState = 'done' | 'current' | 'skipped' | 'pending';
 
@@ -11,31 +10,12 @@ type ExerciseDotsProps = {
   onPress: (index: number) => void;
 };
 
-function dotStyle(state: DotState): { container: string; inner: string } {
-  switch (state) {
-    case 'done':
-      return {
-        container: 'w-5 h-5 rounded-full bg-status-success items-center justify-center',
-        inner: '',
-      };
-    case 'current':
-      return {
-        container: 'w-5 h-5 rounded-full bg-accent items-center justify-center border-2 border-accent',
-        inner: '',
-      };
-    case 'skipped':
-      return {
-        container: 'w-4 h-4 rounded-full bg-background-elevated border border-border items-center justify-center',
-        inner: '',
-      };
-    case 'pending':
-    default:
-      return {
-        container: 'w-4 h-4 rounded-full bg-background-elevated border border-border-subtle',
-        inner: '',
-      };
-  }
-}
+const segmentClasses: Record<DotState, string> = {
+  done: 'bg-status-success',
+  current: 'bg-accent',
+  skipped: 'bg-border-strong',
+  pending: 'bg-background-elevated',
+};
 
 function dotState(
   index: number,
@@ -49,6 +29,11 @@ function dotState(
   return 'pending';
 }
 
+/**
+ * Barre de progression segmentée de la séance : un segment par exercice.
+ * Volt = en cours, vert = fait, gris = passé, sombre = à venir.
+ * Tap sur un segment pour naviguer.
+ */
 export function ExerciseDots({
   count,
   currentIndex,
@@ -56,36 +41,29 @@ export function ExerciseDots({
   skippedIndices,
   onPress,
 }: ExerciseDotsProps) {
-  // No navigation needed for a single exercise; dots add noise without value.
+  // No navigation needed for a single exercise; the bar adds noise without value.
   if (count <= 1) return null;
 
   return (
-    <View className="flex-row items-center justify-center gap-2 py-3">
+    <View className="flex-row items-center gap-1.5 px-4 py-3">
       {Array.from({ length: count }, (_, i) => {
         const state = dotState(i, currentIndex, doneIndices, skippedIndices);
-        const styles = dotStyle(state);
 
         return (
           <Pressable
             key={i}
             onPress={() => onPress(i)}
             hitSlop={12}
-            style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+            className="flex-1 items-stretch justify-center"
+            style={{ height: 24 }}
             accessibilityLabel={`Exercice ${i + 1}${state === 'done' ? ' — terminé' : state === 'skipped' ? ' — passé' : state === 'current' ? ' — en cours' : ''}`}
             accessibilityRole="button"
             testID={`exercise-dot-${i}`}
           >
-            <View className={styles.container}>
-              {state === 'done' ? (
-                <AppText className="text-caption font-bold text-white" style={{ fontSize: 9, lineHeight: 12 }}>
-                  ✓
-                </AppText>
-              ) : state === 'skipped' ? (
-                <AppText className="text-caption font-bold text-content-muted" style={{ fontSize: 9, lineHeight: 12 }}>
-                  —
-                </AppText>
-              ) : null}
-            </View>
+            <View
+              className={`rounded-chip ${segmentClasses[state]}`}
+              style={{ height: state === 'current' ? 6 : 4, alignSelf: 'stretch' }}
+            />
           </Pressable>
         );
       })}

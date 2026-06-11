@@ -1,4 +1,5 @@
-import { Card, AppText } from '@/components/ui';
+import { TrendingDown } from 'lucide-react-native';
+import { AlertBanner } from '@/components/ui';
 
 type Props = {
   count: number;
@@ -6,13 +7,15 @@ type Props = {
 
 export function PlateauCard({ count }: Props) {
   return (
-    <Card elevation="default" className="flex-row items-center gap-3 py-3">
-      <AppText variant="body" className="text-xl">!</AppText>
-      <AppText variant="body" className="flex-1">
-        {count === 1
-          ? '1 exercice en plateau — variation recommandee'
-          : `${count} exercices en plateau — variations recommandees`}
-      </AppText>
-    </Card>
+    <AlertBanner
+      tone="warning"
+      icon={TrendingDown}
+      title="Plateau détecté"
+      message={
+        count === 1
+          ? '1 exercice en plateau — variation recommandée'
+          : `${count} exercices en plateau — variations recommandées`
+      }
+    />
   );
 }

@@ -6,6 +6,33 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-157 — Refonte UX v2 : recomposition des écrans (hero, stats, listes groupées)
+
+**Livré** : suite de TA-156 (qui ne changeait que palette/icônes/nav — feedback : « j'ai toujours la même expérience »). Cette passe recompose la **structure** des écrans.
+
+**Nouveaux composants partagés** (`src/components/ui/`) :
+- `SectionHeader` — titre de section uppercase + action optionnelle
+- `StatTile` — tuile de stat (icône en pastille teintée + grande valeur + label), tones accent/warning/danger/neutral
+- `Chip` — méta-pill avec icône (prop `on` : surface|elevated selon le fond)
+- `ListRow` / `ListGroup` — listes groupées style réglages iOS (icône, label, détail, chevron, tone danger)
+- `AlertBanner` — bannière teintée sans bordure (info/warning/danger)
+- `Button` — prop `icon?: LucideIcon` ; `Card` — **sans bordure** (élévation par contraste de fond), padding 20, borderCurve continuous ; `EmptyState` — icône en pastille
+
+**Écrans recomposés** :
+- **Aujourd'hui** : `WorkoutCard` devient un **hero** (gradient volt via `expo-linear-gradient`, eyebrow « SÉANCE DU JOUR », titre 27/800, chips méta, aperçu exercices à puces, CTA avec icône Play). `MiniSummary` + `FatigueCard` **supprimés**, remplacés par `TodayStatsRow` (3 StatTiles : streak/fatigue/dernière séance — fatigue affichée en permanence avec tone par sévérité). Deload/Plateau → `AlertBanner`. RestDay/NoProgram/Completed → icônes en pastille. Check-in : résumé en 3 mini-tuiles de valeurs.
+- **Programme** (`active-block-screen`) : header de bloc à plat (chips objectif/deload, titre 27/800, `WeekSegments` — un segment par semaine du bloc), `WorkoutDayRow` sans bordure avec numéro de jour ou check vert + « Fait », footer CTA sans border-t avec icône Play.
+- **Profil** : avatar central + sections groupées (`Données` / `Synchronisation` / déconnexion en ListRow danger).
+- **Séance live** : `ExerciseDots` → **barre de progression segmentée** pleine largeur (testIDs `exercise-dot-*` conservés), `ExerciseHeader` → cibles en 3 tuiles à gros chiffres (24/700 tabular-nums), bloc « tous les sets terminés » teinté avec icône, footer nettoyé.
+- **Progrès** : header display + eyebrow (cartes graphiques héritent du Card v2).
+
+**Dépendance ajoutée** : `expo-linear-gradient@15.0.8` (SDK 54, OK Expo Go, installé avec --legacy-peer-deps — conflit peer react-dom préexistant).
+
+**Tests** : 1019 verts. `daily-checkin-card.test` adapté (résumé en tuiles), testIDs et accessibilité conservés partout ailleurs.
+
+**Ouvre** : cartes graphiques du dashboard (e1rm/volume/…) gardent leur layout interne — candidates à une passe dédiée (gros chiffre + delta chip) ; `WeekCalendar` (292 lignes) non retouché ; fiche exercice depuis la séance toujours en TODO TA-15.
+
+---
+
 ## TA-156 — Refonte design & UX : thème dark volt, fix double header, icônes lucide
 
 **Livré** : refonte visuelle complète de l'app, sans changement fonctionnel.
