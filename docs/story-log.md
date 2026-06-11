@@ -6,6 +6,36 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-146 — UX remplacement programme fallback → IA au retour réseau
+
+**Livré** : le flow complet "Programme amélioré disponible" (ADR-028) + le branchement de la génération IA dans l'onboarding.
+
+**Fichiers créés** :
+- **Migration v13** : `generation_source TEXT` sur `programs` et `blocks` ('ai' | 'fallback', NULL pour l'existant). **Colonne locale uniquement** — absente de `toSupabasePayload` (le schéma Supabase ne la connaît pas, un push la rejetterait).
+- `src/features/ai/api/upgrade-program-service.ts` — `upgradeFallbackProgramToAI(db, programId, userId, supabase)` : reconstruit un questionnaire approché depuis programme + profil (`rebuildQuestionnaireFromProgram`, le questionnaire d'onboarding n'est pas persisté), appelle `generateProgramWithAI` (hors transaction), puis **transaction SQLite** (BEGIN/COMMIT/ROLLBACK) : DELETE cascade des blocs **planned** uniquement (planned_exercises → workout_days → blocks), INSERT du bloc IA re-parenté au programme existant ('planned' si bloc actif, sinon 'active', generation_source 'ai'), UPDATE program → 'ai'. Tout ou rien ; échec IA → aucune écriture.
+- `src/features/ai/hooks/use-upgrade-program.ts` — état isUpgrading/error + invalidation `['active-program', userId]` (boundaries : composant → hook → api).
+- `src/features/ai/stores/upgrade-banner-store.ts` — dismissed en mémoire (Zustand, jamais persisté : réapparaît au prochain démarrage).
+- `src/features/ai/components/fallback-upgrade-banner.tsx` — bannière contextuelle non-bloquante : titre + sous-titre, CTA "Mettre à jour" (spinner "Génération en cours…"), lien "Pourquoi ?" (explication dépliable), croix dismiss (44pt partout). Rendue uniquement si `generationSource === 'fallback'` ET réseau dispo ET non dismissed.
+
+**Fichiers modifiés** :
+- `src/types/program.ts` / `block.ts` + `src/services/programs.ts` / `blocks.ts` — champ `generationSource` (row mappers, INSERT, UPDATE programs).
+- `src/screens/(app)/programs/active-block-screen.tsx` — bannière au-dessus du header de bloc.
+- `src/screens/(app)/generate/step-8-summary-screen.tsx` — **la génération d'onboarding passe à l'IA d'abord** (`generateProgramWithAI`), bascule `generateProgramWithFallback` sur toute erreur, persiste `generationSource` sur programme + bloc. C'est le point d'entrée qui rend la bannière atteignable (vision produit : l'IA est le générateur principal).
+- `src/features/sync/index.ts` — export de `useNetworkStatus` (existant, non exporté).
+- Tests blocks/programs services mis à jour (nouveau champ).
+
+**Décisions clés** :
+- Cas "un seul bloc actif, zéro planned" (typique post-onboarding) : l'upgrade insère le bloc IA en **planned** (prochain bloc) et bascule le programme en 'ai' — le bloc en cours n'est jamais interrompu, conformément à l'AC.
+- Questionnaire reconstruit ≈ approximation (goal/fréquence/niveau du programme + blessures/sports du profil, équipement full_gym par défaut) — documenté dans le service.
+
+**Ouvre** : Phase 7 complète. Review visuelle simulateur à faire (design-required). Vérifier le pass-through `system` en blocs dans l'Edge Function ai-proxy avant le premier test réel de génération.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-145 — FallbackProvider.generateProgram et regenerateBlock — wrapper moteur Phase 3
 
 **Livré** : la garantie "l'app fonctionne sans IA" pour la génération (ADR-028). `FallbackProvider.generateProgram` et `.regenerateBlock` encapsulent le moteur déterministe 3-couches Phase 3 derrière le **même contrat** que ClaudeProvider : schéma intermédiaire → même transformer → même annotation de source.

@@ -5,8 +5,9 @@ import { useGenerationStore } from '@/stores/generation-store';
 import { useAuthStore } from '@/features/auth';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useDB } from '@/hooks/use-db';
-import { generateProgram } from '@/services/program-generation';
-import { searchExercises } from '@/services/exercises';
+import { generateProgramWithAI, generateProgramWithFallback } from '@/features/ai';
+import type { AIGenerationResult } from '@/features/ai';
+import { supabase } from '@/services/supabase';
 import { deactivateAllProgramsForUser, getProgramsByUserId, insertProgram } from '@/services/programs';
 import { insertBlock } from '@/services/blocks';
 import { insertWorkoutDay } from '@/services/workout-days';
@@ -85,16 +86,25 @@ export default function Step8SummaryScreen() {
 
     setIsGenerating(true);
     try {
-      const catalogue = await searchExercises(db, '');
-      const result = await generateProgram({
-        userId: user.id,
-        answers,
-        catalogue,
-      });
+      // ADR-028 : l'IA est le générateur principal — le moteur déterministe
+      // est le fallback (offline, rate-limit, validation exhaustée).
+      let result: AIGenerationResult;
+      try {
+        result = await generateProgramWithAI(db, user.id, answers, supabase);
+      } catch (aiError) {
+        console.warn('[generate] IA indisponible — moteur fallback utilisé', aiError);
+        result = await generateProgramWithFallback(db, user.id, answers);
+      }
 
       await deactivateAllProgramsForUser(db, user.id);
-      const savedProgram = await insertProgram(db, result.program);
-      const savedBlock = await insertBlock(db, result.block);
+      const savedProgram = await insertProgram(db, {
+        ...result.program,
+        generationSource: result.generationSource,
+      });
+      const savedBlock = await insertBlock(db, {
+        ...result.block,
+        generationSource: result.generationSource,
+      });
       const savedDays: WorkoutDay[] = [];
       for (const { day, plannedExercises } of result.days) {
         const savedDay = await insertWorkoutDay(db, day);

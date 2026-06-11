@@ -20,6 +20,7 @@ type BlockRow = {
   end_date: string | null;
   status: string;
   deload_strategy: string;
+  generation_source: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -36,6 +37,7 @@ function rowToBlock(row: BlockRow): Block {
     endDate: row.end_date,
     status: row.status as BlockStatus,
     deloadStrategy: row.deload_strategy as Block['deloadStrategy'],
+    generationSource: (row.generation_source ?? null) as Block['generationSource'],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -74,6 +76,7 @@ export async function insertBlock(
     endDate: input.endDate ?? null,
     status: input.status ?? 'planned',
     deloadStrategy: input.deloadStrategy ?? 'fatigue_triggered',
+    generationSource: input.generationSource ?? null,
     createdAt: now,
     updatedAt: now,
   };
@@ -81,9 +84,9 @@ export async function insertBlock(
   await db.runAsync(
     `INSERT INTO blocks (
       id, program_id, title, goal, duration_weeks, week_number,
-      start_date, end_date, status, deload_strategy,
+      start_date, end_date, status, deload_strategy, generation_source,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       block.id,
       block.programId,
@@ -95,6 +98,7 @@ export async function insertBlock(
       block.endDate,
       block.status,
       block.deloadStrategy,
+      block.generationSource,
       block.createdAt,
       block.updatedAt,
     ]

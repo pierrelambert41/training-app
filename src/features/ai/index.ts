@@ -67,6 +67,14 @@ export type { AIBlockResult, TransformBlockInput } from './domain/transform-ai-o
 export { computeBlockStats } from './domain/compute-block-stats';
 export type { BlockStatsSetLog, ComputeBlockStatsInput } from './domain/compute-block-stats';
 
+// TA-146 — UX remplacement programme fallback → IA
+export { FallbackUpgradeBanner } from './components/fallback-upgrade-banner';
+export {
+  upgradeFallbackProgramToAI,
+  rebuildQuestionnaireFromProgram,
+} from './api/upgrade-program-service';
+export { useUpgradeBannerStore } from './stores/upgrade-banner-store';
+
 // TA-145 — FallbackProvider.generateProgram/regenerateBlock (moteur Phase 3)
 export { generateProgramWithFallback } from './api/generate-program-service';
 export { generationResultToIntermediate } from './domain/generation-result-to-intermediate';

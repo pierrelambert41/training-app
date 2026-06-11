@@ -332,6 +332,11 @@ Mis à jour par le dev à chaque fin de story. Lu par le dev avant de coder et p
 
 ---
 
+### SYNC-03 — `generation_source` est une colonne locale uniquement
+TA-146 / 2026-06-10 — `programs.generation_source` et `blocks.generation_source` n'existent **pas** dans le schéma Supabase : ne jamais les ajouter à `toSupabasePayload` (un upsert remote échouerait). Si la colonne doit être syncée un jour : migration Supabase d'abord, puis payload.
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
