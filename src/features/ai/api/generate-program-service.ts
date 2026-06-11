@@ -2,6 +2,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ProgramQuestionnaire } from '@/types';
 import { ClaudeProvider } from './claude-provider';
+import { FallbackProvider } from './fallback-provider';
 import { getAIContextProfile } from './ai-context-service';
 import { buildDefaultProfile } from '../domain/default-profile';
 import {
@@ -71,6 +72,58 @@ export async function generateProgramWithAI(
       questionnaire,
       catalogue: filtered,
       source: 'ai',
+      dayOrderSlots: spreadDayOrders(frequencyDays, questionnaire.preferredDays),
+    },
+    {
+      generateId: generateUUID,
+      buildProgressionConfig,
+    }
+  );
+}
+
+/**
+ * Génération de programme sans IA (TA-145) — moteur déterministe Phase 3
+ * derrière le même pipeline (schéma intermédiaire → transformer).
+ * Utilisé offline ou après échec ClaudeProvider ; le résultat est annoté
+ * generationSource: 'fallback' pour l'UX "remplacer par IA" (TA-146).
+ */
+export async function generateProgramWithFallback(
+  db: SQLiteDatabase,
+  userId: string,
+  questionnaire: ProgramQuestionnaire
+): Promise<AIGenerationResult> {
+  const profile = (await getAIContextProfile(db, userId)) ?? buildDefaultProfile();
+
+  const catalogue = await searchExercises(db, '');
+  const filterCtx = buildFilterContext({ userId, answers: questionnaire, catalogue });
+  const filtered = filterCatalogue(catalogue, filterCtx);
+
+  const frequencyDays = questionnaire.frequencyDays ?? DEFAULT_FREQUENCY;
+
+  const provider = new FallbackProvider();
+  const aiOutput = await provider.generateProgram(
+    { profile, questionnaire },
+    filtered,
+    {
+      catalogue: filtered,
+      userConstraints: {
+        equipmentAllowed: Array.from(filterCtx.equipmentAllowed),
+        forbiddenMuscles: Array.from(filterCtx.forbiddenMuscles),
+        forbiddenMorphoTags: Array.from(filterCtx.forbiddenMorphoTags),
+        maxSessionDurationMin: questionnaire.maxSessionDurationMin,
+      },
+      frequencyDays,
+      level: questionnaire.level ?? 'intermediate',
+    }
+  );
+
+  return transformAIOutputToProgram(
+    aiOutput,
+    {
+      userId,
+      questionnaire,
+      catalogue: filtered,
+      source: 'fallback',
       dayOrderSlots: spreadDayOrders(frequencyDays, questionnaire.preferredDays),
     },
     {

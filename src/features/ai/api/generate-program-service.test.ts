@@ -30,13 +30,13 @@ jest.mock('@/services/exercises', () => ({
   searchExercises: (...args: unknown[]) => mockSearchExercises(...args),
 }));
 
-function makeExercise(id: string, category = 'compound') {
+function makeExercise(id: string, category = 'compound', movementPattern = 'horizontal_push') {
   return {
     id,
     name: id,
     nameFr: id,
     category,
-    movementPattern: 'horizontal_push',
+    movementPattern,
     primaryMuscles: ['chest'],
     secondaryMuscles: [],
     equipment: ['barbell'],
@@ -57,8 +57,12 @@ function makeExercise(id: string, category = 'compound') {
 
 const catalogue = [
   makeExercise('bench_press'),
-  makeExercise('squat'),
-  makeExercise('row'),
+  makeExercise('squat', 'compound', 'squat'),
+  makeExercise('row', 'compound', 'horizontal_pull'),
+  makeExercise('rdl', 'compound', 'hinge'),
+  makeExercise('pullup', 'compound', 'vertical_pull'),
+  makeExercise('ohp', 'compound', 'vertical_push'),
+  makeExercise('lunge', 'compound', 'unilateral_quad'),
 ];
 
 const questionnaire: ProgramQuestionnaire = {
@@ -202,5 +206,32 @@ describe('generateProgramWithAI', () => {
       expect(e).toBeInstanceOf(AIProviderError);
       expect(e.code).toBe('invalid_response');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TA-145 — generateProgramWithFallback (pipeline partagé, source fallback)
+// ---------------------------------------------------------------------------
+
+import { generateProgramWithFallback } from './generate-program-service';
+
+describe('generateProgramWithFallback', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSearchExercises.mockResolvedValue(catalogue);
+  });
+
+  it('génère via le moteur Phase 3 et annote generationSource: fallback', async () => {
+    const result = await generateProgramWithFallback(db, 'user-1', questionnaire);
+
+    expect(result.generationSource).toBe('fallback');
+    expect(result.program.userId).toBe('user-1');
+    expect(result.days).toHaveLength(3);
+    for (const draft of result.days) {
+      expect(draft.plannedExercises.length).toBeGreaterThan(0);
+      for (const pe of draft.plannedExercises) {
+        expect(catalogue.some((c) => c.id === pe.exerciseId)).toBe(true);
+      }
+    }
   });
 });

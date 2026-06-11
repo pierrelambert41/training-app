@@ -67,6 +67,10 @@ export type { AIBlockResult, TransformBlockInput } from './domain/transform-ai-o
 export { computeBlockStats } from './domain/compute-block-stats';
 export type { BlockStatsSetLog, ComputeBlockStatsInput } from './domain/compute-block-stats';
 
+// TA-145 — FallbackProvider.generateProgram/regenerateBlock (moteur Phase 3)
+export { generateProgramWithFallback } from './api/generate-program-service';
+export { generationResultToIntermediate } from './domain/generation-result-to-intermediate';
+
 // TA-142 — ClaudeProvider.generateProgram + transformer + service
 export { generateProgramWithAI } from './api/generate-program-service';
 export { transformAIOutputToProgram } from './domain/transform-ai-output';
