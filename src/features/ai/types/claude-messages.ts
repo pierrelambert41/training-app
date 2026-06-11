@@ -22,8 +22,12 @@ export type ClaudeMessage = {
 /**
  * Structure complète envoyée au LLM : messages + system optionnel.
  * Les builders de prompts retournent ce type.
+ *
+ * system accepte aussi un tableau de blocs (TA-147) : les prompts de
+ * génération placent le catalogue en première position avec
+ * cache_control: ephemeral (prompt caching Anthropic, ADR-025).
  */
 export type ClaudeMessages = {
-  system?: string;
+  system?: string | TextContentBlock[];
   messages: ClaudeMessage[];
 };
