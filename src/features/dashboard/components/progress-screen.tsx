@@ -2,7 +2,9 @@ import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText, Card } from '@/components/ui';
 import { useE1rmHistory } from '../hooks/use-e1rm-history';
+import { useWeeklyVolume } from '../hooks/use-weekly-volume';
 import { E1rmCard } from './e1rm-card';
+import { VolumeCard } from './volume-card';
 
 type PlaceholderProps = {
   title: string;
@@ -29,6 +31,7 @@ function PlaceholderCard({ title, description, testID }: PlaceholderProps) {
  */
 export function ProgressScreen() {
   const e1rm = useE1rmHistory();
+  const volume = useWeeklyVolume();
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -50,10 +53,12 @@ export function ProgressScreen() {
           onSelectExercise={e1rm.selectExercise}
           points={e1rm.points}
         />
-        <PlaceholderCard
-          title="Volume par muscle"
-          description="Séries hebdomadaires par groupe musculaire — bientôt disponible"
-          testID="placeholder-volume"
+        <VolumeCard
+          volumes={volume.volumes}
+          weekStart={volume.weekStart}
+          weekOffset={volume.weekOffset}
+          onPreviousWeek={volume.goToPreviousWeek}
+          onNextWeek={volume.goToNextWeek}
         />
         <PlaceholderCard
           title="Poids du corps"
