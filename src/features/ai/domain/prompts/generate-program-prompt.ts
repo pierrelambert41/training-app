@@ -32,6 +32,9 @@ export function buildGenerateProgramPrompt(
     maxSessionDurationMin: q.maxSessionDurationMin,
     injuries: q.injuries,
     sportsParallel: q.sportsParallel,
+    level: q.level,
+    volumeTolerance: q.volumeTolerance,
+    priorityMuscles: q.priorityMuscles,
   });
 
   const questionnaireSummary = {

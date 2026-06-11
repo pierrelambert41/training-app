@@ -6,6 +6,21 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## Fix — Dimensionnement des séances générées par IA : volume-first (pas le temps)
+
+**Problème** (constaté au premier test réel) : programmes IA à **3 exercices par séance**. Cause double : (1) l'heuristique durée du prompt et du validateur (~5 min/série) était trop pessimiste — 60 min → budget ~10 séries → 3 exercices ; (2) le prompt faisait du **temps** la seule contrainte chiffrée, le volume par muscle (MEV/MAV/MRV) n'étant qu'une suggestion qualitative en bas de prompt. Claude a optimisé sur la contrainte dure. Retour utilisateur : le dimensionnement doit partir du volume hebdo par muscle (evidence-based), pas du temps — conforme à docs/ai-strategy.md §1 et ADR-028.
+
+**Livré** :
+- `program-rules-block.ts` — **le volume devient la règle de dimensionnement principale** : `weeklySetsTarget(level, volumeTolerance)` → fourchette de séries dures/muscle/semaine (beginner 8-12, intermediate 10-16, advanced 14-20, modulée par la tolérance), muscles prioritaires en haut de fourchette (~MAV), les autres ≥ MEV (8-10). La durée max devient un **plafond secondaire** (en cas de conflit : réduire les isolations non prioritaires, jamais sous le MEV) avec une heuristique réaliste (~3 min/série repos inclus). Densité explicite : 5-7 exercices/séance, jamais < 4. `ProgramRulesInput` enrichi (level, volumeTolerance, priorityMuscles) — propagé depuis le questionnaire (generate) et le profil (regenerate).
+- `validate-ai-program.ts` — MIN_PER_SET 5 → 3 ; nouveau code bloquant `session_too_sparse` (< 3 exercices/séance).
+- Fixtures de test mises à jour (3 exercices/jour min) + assertions volume-first dans les tests de prompt.
+
+**Ouvre** : si les programmes restent trop denses/clairsemés sur certains profils, affiner les fourchettes par muscle (table dédiée par groupe) plutôt que globales.
+
+**Bugs découverts** : l'heuristique temps initiale (TA-143/147) sous-dimensionnait toutes les séances — corrigée ici.
+
+---
+
 ## TA-146 — UX remplacement programme fallback → IA au retour réseau
 
 **Livré** : le flow complet "Programme amélioré disponible" (ADR-028) + le branchement de la génération IA dans l'onboarding.
