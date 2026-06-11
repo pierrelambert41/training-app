@@ -57,6 +57,15 @@ jest.mock('@/features/today/hooks/use-today-recommendations', () => ({
   useTodayRecommendations: jest.fn(() => ({ data: null })),
 }));
 
+jest.mock('@/features/today/hooks/use-dev-tools', () => ({
+  useDevTools: jest.fn(() => ({
+    seedTestData: jest.fn(),
+    seedAnalytics: jest.fn(),
+    cleanInactivePrograms: jest.fn(),
+    fullReset: jest.fn(),
+  })),
+}));
+
 jest.mock('@/features/today/hooks/use-daily-checkin', () => ({
   useDailyCheckin: jest.fn(() => ({
     todayLog: null,

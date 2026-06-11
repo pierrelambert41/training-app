@@ -1,5 +1,6 @@
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useSessionStore } from '@/stores/session-store';
@@ -12,11 +13,24 @@ import { resetUserData } from '../api/reset-user-data';
  */
 export function useDevTools(db: SQLiteDatabase, userId: string | undefined) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   async function seedTestData() {
     const { seedActiveBlock } = await import('@/dev/seed-active-block');
     const programId = await seedActiveBlock(db, userId ?? 'dev-user');
     router.push(`/(app)/programs/${programId}` as Parameters<typeof router.push>[0]);
+  }
+
+  async function seedAnalytics() {
+    if (!userId) return;
+    const { seedAnalyticsHistory } = await import('@/dev/seed-analytics-history');
+    const result = await seedAnalyticsHistory(db, userId);
+    // Tout le dashboard + la vue semaine + l'écran Aujourd'hui relisent SQLite.
+    await queryClient.invalidateQueries();
+    Alert.alert(
+      'Mock analytics OK',
+      `${result.sessions} séances, ${result.sets} sets, ${result.weighIns} pesées, ${result.checkins} check-ins.\n\nOuvre l'onglet Progrès pour les graphes, Programme pour la vue semaine.`
+    );
   }
 
   async function cleanInactivePrograms() {
@@ -61,5 +75,5 @@ export function useDevTools(db: SQLiteDatabase, userId: string | undefined) {
     );
   }
 
-  return { seedTestData, cleanInactivePrograms, fullReset };
+  return { seedTestData, seedAnalytics, cleanInactivePrograms, fullReset };
 }

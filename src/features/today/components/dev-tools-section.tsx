@@ -13,7 +13,8 @@ type DevToolsSectionProps = {
  * Rendu uniquement sous __DEV__ — extrait de today-screen (R6).
  */
 export function DevToolsSection({ db, userId }: DevToolsSectionProps) {
-  const { seedTestData, cleanInactivePrograms, fullReset } = useDevTools(db, userId);
+  const { seedTestData, seedAnalytics, cleanInactivePrograms, fullReset } =
+    useDevTools(db, userId);
 
   return (
     <View className="gap-2">
@@ -23,6 +24,12 @@ export function DevToolsSection({ db, userId }: DevToolsSectionProps) {
         onPress={seedTestData}
         variant="secondary"
         testID="seed-test-button"
+      />
+      <Button
+        label="Seed analytics (graphes Progrès)"
+        onPress={seedAnalytics}
+        variant="secondary"
+        testID="seed-analytics-button"
       />
       <Button
         label="Nettoyer DB (suppr. programmes inactifs)"
