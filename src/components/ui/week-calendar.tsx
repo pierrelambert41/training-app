@@ -102,12 +102,44 @@ function buildWeekCells(
   return cells;
 }
 
+/**
+ * État d'un jour d'entraînement sur la semaine affichée (TA-155).
+ * Fourni par le domaine week-progress (feature program) ; le calendrier
+ * reste purement présentationnel.
+ */
+export type WeekCalendarDayState = 'done' | 'today' | 'upcoming' | 'missed';
+
 type DayCellProps = {
   cell: WeekDayCell;
+  state: WeekCalendarDayState | undefined;
   onPress: (workoutDay: WorkoutDay) => void;
 };
 
-function DayCell({ cell, onPress }: DayCellProps) {
+function StateBadge({ state }: { state: WeekCalendarDayState | undefined }) {
+  if (state === 'done') {
+    return (
+      <AppText
+        className="text-caption text-status-success font-bold leading-none"
+        testID="day-state-done"
+      >
+        ✓
+      </AppText>
+    );
+  }
+  if (state === 'missed') {
+    return (
+      <AppText
+        className="text-caption text-status-danger font-bold leading-none"
+        testID="day-state-missed"
+      >
+        ✗
+      </AppText>
+    );
+  }
+  return <View className="w-3 h-3" testID="day-state-none" />;
+}
+
+function DayCell({ cell, state, onPress }: DayCellProps) {
   const { date, workoutDay, dayIndex } = cell;
   const today = isToday(date);
   const hasWorkout = workoutDay !== null;
@@ -169,6 +201,7 @@ function DayCell({ cell, onPress }: DayCellProps) {
           {icon}
         </AppText>
       </View>
+      <StateBadge state={state} />
     </Pressable>
   );
 }
@@ -178,6 +211,8 @@ type WeekCalendarProps = {
   weekNumber: number;
   durationWeeks: number;
   workoutDays: WorkoutDay[];
+  /** État par workout_day id sur la semaine affichée (TA-155). */
+  dayStates?: Record<string, WeekCalendarDayState>;
   onDayPress: (workoutDay: WorkoutDay) => void;
   onPrevWeek: () => void;
   onNextWeek: () => void;
@@ -188,6 +223,7 @@ export function WeekCalendar({
   weekNumber,
   durationWeeks,
   workoutDays,
+  dayStates,
   onDayPress,
   onPrevWeek,
   onNextWeek,
@@ -243,6 +279,9 @@ export function WeekCalendar({
           <DayCell
             key={cell.dayIndex}
             cell={cell}
+            state={
+              cell.workoutDay ? dayStates?.[cell.workoutDay.id] : undefined
+            }
             onPress={onDayPress}
           />
         ))}

@@ -42,6 +42,7 @@ export function useCompleteSession(userId: string | undefined) {
             queryClient.invalidateQueries({ queryKey: ['session-recommendations', sessionId] }),
             queryClient.invalidateQueries({ queryKey: ['today-workout'] }),
             queryClient.invalidateQueries({ queryKey: ['today-recommendations'] }),
+            queryClient.invalidateQueries({ queryKey: ['block-week-progress'] }),
           ]);
           if (userId) {
             triggerAIContextRefresh(userId);
