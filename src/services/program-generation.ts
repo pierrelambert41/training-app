@@ -394,7 +394,7 @@ export function hasConsecutiveDays(days: number[]): boolean {
 // Couche 3 — Sélection des exercices
 // ---------------------------------------------------------------------------
 
-type FilterContext = {
+export type FilterContext = {
   equipmentAllowed: Set<string>;
   forbiddenMuscles: Set<string>;
   forbiddenMorphoTags: Set<string>;
@@ -430,7 +430,9 @@ export const EQUIPMENT_AVAILABLE_BY_TYPE: Record<string, string[]> = {
   ],
 };
 
-function buildFilterContext(
+// Exporté depuis TA-142 : la génération IA réutilise le même filtrage
+// catalogue (équipement, blessures, exclusions nommées) que le moteur Phase 3.
+export function buildFilterContext(
   input: GenerationInput
 ): FilterContext {
   const equipmentType = input.answers.equipment ?? 'full_gym';

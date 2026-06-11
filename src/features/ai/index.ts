@@ -60,6 +60,15 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
 
+// TA-142 — ClaudeProvider.generateProgram + transformer + service
+export { generateProgramWithAI } from './api/generate-program-service';
+export { transformAIOutputToProgram } from './domain/transform-ai-output';
+export type {
+  AIGenerationResult,
+  TransformDeps,
+  TransformInput,
+} from './domain/transform-ai-output';
+
 // TA-147 — Prompts versionnés génération de programme
 export {
   buildGenerateProgramPrompt,

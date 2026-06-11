@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Exercise } from '@/types';
 import type { AIContext } from '../types/ai-context';
 import type {
   BlockSummary,
@@ -6,11 +7,24 @@ import type {
   Recommendation,
   SessionSummary,
 } from '../types/ai-responses';
+import type {
+  AIIntermediateOutput,
+  ProgramGenerationContext,
+  ValidationContext,
+  ValidationError,
+} from '../types/ai-generation';
+import { AIProviderError, AIValidationExhaustedError } from '../types/ai-generation';
+import type { ClaudeMessages } from '../types/claude-messages';
+import { buildGenerateProgramPrompt } from '../domain/prompts/generate-program-prompt';
+import { validateAIGeneratedProgram } from '../domain/validate-ai-program';
 import type { AIProvider } from './ai-provider';
 import { FallbackProvider } from './fallback-provider';
 
 const TIMEOUT_SUMMARY_MS = 30_000;
 const TIMEOUT_PLATEAU_MS = 45_000;
+// Génération de programme : output long (~1-3k tokens), timeout large (≥ 15s requis).
+const TIMEOUT_GENERATION_MS = 60_000;
+const MAX_TOKENS_GENERATION = 4_000;
 
 type AIProxyRequest = {
   messages: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -157,6 +171,121 @@ export class ClaudeProvider implements AIProvider {
       (text) => text.trim(),
       context,
       (ctx) => this.fallback.explainAdjustment(ctx)
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Génération de programme (ADR-028, TA-142)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Génération initiale de programme. Retourne le schéma JSON intermédiaire
+   * validé (TA-143) — le caller applique transformAIOutputToProgram ensuite.
+   *
+   * Contrairement aux méthodes d'interprétation : AUCUN fallback silencieux.
+   * - Erreur transport (timeout, réseau, 429, 5xx) → AIProviderError typée.
+   * - Double échec de validation (génération + 1 retry avec feedback) →
+   *   AIValidationExhaustedError. Le caller bascule sur FallbackProvider (TA-145)
+   *   ou laisse l'UX TA-146 proposer une action explicite.
+   */
+  async generateProgram(
+    context: ProgramGenerationContext,
+    catalogSnapshot: Exercise[],
+    validationCtx: ValidationContext
+  ): Promise<AIIntermediateOutput> {
+    const prompt = buildGenerateProgramPrompt(context, catalogSnapshot);
+    return this.generateValidated(prompt, validationCtx, 'generateProgram');
+  }
+
+  /**
+   * Cycle génération → validation → 1 retry avec feedback → validation.
+   * Partagé entre generateProgram et regenerateBlock (TA-144).
+   */
+  protected async generateValidated(
+    prompt: ClaudeMessages,
+    validationCtx: ValidationContext,
+    label: string
+  ): Promise<AIIntermediateOutput> {
+    const first = await this.invokeGeneration(prompt);
+    const firstResult = validateAIGeneratedProgram(first, validationCtx);
+    if (firstResult.valid) return first;
+
+    this.logValidationErrors(label, 'first_attempt', firstResult.errors);
+
+    const retryPrompt: ClaudeMessages = {
+      system: prompt.system,
+      messages: [
+        ...prompt.messages,
+        { role: 'assistant', content: [{ type: 'text', text: JSON.stringify(first) }] },
+        { role: 'user', content: [{ type: 'text', text: firstResult.feedback ?? 'Programme rejeté — corrige et renvoie le JSON.' }] },
+      ],
+    };
+
+    const second = await this.invokeGeneration(retryPrompt);
+    const secondResult = validateAIGeneratedProgram(second, validationCtx);
+    if (secondResult.valid) return second;
+
+    this.logValidationErrors(label, 'retry', secondResult.errors);
+    throw new AIValidationExhaustedError(secondResult.errors);
+  }
+
+  private logValidationErrors(label: string, attempt: string, errors: ValidationError[]): void {
+    // Loguées pour amélioration des prompts (TA-143).
+    console.warn(
+      `[claude-provider] ${label} validation failed (${attempt}):`,
+      errors.map((e) => `${e.code}@${e.field}`).join(', ')
+    );
+  }
+
+  private async invokeGeneration(prompt: ClaudeMessages): Promise<AIIntermediateOutput> {
+    let data: AIProxyResponse | null;
+    let error: unknown;
+
+    try {
+      ({ data, error } = await this.supabase.functions.invoke<AIProxyResponse>('ai-proxy', {
+        body: {
+          system: prompt.system,
+          messages: prompt.messages,
+          max_tokens: MAX_TOKENS_GENERATION,
+          timeout_ms: TIMEOUT_GENERATION_MS,
+        },
+      }));
+    } catch (e) {
+      throw new AIProviderError('network', `ai-proxy unreachable: ${String(e)}`);
+    }
+
+    if (error) {
+      throw this.classifyTransportError(error);
+    }
+
+    const text = data?.content?.[0]?.text;
+    if (!text) {
+      throw new AIProviderError('invalid_response', 'ai-proxy returned an empty response');
+    }
+
+    try {
+      return this.parseJson<AIIntermediateOutput>(text);
+    } catch {
+      throw new AIProviderError('invalid_response', 'No parseable JSON in generation response');
+    }
+  }
+
+  private classifyTransportError(error: unknown): AIProviderError {
+    const err = error as { name?: string; message?: string; context?: { status?: number } };
+    const status = err.context?.status;
+
+    if (status === 429) {
+      return new AIProviderError('rate_limited', 'Claude rate limit (429) via ai-proxy');
+    }
+    if (err.name === 'FunctionsFetchError') {
+      return new AIProviderError('network', err.message ?? 'Network error calling ai-proxy');
+    }
+    if (typeof err.message === 'string' && /timeout|timed out/i.test(err.message)) {
+      return new AIProviderError('timeout', err.message);
+    }
+    return new AIProviderError(
+      'http_error',
+      `ai-proxy error${status !== undefined ? ` (HTTP ${status})` : ''}: ${err.message ?? 'unknown'}`
     );
   }
 }
