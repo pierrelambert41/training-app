@@ -64,22 +64,18 @@ export type ProgramRulesInput = {
 };
 
 /**
- * Fourchettes de séries dures par groupe musculaire et par semaine
- * (volume landmarks evidence-based, cf. docs/ai-strategy.md §1).
- * La tolérance au volume déplace la cible dans la fourchette.
+ * Repères de volume hebdomadaire — UNIQUEMENT des affirmations sourcées dans
+ * la littérature (méta-analyses / revues systématiques). Aucune coupure par
+ * niveau inventée : la littérature ne fournit pas de tranches précises par
+ * ancienneté d'entraînement, donc on donne au modèle la zone documentée et le
+ * profil, et on exige une justification (champ reasoning).
+ * Sources citées dans le prompt : Schoenfeld, Ogborn & Krieger 2017 (J Sports
+ * Sci, dose-réponse ≥ 10 séries/muscle/semaine) ; Baz-Valle et al. 2022
+ * (revue systématique, zone 12-20 chez le pratiquant entraîné, retours
+ * décroissants au-delà de ~20).
  */
-function weeklySetsTarget(
-  level: ProgramRulesInput['level'],
-  tolerance: ProgramRulesInput['volumeTolerance']
-): { min: number; max: number } {
-  const base =
-    level === 'beginner' ? { min: 8, max: 12 } :
-    level === 'advanced' ? { min: 14, max: 20 } :
-    { min: 10, max: 16 };
-  if (tolerance === 'low') return { min: base.min, max: base.min + 2 };
-  if (tolerance === 'high') return { min: base.max - 2, max: base.max };
-  return base;
-}
+const EVIDENCE_VOLUME_FLOOR = 10;
+const EVIDENCE_VOLUME_CEILING = 20;
 
 /**
  * Cadre dur des règles injecté dans le prompt système (ADR-006, ADR-028,
@@ -89,7 +85,6 @@ function weeklySetsTarget(
 export function buildProgramRulesBlock(input: ProgramRulesInput): string {
   const splits = validSplitsForFrequency(input.frequencyDays);
 
-  const target = weeklySetsTarget(input.level, input.volumeTolerance);
   const priority = input.priorityMuscles.filter((m) => m.trim() !== '');
 
   return `CADRE DUR (toute violation sera rejetée par un validateur déterministe) :
@@ -98,9 +93,9 @@ export function buildProgramRulesBlock(input: ProgramRulesInput): string {
 3. progression : uniquement parmi ${ALLOWED_PROGRESSIONS.join(', ')}.
 4. exercise_id : uniquement les ids du catalogue fourni — aucun exercice inventé.
 
-DIMENSIONNEMENT — LE VOLUME EST LA RÈGLE PRINCIPALE (MV/MEV/MAV/MRV) :
-5. Cible ${target.min} à ${target.max} séries dures par groupe musculaire et par semaine, réparties sur les ${input.frequencyDays} séances. C'est ce volume qui détermine le nombre d'exercices et de séries — jamais l'inverse.
-${priority.length > 0 ? `6. Muscles prioritaires (haut de fourchette, ~MAV) : ${priority.join(', ')}. Les autres muscles entraînés restent ≥ MEV (~8-10 séries/semaine).` : '6. Pas de muscle prioritaire : répartis le volume équitablement, chaque muscle entraîné ≥ MEV (~8-10 séries/semaine).'}
+DIMENSIONNEMENT — LE VOLUME PAR MUSCLE EST LA RÈGLE PRINCIPALE (base scientifique imposée) :
+5. Pour l'hypertrophie, cible au minimum ${EVIDENCE_VOLUME_FLOOR} séries dures par groupe musculaire et par semaine (relation dose-réponse : Schoenfeld, Ogborn & Krieger 2017, méta-analyse, J Sports Sci). La zone documentée chez le pratiquant entraîné est ${EVIDENCE_VOLUME_FLOOR + 2}-${EVIDENCE_VOLUME_CEILING} séries/semaine, avec des retours décroissants et un risque de dépasser la capacité de récupération au-delà de ~${EVIDENCE_VOLUME_CEILING} (Baz-Valle et al. 2022, revue systématique). C'est ce volume, réparti sur les ${input.frequencyDays} séances, qui détermine le nombre d'exercices et de séries — jamais l'inverse.
+6. Positionne chaque muscle DANS cette zone documentée selon le profil (ancienneté d'entraînement${input.level ? ` : ${input.level}` : ''}, tolérance au volume déclarée${input.volumeTolerance ? ` : ${input.volumeTolerance}` : ''}, sports parallèles, récupération) et justifie ce positionnement dans "reasoning". ${priority.length > 0 ? `Muscles prioritaires (haut de zone) : ${priority.join(', ')}. Les autres muscles entraînés restent ≥ ${EVIDENCE_VOLUME_FLOOR} séries/semaine.` : `Pas de muscle prioritaire : chaque muscle entraîné ≥ ${EVIDENCE_VOLUME_FLOOR} séries/semaine.`} Pour un objectif force, la charge et la spécificité priment : un volume plus bas par muscle est acceptable si justifié.
 ${input.maxSessionDurationMin !== null ? `7. Durée max de séance (plafond secondaire) : ${input.maxSessionDurationMin} min (~8 min d'échauffement + ~3 min par série, repos inclus). En cas de conflit avec le volume cible : réduis d'abord les isolations des muscles non prioritaires — jamais un muscle entraîné sous son MEV.` : '7. Pas de contrainte de durée de séance.'}
 8. Densité : 5 à 7 exercices par séance (jamais moins de 4) — 1-2 polyarticulaires lourds puis secondaires et isolations.
 ${input.injuries.trim() !== '' ? `9. Blessures/contraintes à respecter absolument : ${input.injuries.trim()}.` : '9. Aucune blessure déclarée.'}

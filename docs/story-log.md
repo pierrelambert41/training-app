@@ -6,6 +6,21 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## Fix — Repères de volume sourcés uniquement (suppression des tranches par niveau inventées)
+
+**Retour utilisateur** : les tranches 8-12/10-16/14-20 séries/semaine par niveau étaient un « choix pragmatique » non sourcé — inacceptable. Règle produit actée : **toute valeur métier d'entraînement doit être attribuable à une méta-analyse / revue systématique de référence ; sinon, formuler une contrainte ouverte et laisser l'IA positionner en justifiant.**
+
+**Livré** (`program-rules-block.ts`) :
+- Suppression de `weeklySetsTarget` (tranches par niveau inventées).
+- Le prompt n'affirme plus que ce qui est citable : plancher ≥ 10 séries dures/muscle/semaine (Schoenfeld, Ogborn & Krieger 2017, méta-analyse dose-réponse, J Sports Sci) ; zone documentée 12-20 chez le pratiquant entraîné avec retours décroissants au-delà de ~20 (Baz-Valle et al. 2022, revue systématique).
+- Le **positionnement dans la zone** est délégué au modèle selon le profil (niveau, tolérance volume, sports parallèles, récupération) avec justification obligatoire dans `reasoning` — conforme ADR-028 (« principes evidence-based documentés, pas heuristiques figées »).
+- Mention objectif force : charge/spécificité priment, volume plus bas acceptable si justifié.
+- Test : assertions sur la présence des deux citations + garde anti-régression `not.toMatch(/8-12|10-16|14-20/)`.
+
+**Ouvre** : si Pierre fournit une doctrine par groupe musculaire (table sourcée), l'encoder en remplacement de la zone globale ; éventuel garde-fou validateur recomptant les séries/muscle via primaryMuscles.
+
+---
+
 ## Fix — Dimensionnement des séances générées par IA : volume-first (pas le temps)
 
 **Problème** (constaté au premier test réel) : programmes IA à **3 exercices par séance**. Cause double : (1) l'heuristique durée du prompt et du validateur (~5 min/série) était trop pessimiste — 60 min → budget ~10 séries → 3 exercices ; (2) le prompt faisait du **temps** la seule contrainte chiffrée, le volume par muscle (MEV/MAV/MRV) n'étant qu'une suggestion qualitative en bas de prompt. Claude a optimisé sur la contrainte dure. Retour utilisateur : le dimensionnement doit partir du volume hebdo par muscle (evidence-based), pas du temps — conforme à docs/ai-strategy.md §1 et ADR-028.
