@@ -9,6 +9,7 @@ import {
   type SessionStatus,
 } from './session-recommendation-cards';
 import { RecommendationWhy } from './recommendation-why';
+import { colors } from '@/theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Load change row
@@ -25,11 +26,11 @@ function actionArrow(action: Recommendation['action']): {
 } {
   switch (action) {
     case 'increase':
-      return { symbol: '↑', color: '#4ade80' };
+      return { symbol: '↑', color: colors.statusSuccess };
     case 'decrease':
-      return { symbol: '↓', color: '#fb923c' };
+      return { symbol: '↓', color: colors.statusWarning };
     default:
-      return { symbol: '→', color: '#60a5fa' };
+      return { symbol: '→', color: colors.statusInfo };
   }
 }
 
@@ -53,18 +54,18 @@ function LoadChangeRow({ recommendation, exerciseName }: LoadChangeRowProps) {
       }}
     >
       <AppText
-        style={{ flex: 1, fontSize: 14, color: '#e5e7eb' }}
+        style={{ flex: 1, fontSize: 14, color: colors.contentPrimary }}
         numberOfLines={1}
       >
         {exerciseName}
       </AppText>
-      <AppText style={{ fontSize: 13, color: '#9ca3af' }}>
+      <AppText style={{ fontSize: 13, color: colors.contentSecondary }}>
         {currentLoad !== null ? `${currentLoad}kg` : '—'}
       </AppText>
       <AppText style={{ fontSize: 14, fontWeight: '700', color: arrow.color }}>
         {arrow.symbol}
       </AppText>
-      <AppText style={{ fontSize: 13, fontWeight: '600', color: '#e5e7eb' }}>
+      <AppText style={{ fontSize: 13, fontWeight: '600', color: colors.contentPrimary }}>
         {nextLoad !== null ? `${nextLoad}kg` : '—'}
       </AppText>
     </View>
@@ -96,8 +97,8 @@ export function SessionRecommendations({
   if (isLoading) {
     return (
       <View style={{ alignItems: 'center', paddingVertical: 20, gap: 8 }}>
-        <ActivityIndicator color="#60a5fa" />
-        <AppText style={{ fontSize: 14, color: '#9ca3af' }}>Calcul en cours…</AppText>
+        <ActivityIndicator color={colors.statusInfo} />
+        <AppText style={{ fontSize: 14, color: colors.contentSecondary }}>Calcul en cours…</AppText>
       </View>
     );
   }
@@ -125,7 +126,7 @@ export function SessionRecommendations({
   return (
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <AppText style={{ fontSize: 12, fontWeight: '600', color: '#6b7280', letterSpacing: 0.8 }}>
+        <AppText style={{ fontSize: 12, fontWeight: '600', color: colors.contentMuted, letterSpacing: 0.8 }}>
           PROCHAINE SÉANCE
         </AppText>
         <StatusBadge status={sessionStatus} />
@@ -140,7 +141,7 @@ export function SessionRecommendations({
       {loadChangeRecs.length > 0 && (
         <View
           style={{
-            backgroundColor: '#111827',
+            backgroundColor: colors.backgroundSurface,
             borderRadius: 12,
             paddingHorizontal: 12,
             paddingVertical: 4,
@@ -160,7 +161,7 @@ export function SessionRecommendations({
                 key={rec.id}
                 style={
                   idx < visibleLoadChanges.length - 1
-                    ? { borderBottomWidth: 1, borderBottomColor: '#1e2a45' }
+                    ? { borderBottomWidth: 1, borderBottomColor: colors.border }
                     : undefined
                 }
               >
@@ -178,7 +179,7 @@ export function SessionRecommendations({
               style={{ alignItems: 'center', paddingVertical: 10, minHeight: 44 }}
               accessibilityLabel="Voir toutes les recommandations"
             >
-              <AppText style={{ fontSize: 13, color: '#60a5fa' }}>
+              <AppText style={{ fontSize: 13, color: colors.statusInfo }}>
                 Voir plus ({loadChangeRecs.length - MAX_VISIBLE_LOAD_CHANGES} exercices)
               </AppText>
             </Pressable>

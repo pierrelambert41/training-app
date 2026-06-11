@@ -1,4 +1,5 @@
 import { ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Star } from 'lucide-react-native';
 import { useRouter, type Href } from 'expo-router';
 import { useExerciseDetail } from '@/hooks/use-exercise-detail';
 import { useFavorite } from '@/hooks/use-favorite';
@@ -151,12 +152,11 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
           accessibilityLabel={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
           accessibilityRole="button"
         >
-          <AppText
-            variant="heading"
-            className={isFavorite ? 'text-yellow-400' : 'text-content-muted'}
-          >
-            {isFavorite ? '★' : '☆'}
-          </AppText>
+          <Star
+            size={22}
+            color={isFavorite ? colors.statusWarning : colors.contentMuted}
+            fill={isFavorite ? colors.statusWarning : 'transparent'}
+          />
         </TouchableOpacity>
       </View>
 

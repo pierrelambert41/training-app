@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Calendar, ChartColumn, CircleCheck, Dumbbell, SkipForward, TriangleAlert } from 'lucide-react-native';
 import type { ParsedHevyData } from '../types/hevy-csv-types';
 import type { ExerciseMatch } from '../types/import-state';
 import { computeStats } from '../domain/compute-stats';
@@ -18,22 +19,22 @@ function WarningsAccordion({ warnings }: { warnings: ParsedHevyData['warnings'] 
   const [open, setOpen] = useState(false);
   if (warnings.length === 0) return null;
   return (
-    <View className="bg-yellow-950 border border-yellow-800 rounded-card overflow-hidden">
+    <View className="bg-status-warning/10 border border-status-warning/40 rounded-card overflow-hidden">
       <Pressable
         onPress={() => setOpen((v) => !v)}
         style={{ minHeight: 44 }}
         className="px-4 py-3 flex-row items-center gap-2"
       >
-        <Text className="text-base">⚠️</Text>
-        <Text className="text-caption text-yellow-400 flex-1 font-semibold">
+        <TriangleAlert size={16} color={colors.statusWarning} />
+        <Text className="text-caption text-status-warning flex-1 font-semibold">
           Avertissements ({warnings.length})
         </Text>
-        <Text className="text-caption text-yellow-600">{open ? '▲' : '▼'}</Text>
+        <Text className="text-caption text-status-warning">{open ? '▲' : '▼'}</Text>
       </Pressable>
       {open ? (
-        <View className="border-t border-yellow-800 px-4 pb-3 gap-2 pt-2">
+        <View className="border-t border-status-warning/40 px-4 pb-3 gap-2 pt-2">
           {warnings.map((w, i) => (
-            <Text key={i} className="text-caption text-yellow-300">
+            <Text key={i} className="text-caption text-content-secondary">
               Ligne {w.line} : {w.message}
             </Text>
           ))}
@@ -59,7 +60,7 @@ export function StepConfirmation({ parsedData, mappings, onConfirm, onBack }: Pr
   if (isDone) {
     return (
       <SafeAreaView edges={['bottom']} className="flex-1 bg-background items-center justify-center px-8 gap-6">
-        <Text className="text-6xl">✅</Text>
+        <CircleCheck size={64} color={colors.statusSuccess} strokeWidth={1.5} />
         <Text className="text-xl font-bold text-content-primary text-center">
           Import terminé
         </Text>
@@ -83,11 +84,11 @@ export function StepConfirmation({ parsedData, mappings, onConfirm, onBack }: Pr
         <View className="bg-background-surface border border-border rounded-card p-4 gap-4">
           <Text className="text-body font-semibold text-content-primary">Résumé</Text>
           <View className="gap-3">
-            <StatRow icon="📅" label="Séances" value={stats.sessionCount} />
-            <StatRow icon="🏋️" label="Exercices" value={stats.exerciseCount} />
-            <StatRow icon="📊" label="Sets" value={stats.setCount} />
+            <StatRow icon={Calendar} label="Séances" value={stats.sessionCount} />
+            <StatRow icon={Dumbbell} label="Exercices" value={stats.exerciseCount} />
+            <StatRow icon={ChartColumn} label="Sets" value={stats.setCount} />
             {stats.ignoredCount > 0 ? (
-              <StatRow icon="⏭️" label="Exercices ignorés" value={stats.ignoredCount} muted />
+              <StatRow icon={SkipForward} label="Exercices ignorés" value={stats.ignoredCount} muted />
             ) : null}
           </View>
         </View>

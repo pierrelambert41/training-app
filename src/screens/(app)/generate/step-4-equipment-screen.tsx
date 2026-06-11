@@ -1,26 +1,28 @@
 import { useRouter } from 'expo-router';
+import { Building2, House, Backpack } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { useGenerationStore } from '@/stores/generation-store';
 import { CardChoice, StepLayout } from '@/components/ui';
 import type { EquipmentType } from '@/types';
 
-const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; description: string; icon: string }[] = [
+const EQUIPMENT_OPTIONS: { value: EquipmentType; label: string; description: string; icon: LucideIcon }[] = [
   {
     value: 'full_gym',
     label: 'Salle complète',
     description: 'Accès à barres, machines, câbles et haltères',
-    icon: '🏟️',
+    icon: Building2,
   },
   {
     value: 'home',
     label: 'Home gym',
     description: 'Rack, barre, haltères — équipement complet à domicile',
-    icon: '🏠',
+    icon: House,
   },
   {
     value: 'minimal',
     label: 'Minimal',
     description: 'Haltères fixes, bandes élastiques, poids de corps',
-    icon: '🎽',
+    icon: Backpack,
   },
 ];
 

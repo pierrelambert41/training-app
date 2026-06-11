@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { AppText } from '@/components/ui';
 import type { SessionSummary } from '@/features/ai';
+import { colors } from '@/theme/tokens';
 
 // ---------------------------------------------------------------------------
 // Rating badge — grande police, premier élément de la hiérarchie visuelle
@@ -13,13 +14,13 @@ function ratingStyle(rating: SessionSummary['overall_rating']): {
 } {
   switch (rating) {
     case 'excellent':
-      return { bg: '#14532d', text: '#4ade80', label: 'Excellente' };
+      return { bg: colors.tintSuccess, text: colors.statusSuccess, label: 'Excellente' };
     case 'good':
-      return { bg: '#1e3a5f', text: '#60a5fa', label: 'Bonne' };
+      return { bg: colors.tintInfo, text: colors.statusInfo, label: 'Bonne' };
     case 'poor':
-      return { bg: '#431407', text: '#fb923c', label: 'Difficile' };
+      return { bg: colors.tintWarning, text: colors.statusWarning, label: 'Difficile' };
     default:
-      return { bg: '#3b2f10', text: '#fbbf24', label: 'Correcte' };
+      return { bg: colors.tintWarning, text: colors.statusWarning, label: 'Correcte' };
   }
 }
 
@@ -54,7 +55,7 @@ function SkeletonBar({ width }: { width: `${number}%` }) {
         height: 14,
         width,
         borderRadius: 7,
-        backgroundColor: '#1f2937',
+        backgroundColor: colors.backgroundElevated,
       }}
     />
   );
@@ -95,7 +96,7 @@ function BulletList({
       {items.map((item, idx) => (
         <View key={idx} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
           <AppText style={{ fontSize: 14, color, lineHeight: 20 }}>{icon}</AppText>
-          <AppText style={{ flex: 1, fontSize: 14, color: '#e5e7eb', lineHeight: 20 }}>
+          <AppText style={{ flex: 1, fontSize: 14, color: colors.contentPrimary, lineHeight: 20 }}>
             {item}
           </AppText>
         </View>
@@ -123,13 +124,13 @@ type SessionAISummaryProps = {
 export function SessionAISummary({ summary, isPolling, fallbackText }: SessionAISummaryProps) {
   return (
     <View style={{ gap: 12 }}>
-      <AppText style={{ fontSize: 12, fontWeight: '600', color: '#6b7280', letterSpacing: 0.8 }}>
+      <AppText style={{ fontSize: 12, fontWeight: '600', color: colors.contentMuted, letterSpacing: 0.8 }}>
         RÉSUMÉ DE SÉANCE
       </AppText>
 
       <View
         style={{
-          backgroundColor: '#111827',
+          backgroundColor: colors.backgroundSurface,
           borderRadius: 12,
           borderCurve: 'continuous',
           padding: 16,
@@ -141,19 +142,19 @@ export function SessionAISummary({ summary, isPolling, fallbackText }: SessionAI
         ) : summary ? (
           <>
             <RatingBadge rating={summary.overall_rating} />
-            <AppText style={{ fontSize: 15, color: '#e5e7eb', lineHeight: 22 }}>
+            <AppText style={{ fontSize: 15, color: colors.contentPrimary, lineHeight: 22 }}>
               {summary.summary}
             </AppText>
             <BulletList
               items={summary.highlights}
               icon="★"
-              color="#4ade80"
+              color={colors.statusSuccess}
               testID="ai-summary-highlights"
             />
             <BulletList
               items={summary.concerns}
               icon="⚠"
-              color="#fbbf24"
+              color={colors.statusWarning}
               testID="ai-summary-concerns"
             />
             {summary.next_session_note !== '' && (
@@ -164,7 +165,7 @@ export function SessionAISummary({ summary, isPolling, fallbackText }: SessionAI
           </>
         ) : (
           <AppText
-            style={{ fontSize: 15, color: '#e5e7eb', lineHeight: 22 }}
+            style={{ fontSize: 15, color: colors.contentPrimary, lineHeight: 22 }}
             testID="ai-summary-fallback"
           >
             {fallbackText}

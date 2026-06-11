@@ -14,10 +14,10 @@ export function Input({ label, error, secure = false, ...rest }: Props) {
         <Text className="text-label text-content-secondary">{label}</Text>
       ) : null}
       <TextInput
-        className={`w-full bg-background-surface border rounded-button h-tap px-4 text-body text-content-primary ${
+        className={`w-full bg-background-surface border rounded-field h-tap px-4 text-body text-content-primary ${
           error ? 'border-status-danger' : 'border-border'
         }`}
-        placeholderTextColor={colors.contentMuted}
+        placeholderTextColor={colors.contentPlaceholder}
         secureTextEntry={secure}
         {...rest}
       />

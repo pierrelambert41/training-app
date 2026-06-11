@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { AppText } from '@/components/ui';
 import { useDB } from '@/hooks/use-db';
 import { useExplainAdjustment } from '@/features/ai';
+import { colors } from '@/theme/tokens';
 
 type RecommendationWhyProps = {
   recommendationId: string;
@@ -39,7 +40,7 @@ export function RecommendationWhy({ recommendationId, userId }: RecommendationWh
         accessibilityLabel="Pourquoi cette recommandation ?"
         testID={`why-button-${recommendationId}`}
       >
-        <AppText style={{ fontSize: 13, color: '#60a5fa' }}>
+        <AppText style={{ fontSize: 13, color: colors.statusInfo }}>
           {open ? 'Masquer' : 'Pourquoi ?'}
         </AppText>
       </Pressable>
@@ -47,14 +48,14 @@ export function RecommendationWhy({ recommendationId, userId }: RecommendationWh
       {open && (
         <View style={{ paddingHorizontal: 4, paddingBottom: 4 }}>
           {isLoading ? (
-            <ActivityIndicator size="small" color="#60a5fa" />
+            <ActivityIndicator size="small" color={colors.statusInfo} />
           ) : error ? (
-            <AppText style={{ fontSize: 13, color: '#9ca3af' }}>
+            <AppText style={{ fontSize: 13, color: colors.contentSecondary }}>
               Explication indisponible pour le moment.
             </AppText>
           ) : explanation !== null ? (
             <AppText
-              style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 19 }}
+              style={{ fontSize: 13, color: colors.contentSecondary, lineHeight: 19 }}
               testID={`why-explanation-${recommendationId}`}
             >
               {explanation}

@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+// Palette synchronisée avec src/theme/tokens.ts.
 module.exports = {
   content: ['./app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
@@ -7,35 +8,39 @@ module.exports = {
     extend: {
       colors: {
         background: {
-          DEFAULT: '#080d1a',
-          surface: '#0f1628',
-          elevated: '#1a2440',
+          DEFAULT: '#0a0a0c',
+          surface: '#151519',
+          elevated: '#1f1f25',
         },
         content: {
-          primary: '#ffffff',
-          secondary: '#a3a3a3',
-          muted: '#525252',
-          placeholder: '#6b7280',
-          'on-accent': '#ffffff',
+          primary: '#fafafa',
+          secondary: '#a1a1aa',
+          muted: '#71717a',
+          placeholder: '#52525b',
+          'on-accent': '#0a0a0c',
         },
         accent: {
-          DEFAULT: '#3b82f6',
-          hover: '#2563eb',
+          DEFAULT: '#a3e635',
+          hover: '#84cc16',
         },
         status: {
-          success: '#22c55e',
-          warning: '#f97316',
-          danger: '#ef4444',
+          success: '#4ade80',
+          warning: '#fbbf24',
+          danger: '#f87171',
+          info: '#38bdf8',
+        },
+        ai: {
+          DEFAULT: '#a78bfa',
         },
         border: {
-          DEFAULT: '#1e2d4a',
-          strong: '#2d4170',
+          DEFAULT: '#232329',
+          strong: '#3a3a42',
         },
       },
       fontSize: {
-        'display': ['32px', { lineHeight: '40px', fontWeight: '700' }],
-        'logger': ['28px', { lineHeight: '36px', fontWeight: '600' }],
-        'heading': ['20px', { lineHeight: '28px', fontWeight: '600' }],
+        'display': ['34px', { lineHeight: '40px', fontWeight: '800', letterSpacing: '-0.5px' }],
+        'logger': ['28px', { lineHeight: '34px', fontWeight: '700', letterSpacing: '-0.3px' }],
+        'heading': ['20px', { lineHeight: '26px', fontWeight: '700', letterSpacing: '-0.2px' }],
         'body': ['16px', { lineHeight: '24px', fontWeight: '400' }],
         'label': ['14px', { lineHeight: '20px', fontWeight: '500' }],
         'caption': ['12px', { lineHeight: '16px', fontWeight: '400' }],
@@ -46,9 +51,10 @@ module.exports = {
         '22': '88px',
       },
       borderRadius: {
-        'card': '12px',
-        'button': '8px',
+        'card': '20px',
+        'button': '999px',
         'chip': '999px',
+        'field': '14px',
       },
     },
   },

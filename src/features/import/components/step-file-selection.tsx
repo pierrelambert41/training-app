@@ -1,4 +1,5 @@
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
+import { CircleCheck, FileUp, TriangleAlert } from 'lucide-react-native';
 import { colors } from '@/theme/tokens';
 
 type Props = {
@@ -36,7 +37,7 @@ export function StepFileSelection({
           <ActivityIndicator color={colors.accent} />
         ) : (
           <>
-            <Text className="text-4xl">📂</Text>
+            <FileUp size={36} color={colors.accent} strokeWidth={1.5} />
             <Text className="text-body font-semibold text-accent text-center">
               Choisir un fichier CSV
             </Text>
@@ -49,7 +50,7 @@ export function StepFileSelection({
 
       {fileName ? (
         <View className="bg-background-surface border border-border rounded-card px-4 py-3 flex-row items-center gap-3">
-          <Text className="text-lg">✅</Text>
+          <CircleCheck size={18} color={colors.statusSuccess} />
           <Text className="text-body text-content-primary flex-1" numberOfLines={1}>
             {fileName}
           </Text>
@@ -57,9 +58,9 @@ export function StepFileSelection({
       ) : null}
 
       {fileError ? (
-        <View className="bg-red-950 border border-red-800 rounded-card px-4 py-3 flex-row items-start gap-3">
-          <Text className="text-lg">⚠️</Text>
-          <Text className="text-body text-red-400 flex-1">{fileError}</Text>
+        <View className="bg-status-danger/10 border border-status-danger/40 rounded-card px-4 py-3 flex-row items-start gap-3">
+          <TriangleAlert size={18} color={colors.statusDanger} />
+          <Text className="text-body text-status-danger flex-1">{fileError}</Text>
         </View>
       ) : null}
 

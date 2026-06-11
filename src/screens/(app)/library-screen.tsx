@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { View, FlatList, ActivityIndicator, TouchableOpacity, Text } from 'react-native';
+import { View, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Plus } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useExercises } from '@/hooks/use-exercises';
@@ -75,9 +76,9 @@ export default function LibraryScreen() {
         activeOpacity={0.8}
         testID="library-create-button"
         className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-accent items-center justify-center"
-        style={{ elevation: 4 }}
+        style={{ boxShadow: '0 4px 16px rgba(163, 230, 53, 0.35)' }}
       >
-        <Text className="text-content-on-accent text-display leading-none" style={{ marginTop: -2 }}>+</Text>
+        <Plus size={26} color={colors.contentOnAccent} strokeWidth={2.4} />
       </TouchableOpacity>
     </SafeAreaView>
   );

@@ -1,26 +1,28 @@
 import { useRouter } from 'expo-router';
+import { BicepsFlexed, Dumbbell, Zap } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { useGenerationStore } from '@/stores/generation-store';
 import { CardChoice, StepLayout } from '@/components/ui';
 import type { ProgramGoal } from '@/types';
 
-const GOAL_OPTIONS: { value: ProgramGoal; label: string; description: string; icon: string }[] = [
+const GOAL_OPTIONS: { value: ProgramGoal; label: string; description: string; icon: LucideIcon }[] = [
   {
     value: 'hypertrophy',
     label: 'Hypertrophie',
     description: 'Maximiser le volume musculaire',
-    icon: '💪',
+    icon: BicepsFlexed,
   },
   {
     value: 'strength',
     label: 'Force',
     description: 'Augmenter les charges sur les mouvements de base',
-    icon: '🏋️',
+    icon: Dumbbell,
   },
   {
     value: 'mixed',
     label: 'Mixte',
     description: 'Combiner hypertrophie et force',
-    icon: '⚡',
+    icon: Zap,
   },
 ];
 

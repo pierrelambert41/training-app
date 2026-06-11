@@ -1,26 +1,28 @@
 import { useRouter } from 'expo-router';
+import { Sprout, Target, TrendingUp } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { useGenerationStore } from '@/stores/generation-store';
 import { CardChoice, StepLayout } from '@/components/ui';
 import type { TrainingLevel } from '@/types';
 
-const LEVEL_OPTIONS: { value: TrainingLevel; label: string; description: string; icon: string }[] = [
+const LEVEL_OPTIONS: { value: TrainingLevel; label: string; description: string; icon: LucideIcon }[] = [
   {
     value: 'beginner',
     label: 'Débutant',
     description: 'Moins de 1 an de pratique sérieuse et régulière',
-    icon: '🌱',
+    icon: Sprout,
   },
   {
     value: 'intermediate',
     label: 'Intermédiaire',
     description: '1 à 4 ans de pratique, progression régulière',
-    icon: '📈',
+    icon: TrendingUp,
   },
   {
     value: 'advanced',
     label: 'Avancé',
     description: '4+ ans, progression lente, bases solides',
-    icon: '🎯',
+    icon: Target,
   },
 ];
 

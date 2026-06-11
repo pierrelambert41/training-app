@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { AppText } from '@/components/ui';
+import { colors } from '@/theme/tokens';
 
 export function ScoreRing({ score }: { score: number }) {
   const pct = score / 10;
 
   const ringColor = useMemo(() => {
-    if (score >= 8) return '#22c55e';
-    if (score >= 6) return '#3b82f6';
-    if (score >= 4) return '#f59e0b';
-    if (score >= 2) return '#f97316';
-    return '#ef4444';
+    if (score >= 8) return colors.statusSuccess;
+    if (score >= 6) return colors.statusInfo;
+    if (score >= 4) return colors.statusWarning;
+    if (score >= 2) return colors.statusWarning;
+    return colors.statusDanger;
   }, [score]);
 
   return (
@@ -21,7 +22,7 @@ export function ScoreRing({ score }: { score: number }) {
           height: 160,
           borderRadius: 80,
           borderWidth: 10,
-          borderColor: '#1e2a45',
+          borderColor: colors.border,
           position: 'absolute',
         }}
       />
@@ -32,9 +33,9 @@ export function ScoreRing({ score }: { score: number }) {
           borderRadius: 80,
           borderWidth: 10,
           borderColor: ringColor,
-          borderRightColor: pct >= 0.25 ? ringColor : '#1e2a45',
-          borderBottomColor: pct >= 0.5 ? ringColor : '#1e2a45',
-          borderLeftColor: pct >= 0.75 ? ringColor : '#1e2a45',
+          borderRightColor: pct >= 0.25 ? ringColor : colors.border,
+          borderBottomColor: pct >= 0.5 ? ringColor : colors.border,
+          borderLeftColor: pct >= 0.75 ? ringColor : colors.border,
           position: 'absolute',
           transform: [{ rotate: '-90deg' }],
           opacity: 0.9,
@@ -52,7 +53,7 @@ export function ScoreRing({ score }: { score: number }) {
 
 export function AchievementDot({ achievement }: { achievement: number }) {
   const color =
-    achievement >= 1 ? '#22c55e' : achievement >= 0.7 ? '#f59e0b' : '#ef4444';
+    achievement >= 1 ? colors.statusSuccess : achievement >= 0.7 ? colors.statusWarning : colors.statusDanger;
   return (
     <View
       style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }}
@@ -64,9 +65,9 @@ export function StatPill({ label, value }: { label: string; value: string }) {
   return (
     <View
       className="flex-1 items-center py-3 rounded-card"
-      style={{ backgroundColor: '#111827' }}
+      style={{ backgroundColor: colors.backgroundSurface }}
     >
-      <AppText style={{ fontSize: 22, fontWeight: '700', color: '#f3f4f6' }}>
+      <AppText style={{ fontSize: 22, fontWeight: '700', color: colors.contentPrimary }}>
         {value}
       </AppText>
       <AppText className="text-caption text-content-muted mt-0.5">{label}</AppText>

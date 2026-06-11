@@ -97,22 +97,15 @@ describe('HomeScreen', () => {
     expect(screen.getByText("Aujourd'hui")).toBeTruthy();
   });
 
-  it("affiche l'email de l'utilisateur connecté", () => {
+  it("n'affiche pas l'email sur le Home (déplacé dans Profil)", () => {
     useAuthStore.setState({ user: fakeUser, isAuthenticated: true, isHydrated: true });
-    render(<HomeScreen />);
-    expect(screen.getByText('test@example.com')).toBeTruthy();
-  });
-
-  it("n'affiche pas d'email si aucun utilisateur", () => {
     render(<HomeScreen />);
     expect(screen.queryByText('test@example.com')).toBeNull();
   });
 
-  it('appelle logout au tap sur le bouton de déconnexion', async () => {
-    mockLogout.mockResolvedValue(undefined);
+  it("n'affiche pas de bouton de déconnexion sur le Home (déplacé dans Profil)", () => {
     render(<HomeScreen />);
-    fireEvent.press(screen.getByTestId('logout-button'));
-    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('logout-button')).toBeNull();
   });
 
   it('affiche le CTA générer programme quand pas de données', () => {

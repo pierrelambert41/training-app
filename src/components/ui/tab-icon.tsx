@@ -1,21 +1,17 @@
-import { Text } from 'react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import { colors } from '@/theme/tokens';
 
 type TabIconProps = {
-  symbol: string;
+  icon: LucideIcon;
   focused: boolean;
 };
 
-export function TabIcon({ symbol, focused }: TabIconProps) {
+export function TabIcon({ icon: Icon, focused }: TabIconProps) {
   return (
-    <Text
-      style={{
-        fontSize: 22,
-        color: focused ? colors.accent : colors.contentSecondary,
-        lineHeight: 26,
-      }}
-    >
-      {symbol}
-    </Text>
+    <Icon
+      size={24}
+      color={focused ? colors.accent : colors.contentMuted}
+      strokeWidth={focused ? 2.4 : 2}
+    />
   );
 }

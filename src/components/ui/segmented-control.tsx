@@ -15,24 +15,25 @@ type Props<T extends string> = {
 export function SegmentedControl<T extends string>({ options, value, onChange, testID }: Props<T>) {
   return (
     <View
-      className="flex-row bg-background-surface border border-border rounded-card overflow-hidden"
+      className="flex-row bg-background-surface rounded-chip p-1"
       testID={testID}
     >
-      {options.map((option, index) => {
+      {options.map((option) => {
         const isSelected = value === option.value;
-        const isLast = index === options.length - 1;
         return (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
             testID={testID ? `${testID}-${option.value}` : undefined}
-            className={`flex-1 h-tap items-center justify-center active:opacity-70 ${
+            className={`flex-1 h-tap items-center justify-center rounded-chip active:opacity-70 ${
               isSelected ? 'bg-accent' : 'bg-transparent'
-            } ${!isLast ? 'border-r border-border' : ''}`}
+            }`}
           >
             <Text
-              className={`text-label font-medium ${
-                isSelected ? 'text-content-on-accent' : 'text-content-secondary'
+              className={`text-label ${
+                isSelected
+                  ? 'text-content-on-accent font-semibold'
+                  : 'text-content-secondary font-medium'
               }`}
             >
               {option.label}

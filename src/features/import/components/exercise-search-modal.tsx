@@ -52,7 +52,7 @@ export function ExerciseSearchModal({ visible, onSelect, onClose }: Props) {
             autoCorrect={false}
             autoCapitalize="none"
             clearButtonMode="while-editing"
-            className="h-tap rounded-button bg-background-surface border border-border px-4 text-body text-content-primary"
+            className="h-tap rounded-field bg-background-surface border border-border px-4 text-body text-content-primary"
           />
         </View>
 

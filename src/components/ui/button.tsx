@@ -31,12 +31,12 @@ const variantClasses: Record<Variant, { container: string; text: string }> = {
 
 const sizeClasses: Record<Size, { container: string; text: string }> = {
   md: {
-    container: 'h-tap px-4 rounded-button',
+    container: 'h-tap px-5 rounded-button',
     text: 'text-label',
   },
   lg: {
-    container: 'h-18 px-6 rounded-button',
-    text: 'text-body',
+    container: 'h-14 px-6 rounded-button',
+    text: 'text-body font-semibold',
   },
 };
 
@@ -58,7 +58,7 @@ export function Button({
       onPress={onPress}
       disabled={isDisabled}
       testID={testID}
-      className={`items-center justify-center ${variantContainer} ${sizeContainer} ${isDisabled ? 'opacity-50' : ''}`}
+      className={`items-center justify-center active:opacity-80 ${variantContainer} ${sizeContainer} ${isDisabled ? 'opacity-50' : ''}`}
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.contentOnAccent : colors.accent} />
