@@ -15,6 +15,8 @@ export interface Block {
   endDate: string | null;
   status: BlockStatus;
   deloadStrategy: DeloadStrategy;
+  /** Source de génération (TA-146) — NULL pour les blocs antérieurs. */
+  generationSource: 'ai' | 'fallback' | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +32,7 @@ export type NewBlockInput = {
   endDate?: string | null;
   status?: BlockStatus;
   deloadStrategy?: DeloadStrategy;
+  generationSource?: 'ai' | 'fallback' | null;
 };
 
 export type UpdateBlockInput = Partial<

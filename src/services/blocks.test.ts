@@ -166,6 +166,7 @@ describe('blocks repository', () => {
         endDate: '2026-05-13',
         status: 'deloaded',
         deloadStrategy: 'fatigue_triggered',
+        generationSource: null,
         createdAt: '2026-04-01T00:00:00.000Z',
         updatedAt: '2026-04-15T00:00:00.000Z',
       });

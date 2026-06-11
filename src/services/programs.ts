@@ -16,6 +16,7 @@ type ProgramRow = {
   frequency: number | null;
   level: string | null;
   is_active: number;
+  generation_source: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,6 +30,7 @@ function rowToProgram(row: ProgramRow): Program {
     frequency: row.frequency,
     level: row.level as Program['level'],
     isActive: row.is_active === 1,
+    generationSource: (row.generation_source ?? null) as Program['generationSource'],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -61,14 +63,15 @@ export async function insertProgram(
     frequency: input.frequency,
     level: input.level,
     isActive: input.isActive ?? false,
+    generationSource: input.generationSource ?? null,
     createdAt: now,
     updatedAt: now,
   };
 
   await db.runAsync(
     `INSERT INTO programs (
-      id, user_id, title, goal, frequency, level, is_active, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, user_id, title, goal, frequency, level, is_active, generation_source, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       program.id,
       program.userId,
@@ -77,6 +80,7 @@ export async function insertProgram(
       program.frequency,
       program.level,
       program.isActive ? 1 : 0,
+      program.generationSource,
       program.createdAt,
       program.updatedAt,
     ]
@@ -102,12 +106,14 @@ export async function updateProgram(
     frequency: input.frequency !== undefined ? input.frequency : existing.frequency,
     level: input.level !== undefined ? input.level : existing.level,
     isActive: input.isActive ?? existing.isActive,
+    generationSource:
+      input.generationSource !== undefined ? input.generationSource : existing.generationSource,
     updatedAt: now,
   };
 
   await db.runAsync(
     `UPDATE programs
-       SET title = ?, goal = ?, frequency = ?, level = ?, is_active = ?, updated_at = ?
+       SET title = ?, goal = ?, frequency = ?, level = ?, is_active = ?, generation_source = ?, updated_at = ?
      WHERE id = ?`,
     [
       updated.title,
@@ -115,6 +121,7 @@ export async function updateProgram(
       updated.frequency,
       updated.level,
       updated.isActive ? 1 : 0,
+      updated.generationSource,
       updated.updatedAt,
       updated.id,
     ]

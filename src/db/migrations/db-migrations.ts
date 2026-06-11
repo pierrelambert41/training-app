@@ -379,4 +379,14 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       ALTER TABLE ai_retry_queue ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
     `,
   },
+  // TA-146 — Source de génération ('ai' | 'fallback', NULL pour l'existant).
+  // Colonne locale uniquement (pas dans toSupabasePayload : absente du schéma
+  // Supabase, un push la rejetterait). Détection bannière "remplacer par IA".
+  {
+    version: 13,
+    sql: `
+      ALTER TABLE programs ADD COLUMN generation_source TEXT;
+      ALTER TABLE blocks ADD COLUMN generation_source TEXT;
+    `,
+  },
 ];

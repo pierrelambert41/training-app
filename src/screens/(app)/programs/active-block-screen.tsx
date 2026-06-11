@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveProgramStore } from '@/stores/active-program-store';
-import { AISummaryCard, useStoredBlockSummary } from '@/features/ai';
+import { AISummaryCard, FallbackUpgradeBanner, useStoredBlockSummary } from '@/features/ai';
+import { useAuthStore } from '@/features/auth';
 import { Button, AppText, EmptyState, WeekCalendar } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { WorkoutDay } from '@/types/workout-day';
@@ -181,6 +182,7 @@ export default function ActiveBlockScreen() {
   const sessionCountsByDayId = useActiveProgramStore((s) => s.sessionCountsByDayId);
   const [calendarWeek, setCalendarWeek] = useState<number | null>(null);
   const { summary: blockSummary } = useStoredBlockSummary(activeBlock?.id);
+  const userId = useAuthStore((s) => s.user?.id);
 
   if (isLoading) {
     return (
@@ -267,6 +269,12 @@ export default function ActiveBlockScreen() {
         contentContainerClassName="pb-36"
         showsVerticalScrollIndicator={false}
       >
+        {program.generationSource === 'fallback' ? (
+          <View className="px-4 pt-4">
+            <FallbackUpgradeBanner program={program} userId={userId} />
+          </View>
+        ) : null}
+
         <BlockHeader
           title={activeBlock.title}
           goal={activeBlock.goal}
