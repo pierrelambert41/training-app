@@ -174,9 +174,9 @@ describe('transformAIOutputToProgram', () => {
     ).toBe('fallback');
   });
 
-  it('estime la durée de séance (8 min + min/set par rôle)', () => {
+  it('estime la durée de séance avec la même heuristique que le validateur (8 + 3 min/série)', () => {
     const result = transformAIOutputToProgram(aiOutput, makeInput(), makeDeps());
-    // Jour A : main 4 sets × 6 + secondary 3 × 4 + accessory 3 × 3 = 24+12+9 + 8 = 53
-    expect(result.days[0].day.estimatedDurationMin).toBe(53);
+    // Jour A : (4+3+3) séries × 3 min + 8 min échauffement = 38
+    expect(result.days[0].day.estimatedDurationMin).toBe(38);
   });
 });

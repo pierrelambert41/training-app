@@ -14,6 +14,7 @@ import type {
   TrainingLevel,
 } from '@/types';
 import type { AIIntermediateDay, AIIntermediateOutput } from '../types/ai-generation';
+import { SESSION_MIN_PER_SET, SESSION_WARMUP_MIN } from './validate-ai-program';
 
 /**
  * Résultat de génération annoté de sa source (ADR-028, TA-145/146) :
@@ -56,13 +57,9 @@ const REST_SECONDS_BY_ROLE: Record<PlannedExerciseRole, number> = {
   accessory: 90,
 };
 
-const ESTIMATED_MIN_PER_SET_BY_ROLE: Record<PlannedExerciseRole, number> = {
-  main: 6,
-  secondary: 4,
-  accessory: 3,
-};
-
-const WARMUP_MIN = 8;
+// Estimation de durée affichée : MÊME heuristique que le validateur et le
+// prompt (source unique) — sinon l'app affiche 93 min pour une séance que
+// le contrat IA borne à 70 (constaté en réel le 2026-06-10).
 
 function parseReps(reps: string): { min: number; max: number } {
   const [low, high] = reps.split('-').map(Number);
@@ -110,7 +107,7 @@ function transformDay(
   const byId = new Map(catalogue.map((e) => [e.id, e]));
   const dayId = deps.generateId();
 
-  let estimatedMin = WARMUP_MIN;
+  let estimatedMin = SESSION_WARMUP_MIN;
 
   const plannedExercises: NewPlannedExerciseInput[] = day.exercises.map((aiEx, order) => {
     // exercise_id validé par TA-143 avant transformation — le `!` est sûr.
@@ -118,7 +115,7 @@ function transformDay(
     const role = inferRole(exercise, order);
     const repRange = parseReps(aiEx.reps);
 
-    estimatedMin += aiEx.sets * ESTIMATED_MIN_PER_SET_BY_ROLE[role];
+    estimatedMin += aiEx.sets * SESSION_MIN_PER_SET;
 
     const baseConfig = deps.buildProgressionConfig(
       aiEx.progression as ProgressionType,
