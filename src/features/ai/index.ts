@@ -55,3 +55,7 @@ export { useExplainAdjustment } from './hooks/use-explain-adjustment';
 // TA-137 — Analyse de plateau à la demande
 export { analyzePlateau } from './api/plateau-analysis-service';
 export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
+
+// TA-138 — Résumé de bloc à la demande
+export { generateBlockSummary } from './api/block-summary-service';
+export { useBlockSummary } from './hooks/use-block-summary';
