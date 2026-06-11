@@ -1,4 +1,11 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { render as rtlRender, screen, fireEvent, waitFor, act } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// ExercisePage utilise useQueryClient (toggle d'unité TA-162) : provider requis.
+function render(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return rtlRender(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
 import { Alert } from 'react-native';
 import { useSessionStore } from '@/stores/session-store';
 import SessionLiveScreen from '../../../../app/(app)/session/live';

@@ -1,4 +1,5 @@
 import {
+  defaultBarWeightKg,
   formatWeight,
   fromDisplayWeight,
   kgToLb,
@@ -67,6 +68,16 @@ describe('units', () => {
     it('lb : la valeur affichée tombe sur un multiple de 5 lb', () => {
       const rounded = roundToLoadableIncrement(42, 'lb'); // 92.6 lb brut
       expect(toDisplayWeight(rounded, 'lb') % 5).toBe(0);
+    });
+  });
+
+  describe('defaultBarWeightKg', () => {
+    it('barre olympique : 20 kg en mode kg', () => {
+      expect(defaultBarWeightKg('kg')).toBe(20);
+    });
+
+    it('barre olympique : 45 lb en mode lb (pas 44.1)', () => {
+      expect(toDisplayWeight(defaultBarWeightKg('lb'), 'lb')).toBe(45);
     });
   });
 

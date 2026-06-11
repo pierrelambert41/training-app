@@ -1,10 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { ActionSheetIOS, Platform, Pressable, ScrollView, View } from 'react-native';
 import { CircleCheck } from 'lucide-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
-import { fromDisplayWeight, resolveExerciseUnit, toDisplayWeight } from '@/lib/units';
+import { defaultBarWeightKg, fromDisplayWeight, resolveExerciseUnit, toDisplayWeight } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
 import { usePreferredUnit } from '@/stores/settings-store';
+import { updateExerciseSettings } from '@/services/exercises';
 import { useLastSetForExercise } from '@/hooks/use-last-set-for-exercise';
 import { useLastSetForExerciseSide } from '@/hooks/use-last-set-for-exercise-side';
 import { useSessionStore } from '@/stores/session-store';
@@ -57,11 +60,29 @@ export function ExercisePage({
   // qu'à cette frontière (prefill → affichage, saisie → kg).
   const preferredUnit = usePreferredUnit();
   const unit = resolveExerciseUnit(exerciseMeta, preferredUnit);
+  const queryClient = useQueryClient();
 
-  // Plate calculator : poids de barre explicite, sinon 20 kg si barbell.
+  // Bascule kg/lb en cours de séance : on découvre l'unité de la machine sur
+  // place. Persistée en display_unit sur l'exercice → mémorisée pour les
+  // prochaines séances. Le stockage des sets reste en kg canonique.
+  const handleSelectUnit = useCallback(
+    async (nextUnit: WeightUnit) => {
+      if (!exerciseMeta || nextUnit === unit) return;
+      await updateExerciseSettings(db, exerciseMeta.id, {
+        displayUnit: nextUnit,
+        barWeightKg: exerciseMeta.barWeightKg ?? null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['session-exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['exercise', exerciseMeta.id] });
+    },
+    [db, exerciseMeta, unit, queryClient]
+  );
+
+  // Plate calculator : poids de barre explicite, sinon le standard de
+  // l'unité affichée (20 kg / 45 lb) si barbell — suit le toggle kg/lb.
   const barWeightKg =
     exerciseMeta?.barWeightKg ??
-    (exerciseMeta?.equipment.includes('barbell') ? 20 : null);
+    (exerciseMeta?.equipment.includes('barbell') ? defaultBarWeightKg(unit) : null);
   const barWeightDisplay =
     barWeightKg !== null && logType === 'weight_reps'
       ? toDisplayWeight(barWeightKg, unit)
@@ -191,9 +212,11 @@ export function ExercisePage({
         targetRir={plannedExercise.targetRir}
         targetLoad={logType === 'weight_reps' ? prefillLoad : null}
         unit={unit}
+        onSelectUnit={exerciseMeta ? handleSelectUnit : undefined}
       />
 
       <SetRowList
+        key={unit}
         virtualRows={virtualRows}
         allSetsLogged={allSetsLogged}
         nextVirtual={nextVirtual}
