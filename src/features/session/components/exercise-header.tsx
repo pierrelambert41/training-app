@@ -12,7 +12,47 @@ type ExerciseHeaderProps = {
   /** Déjà converti dans l'unité d'affichage par l'appelant. */
   targetLoad: number | null;
   unit: WeightUnit;
+  /**
+   * Bascule kg/lb en cours de séance (machine découverte sur place).
+   * Persistée sur l'exercice par l'appelant. Absent = toggle masqué.
+   */
+  onSelectUnit?: (unit: WeightUnit) => void;
 };
+
+function UnitToggle({
+  unit,
+  onSelectUnit,
+}: {
+  unit: WeightUnit;
+  onSelectUnit: (unit: WeightUnit) => void;
+}) {
+  return (
+    <View className="flex-row bg-background-surface rounded-chip p-0.5">
+      {(['kg', 'lb'] as const).map((u) => {
+        const selected = u === unit;
+        return (
+          <Pressable
+            key={u}
+            onPress={() => onSelectUnit(u)}
+            className={`px-3 py-1.5 rounded-chip ${selected ? 'bg-accent' : ''}`}
+            accessibilityLabel={`Afficher les charges en ${u}`}
+            accessibilityRole="button"
+            testID={`unit-toggle-${u}`}
+            hitSlop={6}
+          >
+            <AppText
+              className={`text-caption font-bold ${
+                selected ? 'text-content-on-accent' : 'text-content-muted'
+              }`}
+            >
+              {u}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 function TargetStat({ value, unit }: { value: string; unit: string }) {
   return (
@@ -39,25 +79,30 @@ export function ExerciseHeader({
   targetRir,
   targetLoad,
   unit,
+  onSelectUnit,
 }: ExerciseHeaderProps) {
   const musclesLabel = primaryMuscles.slice(0, 3).join(' · ');
 
   return (
     <View className="gap-3 pb-1">
       <View className="gap-1">
-        <Pressable
-          onPress={() => console.warn('TODO TA-15: ouvrir fiche exercice en modal')}
-          accessibilityLabel={`Voir la fiche de ${name}`}
-          accessibilityRole="button"
-        >
-          <AppText
-            className="font-bold text-content-primary"
-            style={{ fontSize: 25, lineHeight: 30, letterSpacing: -0.4 }}
-            numberOfLines={2}
+        <View className="flex-row items-start justify-between gap-3">
+          <Pressable
+            onPress={() => console.warn('TODO TA-15: ouvrir fiche exercice en modal')}
+            accessibilityLabel={`Voir la fiche de ${name}`}
+            accessibilityRole="button"
+            className="flex-1"
           >
-            {name}
-          </AppText>
-        </Pressable>
+            <AppText
+              className="font-bold text-content-primary"
+              style={{ fontSize: 25, lineHeight: 30, letterSpacing: -0.4 }}
+              numberOfLines={2}
+            >
+              {name}
+            </AppText>
+          </Pressable>
+          {onSelectUnit ? <UnitToggle unit={unit} onSelectUnit={onSelectUnit} /> : null}
+        </View>
 
         {musclesLabel ? (
           <AppText className="text-caption text-content-muted uppercase" style={{ letterSpacing: 1 }}>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { AppText, SegmentedControl } from '@/components/ui';
 import { colors } from '@/theme/tokens';
-import { fromDisplayWeight, resolveExerciseUnit, toDisplayWeight } from '@/lib/units';
+import { defaultBarWeightKg, fromDisplayWeight, toDisplayWeight } from '@/lib/units';
 import type { WeightUnit } from '@/lib/units';
 import { usePreferredUnit } from '@/stores/settings-store';
 import type { Exercise } from '@/types';
@@ -13,8 +13,6 @@ type UnitChoice = 'auto' | WeightUnit;
 type Props = {
   exercise: Exercise;
 };
-
-const DEFAULT_BAR_KG = 20;
 
 /**
  * Réglages locaux de l'exercice : unité d'affichage (machines en lb) et
@@ -28,7 +26,7 @@ export function ExerciseSettingsSection({ exercise }: Props) {
   const effectiveUnit = unitChoice === 'auto' ? preferredUnit : unitChoice;
 
   const isBarbell = exercise.equipment.includes('barbell');
-  const initialBarKg = exercise.barWeightKg ?? (isBarbell ? DEFAULT_BAR_KG : null);
+  const initialBarKg = exercise.barWeightKg ?? (isBarbell ? defaultBarWeightKg(effectiveUnit) : null);
   const [barWeightText, setBarWeightText] = useState(
     initialBarKg !== null ? String(toDisplayWeight(initialBarKg, effectiveUnit)) : ''
   );
@@ -85,7 +83,7 @@ export function ExerciseSettingsSection({ exercise }: Props) {
           keyboardType="decimal-pad"
           className="w-full bg-background-surface border border-border rounded-field h-tap px-4 text-body text-content-primary"
           placeholderTextColor={colors.contentPlaceholder}
-          placeholder={isBarbell ? String(toDisplayWeight(DEFAULT_BAR_KG, effectiveUnit)) : '—'}
+          placeholder={isBarbell ? String(toDisplayWeight(defaultBarWeightKg(effectiveUnit), effectiveUnit)) : '—'}
           accessibilityLabel={`Poids de la barre en ${effectiveUnit}`}
           testID="exercise-bar-weight-input"
         />

@@ -6,6 +6,23 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-162 — Switch kg/lb en cours de séance
+
+**Livré** : toggle kg/lb directement sur la page d'exercice du logger live — on découvre l'unité de la machine devant elle, pas à l'avance.
+
+- `UnitToggle` (mini-segmented kg|lb) dans `ExerciseHeader`, à droite du nom de l'exercice. Masqué si l'exercice n'est pas chargé (prop `onSelectUnit` optionnelle).
+- La bascule **persiste `display_unit` sur l'exercice** (`updateExerciseSettings`) → mémorisée pour les prochaines séances, cohérente avec le réglage de la fiche exercice. Invalidation `['session-exercises']` + `['exercise', id]`.
+- `key={unit}` sur `SetRowList` : les champs de saisie (état local initialisé du prefill) se réinitialisent dans la nouvelle unité — pas de « 100 » saisi en kg interprété en lb.
+- **Plate calculator suit la bascule** (demande explicite) : jeu de plaques de l'unité + nouveau `defaultBarWeightKg(unit)` dans lib/units — barre standard **20 kg ou 45 lb** (pas 20 kg convertis en 44.1 lb). Utilisé aussi par la section Réglages de la fiche exercice (placeholder).
+
+**Bugs rencontrés** : `useQueryClient()` dans ExercisePage → « No QueryClient set » dans session-live-screen.test et set-row-log-type-unilateral.test (41 `render()`) → wrapper local `render` avec `QueryClientProvider` (alias `rtlRender`).
+
+**S'appuie sur** : TA-158/159 (unités), TA-160 (plate calculator).
+
+**Ouvre** : rien de nouveau.
+
+---
+
 ## TA-160/TA-161 — Plate calculator + tonnage de séance
 
 **Livré** : calculateur de chargement de barre façon Hevy et tonnage comme métrique de suivi.

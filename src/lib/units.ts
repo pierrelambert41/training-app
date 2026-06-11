@@ -51,6 +51,15 @@ export function roundToLoadableIncrement(kg: number, unit: WeightUnit): number {
   return Math.round(kg / increment) * increment;
 }
 
+/**
+ * Poids de barre olympique standard par convention d'unité : 20 kg ou 45 lb.
+ * Retourne des kg canoniques. Utilisé quand l'exercice n'a pas de
+ * bar_weight_kg explicite.
+ */
+export function defaultBarWeightKg(unit: WeightUnit): number {
+  return unit === 'lb' ? lbToKg(45) : 20;
+}
+
 type ExerciseUnitSource = { displayUnit?: WeightUnit | null } | null | undefined;
 
 /** Unité effective d'un exercice : son override, sinon la préférence globale. */
