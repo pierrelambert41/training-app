@@ -103,12 +103,12 @@ function transformDay(
   day: AIIntermediateDay,
   blockId: string,
   dayOrder: number,
-  input: TransformInput,
+  catalogue: Exercise[],
+  level: TrainingLevel,
   deps: TransformDeps
 ): GenerationDayDraft {
-  const byId = new Map(input.catalogue.map((e) => [e.id, e]));
+  const byId = new Map(catalogue.map((e) => [e.id, e]));
   const dayId = deps.generateId();
-  const level: TrainingLevel = input.questionnaire.level ?? 'intermediate';
 
   let estimatedMin = WARMUP_MIN;
 
@@ -206,7 +206,7 @@ export function transformAIOutputToProgram(
   };
 
   const days = aiOutput.days.map((day, idx) =>
-    transformDay(day, blockId, input.dayOrderSlots[idx] ?? idx, input, deps)
+    transformDay(day, blockId, input.dayOrderSlots[idx] ?? idx, input.catalogue, level, deps)
   );
 
   return {
@@ -217,4 +217,57 @@ export function transformAIOutputToProgram(
     warnings: [],
     generationSource: input.source,
   };
+}
+
+export type TransformBlockInput = {
+  /** Programme existant auquel rattacher le bloc régénéré. */
+  programId: string;
+  /** Titre du nouveau bloc (ex: "Bloc 2 — Hypertrophie"). */
+  blockTitle: string;
+  /** Numéro de semaine de départ (continuité du programme). */
+  weekNumber: number;
+  /** Objectif du bloc (hérité du bloc précédent ou du changement d'objectif). */
+  goal: NewBlockInput['goal'];
+  catalogue: Exercise[];
+  level: TrainingLevel;
+  source: 'ai' | 'fallback';
+  dayOrderSlots: number[];
+  /** 'planned' par défaut : le bloc actif en cours n'est jamais remplacé (TA-146). */
+  status?: NewBlockInput['status'];
+};
+
+export type AIBlockResult = {
+  block: NewBlockInput;
+  days: GenerationDayDraft[];
+  generationSource: 'ai' | 'fallback';
+};
+
+/**
+ * Variante regenerateBlock (TA-144) du transformer partagé : convertit le
+ * même schéma intermédiaire vers un Block (+ jours) rattaché au programme
+ * existant — pas de nouveau Program.
+ */
+export function transformAIOutputToBlock(
+  aiOutput: AIIntermediateOutput,
+  input: TransformBlockInput,
+  deps: TransformDeps
+): AIBlockResult {
+  const blockId = deps.generateId();
+
+  const block: NewBlockInput = {
+    id: blockId,
+    programId: input.programId,
+    title: input.blockTitle,
+    goal: input.goal,
+    durationWeeks: aiOutput.weeks,
+    weekNumber: input.weekNumber,
+    status: input.status ?? 'planned',
+    deloadStrategy: input.level === 'advanced' ? 'scheduled' : 'fatigue_triggered',
+  };
+
+  const days = aiOutput.days.map((day, idx) =>
+    transformDay(day, blockId, input.dayOrderSlots[idx] ?? idx, input.catalogue, input.level, deps)
+  );
+
+  return { block, days, generationSource: input.source };
 }

@@ -60,6 +60,13 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
 
+// TA-144 — ClaudeProvider.regenerateBlock + stats de bloc
+export { regenerateBlockWithAI } from './api/regenerate-block-service';
+export { transformAIOutputToBlock } from './domain/transform-ai-output';
+export type { AIBlockResult, TransformBlockInput } from './domain/transform-ai-output';
+export { computeBlockStats } from './domain/compute-block-stats';
+export type { BlockStatsSetLog, ComputeBlockStatsInput } from './domain/compute-block-stats';
+
 // TA-142 — ClaudeProvider.generateProgram + transformer + service
 export { generateProgramWithAI } from './api/generate-program-service';
 export { transformAIOutputToProgram } from './domain/transform-ai-output';

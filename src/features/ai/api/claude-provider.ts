@@ -9,6 +9,7 @@ import type {
 } from '../types/ai-responses';
 import type {
   AIIntermediateOutput,
+  BlockRegenerationContext,
   ProgramGenerationContext,
   ValidationContext,
   ValidationError,
@@ -16,6 +17,7 @@ import type {
 import { AIProviderError, AIValidationExhaustedError } from '../types/ai-generation';
 import type { ClaudeMessages } from '../types/claude-messages';
 import { buildGenerateProgramPrompt } from '../domain/prompts/generate-program-prompt';
+import { buildRegenerateBlockPrompt } from '../domain/prompts/regenerate-block-prompt';
 import { validateAIGeneratedProgram } from '../domain/validate-ai-program';
 import type { AIProvider } from './ai-provider';
 import { FallbackProvider } from './fallback-provider';
@@ -195,6 +197,23 @@ export class ClaudeProvider implements AIProvider {
   ): Promise<AIIntermediateOutput> {
     const prompt = buildGenerateProgramPrompt(context, catalogSnapshot);
     return this.generateValidated(prompt, validationCtx, 'generateProgram');
+  }
+
+  /**
+   * Régénération du bloc suivant (ADR-028, TA-144). Même schéma intermédiaire,
+   * même validateur, même cycle retry que generateProgram. La continuité
+   * 60-80% est une consigne du prompt (cf. buildRegenerateBlockPrompt).
+   *
+   * Jamais enqueué dans la queue TA-141 : le retry est piloté par
+   * l'utilisateur (TA-146). Erreurs : AIProviderError / AIValidationExhaustedError.
+   */
+  async regenerateBlock(
+    context: BlockRegenerationContext,
+    catalogSnapshot: Exercise[],
+    validationCtx: ValidationContext
+  ): Promise<AIIntermediateOutput> {
+    const prompt = buildRegenerateBlockPrompt(context, catalogSnapshot);
+    return this.generateValidated(prompt, validationCtx, 'regenerateBlock');
   }
 
   /**
