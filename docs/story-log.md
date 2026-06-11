@@ -6,6 +6,18 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-163 — Fix : header « exercise/[id] » sur la fiche exercice
+
+**Livré** : la fiche exercice ouverte depuis le programme affichait le nom de route brut en titre de header — récidive du pitfall **NAV-01** (route non déclarée dans le Stack parent).
+
+- `app/(app)/_layout.tsx` : déclaration de `exercise/[id]` (fallback « Exercice ») et `design-system` (« Design system »), seules routes du groupe encore non déclarées (audit complet fait).
+- `exercise-detail-screen.tsx` : `<Stack.Screen options={{ title: displayName }} />` une fois l'exercice chargé → le header affiche le **nom de l'exercice**.
+- Test : mock expo-router enrichi (`Stack.Screen` no-op).
+
+**Ouvre** : rien. Rappel process : toute nouvelle route hors (tabs) doit être déclarée dans le Stack parent (NAV-01/NAV-03).
+
+---
+
 ## TA-162 — Switch kg/lb en cours de séance
 
 **Livré** : toggle kg/lb directement sur la page d'exercice du logger live — on découvre l'unité de la machine devant elle, pas à l'avance.
