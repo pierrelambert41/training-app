@@ -140,12 +140,15 @@ describe('buildGenerateProgramPrompt', () => {
     expect(text).toContain('60 min');
     expect(text).toContain('upper_lower');
     expect(text).toContain('MV/MEV/MAV/MRV');
-    // le volume est la règle de dimensionnement principale, pas le temps
+    // le volume est la règle de dimensionnement principale, pas le temps —
+    // et uniquement des repères sourcés (pas de tranches inventées)
     expect(text).toContain('séries dures par groupe musculaire et par semaine');
-    expect(text).toContain('10 à 16 séries'.replace('séries', 'séries dures')); // intermediate medium
+    expect(text).toContain('Schoenfeld, Ogborn & Krieger 2017');
+    expect(text).toContain('Baz-Valle et al. 2022');
     expect(text).toContain('Muscles prioritaires');
     expect(text).toContain('Pectoraux');
     expect(text).toContain('plafond secondaire');
+    expect(text).not.toMatch(/8-12|10-16|14-20/); // pas de coupures par niveau inventées
 
     const userText = messages[0].content.map((c) => c.text).join('\n');
     expect(userText).toContain('hypertrophy');
