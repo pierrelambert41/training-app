@@ -1,4 +1,5 @@
-import type { Exercise, TrainingLevel } from '@/types';
+import type { Block, Exercise, ProgramQuestionnaire, TrainingLevel } from '@/types';
+import type { AIContextProfile } from './ai-context';
 
 /**
  * Types de la génération de programme par IA (ADR-028, TA-142/143/144).
@@ -7,6 +8,43 @@ import type { Exercise, TrainingLevel } from '@/types';
  * complet. Le validateur déterministe (validate-ai-program.ts) opère sur ce
  * schéma AVANT la transformation transformAIOutputToProgram.
  */
+
+/**
+ * Contexte de génération initiale (ClaudeProvider.generateProgram, TA-142).
+ * Le questionnaire est le type Phase 3 existant — contrat partagé avec
+ * FallbackProvider (TA-145), aucune divergence possible.
+ */
+export type ProgramGenerationContext = {
+  profile: AIContextProfile;
+  questionnaire: ProgramQuestionnaire;
+};
+
+/** Progression observée d'un exercice sur le bloc précédent (input regenerateBlock). */
+export type BlockExerciseProgress = {
+  exerciseId: string;
+  exerciseName: string;
+  e1rmTrend: 'up' | 'down' | 'plateau' | 'stable';
+  complianceRate: number;
+};
+
+/** Statistiques agrégées du bloc précédent — calculées avant l'appel IA (TA-144). */
+export type BlockStats = {
+  complianceRate: number;
+  /** Nombre de séances par semaine du bloc précédent (structure à reconduire). */
+  daysPerWeek: number;
+  exerciseProgress: BlockExerciseProgress[];
+  avgFatigueScore: number | null;
+  /** PR réalisés pendant le bloc, formulés pour le prompt. */
+  prs: string[];
+};
+
+/** Contexte de régénération de bloc (ClaudeProvider.regenerateBlock, TA-144). */
+export type BlockRegenerationContext = {
+  profile: AIContextProfile;
+  previousBlock: Block;
+  previousBlockStats: BlockStats;
+  reason: 'end_of_block' | 'goal_change' | 'compliance_gap';
+};
 
 /** Un exercice du schéma intermédiaire produit par l'IA. */
 export type AIIntermediateExercise = {

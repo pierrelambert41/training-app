@@ -45,6 +45,13 @@ export const PRIORITY_MUSCLE_OPTIONS = [
   'Abdominaux',
 ] as const;
 
+/**
+ * Contrat partagé FallbackProvider ↔ ClaudeProvider (ADR-028, TA-145).
+ * C'est le questionnaire Phase 3 existant — une seule source de vérité,
+ * pas un nouveau type : alias exposé pour ProgramGenerationContext.
+ */
+export type ProgramQuestionnaire = GenerationAnswers;
+
 export type GenerationHistoryEntry = {
   exerciseId: string;
   load: number;

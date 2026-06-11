@@ -6,6 +6,37 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-147 — Prompts versionnés génération de programme (generateProgram + regenerateBlock)
+
+**Livré** : les 2 builders de prompts de génération (ADR-028) — fonctions pures, catalogue passé pré-filtré en paramètre. `buildGenerateProgramPrompt(context, catalogSnapshot)` et `buildRegenerateBlockPrompt(context, catalogSnapshot)` → `ClaudeMessages`.
+
+**Fichiers créés** :
+- `src/features/ai/domain/prompts/program-rules-block.ts` — blocs partagés : `buildCatalogueBlock` (1 ligne JSON compacte par exercice : id, nom, pattern, muscles, équipement, fatigue, progression recommandée), `buildProgramRulesBlock` (cadre dur : splits §5.1 via `validSplitsForFrequency`, 6 progressionType, contraintes blessures/durée/sports, principes evidence-based MV/MEV/MAV/MRV + SFR + placement, schéma JSON intermédiaire `OUTPUT_SCHEMA_EXAMPLE`, instruction JSON-only + reasoning 15-30 mots).
+- `src/features/ai/domain/prompts/generate-program-prompt.ts` — system = [catalogue **en 1ère position avec cache_control: ephemeral** (~90% réduction coût, ADR-025), rôle + règles] ; user = profil + questionnaire résumé.
+- `src/features/ai/domain/prompts/regenerate-block-prompt.ts` — même mécanique + bloc CONTINUITÉ INTER-BLOCS (60-80% stable, consigne de prompt pas règle de validateur) + exercices du bloc précédent avec e1rm_trend/compliance + raison (end_of_block/goal_change/compliance_gap).
+- `src/features/ai/domain/prompts/generation-prompts.test.ts` — 9 tests.
+
+**Fichiers modifiés** :
+- `src/types/generation.ts` — `ProgramQuestionnaire = GenerationAnswers` (alias, contrat partagé TA-145, pas un nouveau type).
+- `src/features/ai/types/ai-generation.ts` — `ProgramGenerationContext`, `BlockRegenerationContext`, `BlockStats` (avec `daysPerWeek` pour porter la fréquence du bloc précédent), `BlockExerciseProgress`.
+- `src/features/ai/types/claude-messages.ts` — `system?: string | TextContentBlock[]` (le caching du catalogue exige des blocs système ; les prompts TA-133 existants restent en string).
+- index prompts + index feature ai.
+
+**S'appuie sur** : TA-143 (`validSplitsForFrequency`, `ALLOWED_PROGRESSIONS` — mêmes sources que le validateur, prompts et validateur ne peuvent pas diverger), TA-133 (pattern builders).
+
+**Décisions clés** :
+- La fréquence du regenerate vient de `BlockStats.daysPerWeek` (le contexte spec ne porte pas le questionnaire).
+- `frequencyDays: null` → défaut 3 jours dans le prompt (le validateur tranchera de toute façon).
+- Transport : TA-142 devra transmettre `system` en blocs (array) à l'ai-proxy — les services existants passent une string, compatibles.
+
+**Ouvre** : TA-142 (ClaudeProvider.generateProgram consomme buildGenerateProgramPrompt + transport system array), TA-144 (regenerateBlock + computeBlockStats), TA-145.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-143 — Validateur déterministe post-IA (schéma, catalogue, contraintes)
 
 **Livré** : `validateAIGeneratedProgram(output, ctx)` — fonction pure (aucun I/O), arbitre final entre l'espace de solutions valides et la sortie IA (ADR-028). Opère sur le **schéma JSON intermédiaire** (split/weeks/days[].exercises[]), jamais sur le type Program. Types de génération posés : `AIIntermediateOutput`, `ValidationContext`, `ValidationResult`, `UserConstraints`, `AIValidationExhaustedError`, `AIProviderError` (codes typés timeout/network/rate_limited/http_error/invalid_response, pour TA-142).

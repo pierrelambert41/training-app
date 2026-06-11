@@ -60,6 +60,18 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
 
+// TA-147 — Prompts versionnés génération de programme
+export {
+  buildGenerateProgramPrompt,
+  buildRegenerateBlockPrompt,
+} from './domain/prompts';
+export type {
+  ProgramGenerationContext,
+  BlockRegenerationContext,
+  BlockStats,
+  BlockExerciseProgress,
+} from './types/ai-generation';
+
 // TA-143 — Validateur déterministe post-IA (ADR-028)
 export type {
   AIIntermediateOutput,
