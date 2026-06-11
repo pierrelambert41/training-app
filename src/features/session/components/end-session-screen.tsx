@@ -9,9 +9,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/features/auth';
 import { useSessionStore } from '@/stores/session-store';
+import { useDB } from '@/hooks/use-db';
 import { useSessionExercises } from '@/hooks/use-session-exercises';
+import { getLatestBodyMetric } from '@/services/body-metrics';
+import { computeSessionTonnage } from '@/lib/session-tonnage';
+import { toDisplayWeight } from '@/lib/units';
+import { usePreferredUnit } from '@/stores/settings-store';
 import {
   computeExerciseAchievements,
   computeSessionScores,
@@ -50,6 +56,21 @@ export function EndSessionScreen() {
     session?.workoutDayId ?? null
   );
   const exercisesById = exerciseData?.exercisesById ?? new Map();
+
+  // Tonnage informatif (Σ charge×reps, BW inclus pour les exos bodyweight) —
+  // le moteur de progression ne s'en sert pas (doctrine séries/muscle).
+  const db = useDB();
+  const preferredUnit = usePreferredUnit();
+  const { data: latestBodyMetric } = useQuery({
+    queryKey: ['latest-body-metric', userId, session?.date],
+    queryFn: () => getLatestBodyMetric(db, userId!, session!.date),
+    enabled: !!userId && !!session,
+  });
+  const tonnage = useMemo(
+    () => computeSessionTonnage(setLogs, exercisesById, latestBodyMetric?.weightKg ?? null),
+    [setLogs, exercisesById, latestBodyMetric]
+  );
+  const tonnageValue = `${toDisplayWeight(tonnage.totalKg, preferredUnit).toLocaleString('fr-FR')} ${preferredUnit}`;
 
   const scores = useMemo(() => {
     if (!session) return null;
@@ -167,16 +188,34 @@ export function EndSessionScreen() {
           </AppText>
         </View>
 
-        <View className="flex-row gap-3">
-          <StatPill
-            label="Sets"
-            value={`${completedSets}/${totalPlannedSets > 0 ? totalPlannedSets : completedSets}`}
-          />
-          <StatPill
-            label="Exercices"
-            value={`${completedExercises}/${plannedExercises.filter((pe) => !pe.isUnplanned).length || completedExercises}`}
-          />
-          <StatPill label="Durée" value={finalDuration} />
+        <View className="gap-3">
+          <View className="flex-row gap-3">
+            <StatPill
+              label="Sets"
+              value={`${completedSets}/${totalPlannedSets > 0 ? totalPlannedSets : completedSets}`}
+            />
+            <StatPill
+              label="Exercices"
+              value={`${completedExercises}/${plannedExercises.filter((pe) => !pe.isUnplanned).length || completedExercises}`}
+            />
+            <StatPill label="Durée" value={finalDuration} />
+          </View>
+          {tonnage.totalKg > 0 ? (
+            <View className="gap-1">
+              <View className="flex-row gap-3">
+                <StatPill
+                  label="Tonnage"
+                  value={tonnageValue}
+                  testID="session-tonnage"
+                />
+              </View>
+              {tonnage.missingBodyweight ? (
+                <AppText variant="caption" muted testID="session-tonnage-warning">
+                  Sous-estimé : exos au poids du corps sans pesée enregistrée.
+                </AppText>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         {(isCompleting || isCompleted) && (

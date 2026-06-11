@@ -41,15 +41,25 @@ jest.mock('@/features/dashboard/hooks/use-fatigue-compliance', () => ({
   })),
 }));
 
+jest.mock('@/features/dashboard/hooks/use-tonnage-history', () => ({
+  useTonnageHistory: jest.fn(() => ({
+    workoutDays: [],
+    selectedDayId: null,
+    selectDay: jest.fn(),
+    points: [],
+  })),
+}));
+
 describe('ProgressScreen', () => {
   it('affiche le titre Progrès', () => {
     render(<ProgressRoute />);
     expect(screen.getByText('Progrès')).toBeTruthy();
   });
 
-  it('affiche les 5 cartes analytics du dashboard', () => {
+  it('affiche les 6 cartes analytics du dashboard', () => {
     render(<ProgressRoute />);
     expect(screen.getByTestId('e1rm-card')).toBeTruthy();
+    expect(screen.getByTestId('tonnage-card')).toBeTruthy();
     expect(screen.getByTestId('volume-card')).toBeTruthy();
     expect(screen.getByTestId('body-weight-card')).toBeTruthy();
     expect(screen.getByTestId('fatigue-trend-card')).toBeTruthy();

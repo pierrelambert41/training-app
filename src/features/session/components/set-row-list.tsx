@@ -16,6 +16,7 @@ type SetRowListProps = {
   nextVirtual: VirtualSetRow | null;
   unit: WeightUnit;
   logType: LogType;
+  barWeight?: number | null;
   prefillLoad: number | null;
   targetReps: number | null;
   targetRir: number | null;
@@ -54,6 +55,7 @@ export function SetRowList({
   nextVirtual,
   logType,
   unit,
+  barWeight = null,
   prefillLoad,
   targetReps,
   targetRir,
@@ -114,6 +116,7 @@ export function SetRowList({
               log={vr.log}
               logType={logType}
               unit={unit}
+              barWeight={barWeight}
               targetLoad={logType === 'weight_reps' ? prefillLoad : null}
               targetReps={targetReps}
               targetRir={targetRir}

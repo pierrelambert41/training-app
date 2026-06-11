@@ -16,6 +16,8 @@ export type SetRowProps = {
   logType: LogType;
   /** Unité d'affichage de l'exercice — log.load (kg canonique) est converti pour l'affichage. */
   unit: WeightUnit;
+  /** Poids de barre (unité d'affichage) pour le calculateur de plaques. */
+  barWeight?: number | null;
   targetLoad: number | null;
   targetReps: number | null;
   targetRir: number | null;
@@ -36,6 +38,7 @@ export function SetRow({
   log,
   logType,
   unit,
+  barWeight = null,
   targetLoad,
   targetReps,
   targetRir,
@@ -129,6 +132,7 @@ export function SetRow({
         <SetRowInlineForm
           logType={logType}
           unit={unit}
+          barWeight={barWeight}
           side={side}
           prefillLoad={prefillLoad}
           prefillReps={prefillReps}

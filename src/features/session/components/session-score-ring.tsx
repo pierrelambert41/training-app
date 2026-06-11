@@ -61,11 +61,12 @@ export function AchievementDot({ achievement }: { achievement: number }) {
   );
 }
 
-export function StatPill({ label, value }: { label: string; value: string }) {
+export function StatPill({ label, value, testID }: { label: string; value: string; testID?: string }) {
   return (
     <View
       className="flex-1 items-center py-3 rounded-card"
       style={{ backgroundColor: colors.backgroundSurface }}
+      testID={testID}
     >
       <AppText style={{ fontSize: 22, fontWeight: '700', color: colors.contentPrimary }}>
         {value}

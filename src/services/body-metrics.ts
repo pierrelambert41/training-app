@@ -105,6 +105,25 @@ export async function getBodyMetricByDate(
 }
 
 /**
+ * Dernière pesée connue à une date donnée incluse (tonnage des exos
+ * bodyweight : on prend le poids du corps le plus récent ≤ date de séance).
+ */
+export async function getLatestBodyMetric(
+  db: SQLiteDatabase,
+  userId: string,
+  onOrBeforeDate: string
+): Promise<BodyMetric | null> {
+  const row = await db.getFirstAsync<BodyMetricRow>(
+    `SELECT * FROM body_metrics
+     WHERE user_id = ? AND date <= ? AND weight_kg IS NOT NULL
+     ORDER BY date DESC
+     LIMIT 1`,
+    [userId, onOrBeforeDate]
+  );
+  return row ? rowToBodyMetric(row) : null;
+}
+
+/**
  * Pesées depuis une date incluse, ordre chronologique (courbe dashboard).
  */
 export async function getBodyMetricsSince(

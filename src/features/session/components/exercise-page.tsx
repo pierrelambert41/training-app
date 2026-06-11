@@ -58,6 +58,15 @@ export function ExercisePage({
   const preferredUnit = usePreferredUnit();
   const unit = resolveExerciseUnit(exerciseMeta, preferredUnit);
 
+  // Plate calculator : poids de barre explicite, sinon 20 kg si barbell.
+  const barWeightKg =
+    exerciseMeta?.barWeightKg ??
+    (exerciseMeta?.equipment.includes('barbell') ? 20 : null);
+  const barWeightDisplay =
+    barWeightKg !== null && logType === 'weight_reps'
+      ? toDisplayWeight(barWeightKg, unit)
+      : null;
+
   const exerciseSetLogs = useMemo(
     () => setLogs.filter((sl) => sl.exerciseId === plannedExercise.exerciseId),
     [setLogs, plannedExercise.exerciseId]
@@ -190,6 +199,7 @@ export function ExercisePage({
         nextVirtual={nextVirtual}
         logType={logType}
         unit={unit}
+        barWeight={barWeightDisplay}
         prefillLoad={prefillLoad}
         targetReps={plannedExercise.repRangeMin}
         targetRir={plannedExercise.targetRir}
