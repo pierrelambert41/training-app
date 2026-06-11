@@ -6,6 +6,31 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-145 — FallbackProvider.generateProgram et regenerateBlock — wrapper moteur Phase 3
+
+**Livré** : la garantie "l'app fonctionne sans IA" pour la génération (ADR-028). `FallbackProvider.generateProgram` et `.regenerateBlock` encapsulent le moteur déterministe 3-couches Phase 3 derrière le **même contrat** que ClaudeProvider : schéma intermédiaire → même transformer → même annotation de source.
+
+**Fichiers créés** :
+- `src/features/ai/domain/generation-result-to-intermediate.ts` — `generationResultToIntermediate` (pur) : GenerationResult moteur → AIIntermediateOutput (reps "min-max" reconstruites, rir par défaut 2, start_weight_kg null — le moteur ne calibre pas, cf. calibrateLoad TA-127).
+
+**Fichiers modifiés** :
+- `ai-provider.ts` — interface étendue : `generateProgram(context, catalogSnapshot, validationCtx)` et `regenerateBlock(...)` (mêmes signatures pour les 2 providers, posées en TA-142/144 côté Claude).
+- `fallback-provider.ts` — les 2 méthodes : ré-exécutent le moteur Phase 3 (`userId: 'fallback'` factice — le schéma intermédiaire ne porte aucun id). regenerateBlock reconstruit les GenerationAnswers depuis bloc précédent + profil (goal mappé peaking→strength/deload→hypertrophy, fréquence clampée 3-6, blessures du profil). **Pas de continuité 60-80% garantie en mode dégradé** (re-sélection par scoring) — compromis assumé.
+- `generate-program-service.ts` — `generateProgramWithFallback(db, userId, questionnaire)` : même pipeline (catalogue filtré → provider → transformer), `generationSource: 'fallback'`.
+- `src/types/generation.ts` (TA-147) portait déjà `ProgramQuestionnaire` = alias du type Phase 3 — contrat partagé confirmé, aucun nouveau type.
+
+**Décisions clés / vérifications** :
+- Test croisé clé : **la sortie du moteur Phase 3 passe le validateur TA-143** (même contrat que l'IA) pour le niveau intermediate.
+- Piège identifié : pour (3 jours, beginner) le moteur produit un split full_body_ab à **2 jours** templates pour 3 séances/semaine (rotation A/B) — le validateur (days === frequencyDays) rejetterait cette sortie. Sans impact aujourd'hui : le fallback ne passe pas par le validateur. À garder en tête si on valide un jour les sorties fallback.
+
+**Ouvre** : TA-146 (UX remplacement fallback → IA, consomme generateProgramWithFallback/generateProgramWithAI + generationSource).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-144 — ClaudeProvider.regenerateBlock — prompt continuité inter-blocs
 
 **Livré** : la régénération IA du bloc suivant (ADR-028). `ClaudeProvider.regenerateBlock(context, catalogSnapshot, validationCtx)` réutilise le cycle `generateValidated` de TA-142 (validation TA-143 + 1 retry feedback) avec `buildRegenerateBlockPrompt` (TA-147, continuité 60-80%). `regenerateBlockWithAI(db, previousBlockId, userId, reason, supabase)` orchestre de bout en bout, ne persiste rien.
