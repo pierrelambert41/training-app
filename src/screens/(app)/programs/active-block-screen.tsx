@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveProgramStore } from '@/stores/active-program-store';
+import { AISummaryCard, useStoredBlockSummary } from '@/features/ai';
 import { Button, AppText, EmptyState, WeekCalendar } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { WorkoutDay } from '@/types/workout-day';
@@ -179,6 +180,7 @@ export default function ActiveBlockScreen() {
   const workoutDays = useActiveProgramStore((s) => s.workoutDays);
   const sessionCountsByDayId = useActiveProgramStore((s) => s.sessionCountsByDayId);
   const [calendarWeek, setCalendarWeek] = useState<number | null>(null);
+  const { summary: blockSummary } = useStoredBlockSummary(activeBlock?.id);
 
   if (isLoading) {
     return (
@@ -284,6 +286,15 @@ export default function ActiveBlockScreen() {
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}
         />
+
+        {blockSummary ? (
+          <View className="px-4 pt-5 gap-3">
+            <AppText variant="caption" muted>
+              BILAN DU BLOC
+            </AppText>
+            <AISummaryCard type="block" summary={blockSummary} />
+          </View>
+        ) : null}
 
         <View className="px-4 pt-5 gap-3">
           <AppText variant="caption" muted>

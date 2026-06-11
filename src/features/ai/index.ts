@@ -59,3 +59,14 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 // TA-138 — Résumé de bloc à la demande
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
+
+// TA-140 — Composants d'affichage IA (Aujourd'hui + bloc)
+export { AISummaryCard } from './components/ai-summary-card';
+export { AIInsightBadge } from './components/ai-insight-badge';
+export { inferHighlightSentiment } from './domain/highlight-sentiment';
+export type { InsightSentiment } from './domain/highlight-sentiment';
+export {
+  useLatestSessionSummary,
+  useStoredBlockSummary,
+  useAIHighlights,
+} from './hooks/use-ai-display-data';

@@ -18,6 +18,15 @@ jest.mock('@/hooks/use-db', () => ({
   useDB: () => ({}),
 }));
 
+// SYNC-01 : @/features/ai importe supabase transitivement (via use-explain-adjustment)
+jest.mock('@/features/ai', () => ({
+  AISummaryCard: () => null,
+  AIInsightBadge: () => null,
+  inferHighlightSentiment: () => 'neutral',
+  useLatestSessionSummary: () => ({ latest: null }),
+  useAIHighlights: () => ({ highlights: [] }),
+}));
+
 jest.mock('@/dev/seed-active-block', () => ({
   seedActiveBlock: jest.fn(),
 }));

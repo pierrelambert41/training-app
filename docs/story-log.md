@@ -6,6 +6,39 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-140 — Composants d'affichage IA dans l'app (Aujourd'hui + bloc)
+
+**Livré** : composants réutilisables `AISummaryCard` (SessionSummary | BlockSummary, identité visuelle IA : liseré violet #8b5cf6 + ✦, collapse "Voir plus" si texte > ~3 lignes, highlights condensés à 2) et `AIInsightBadge` (pill compact, sentiments positive/warning/neutral). Intégrés : écran Aujourd'hui (badges recent_highlights sous le header + section "Dernière séance" avec le dernier résumé IA de séance) et écran bloc courant (section "Bilan du bloc" si résumé TA-138 persisté). Rien n'est rendu si pas de données (pas de placeholder).
+
+**Fichiers créés** :
+- `src/features/ai/components/ai-summary-card.tsx` + `ai-insight-badge.tsx` (+tests RNTL)
+- `src/features/ai/domain/recommendation-mappers.ts` — `sessionSummaryFromRecommendation` / `blockSummaryFromMetadata` (purs, tolérants aux champs manquants)
+- `src/features/ai/domain/highlight-sentiment.ts` — `inferHighlightSentiment` heuristique mots-clés (warning > positive > neutral) (+tests)
+- `src/features/ai/api/summary-display-service.ts` — `getLatestSessionSummary(db, userId)` (JOIN sessions, exclut metadata.block_id) et `getStoredBlockSummary(db, blockId)` (+tests)
+- `src/features/ai/hooks/use-ai-display-data.ts` — `useLatestSessionSummary`, `useStoredBlockSummary`, `useAIHighlights` (lecture seule SQLite, **pas d'import supabase** — pas de piège SYNC-01 pour ces hooks, mais l'index ai reste contaminé par use-explain-adjustment)
+- `src/features/today/components/dev-tools-section.tsx` + `src/features/today/hooks/use-dev-tools.ts` — extraction des outils dev de today-screen (R6) ; au passage, **corrige la violation boundaries préexistante** (components → api direct devient components → hooks → api)
+
+**Fichiers modifiés** :
+- `today-screen.tsx` — badges highlights + section "Dernière séance" ; handlers dev déplacés ; reste sous 250 lignes
+- `src/screens/(app)/programs/active-block-screen.tsx` — section "Bilan du bloc"
+- `src/features/ai/index.ts` — exports TA-140
+- `src/screens/(app)/home-screen.test.tsx` — mock `@/features/ai` (SYNC-01)
+
+**S'appuie sur** : TA-135/TA-138 (résumés persistés), TA-132 (recent_highlights du profil), TA-139 (pattern mapping Recommendation→SessionSummary, dupliqué côté ai car session→ai serait un cycle).
+
+**Décisions clés** :
+- Mappers dupliqués dans ai/domain plutôt qu'import depuis session (R2 : session importe déjà ai ; l'inverse créerait un cycle).
+- Collapse par heuristique de longueur (>140 chars) plutôt que onTextLayout : déterministe et testable.
+- staleTime 60s sur les hooks d'affichage : les résumés changent rarement, pas de polling.
+
+**Ouvre** : review visuelle simulateur à faire (ticket design-required, flow autonome sans device). Bouton de génération du résumé de bloc à la demande (useBlockSummary TA-138) à brancher quand le flow fin de bloc existera.
+
+**Bugs découverts** : violation boundaries préexistante dans today-screen (import api direct) — corrigée ici.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-139 — Écran fin de séance avec résumé IA
 
 **Livré** : intégration du SessionSummary IA (TA-135) dans l'écran de fin de séance + bouton "Pourquoi ?" (TA-136) sous chaque recommandation load_change. Le résumé arrive de façon différée : polling 3s pendant 30s max (`useAISessionSummary`), skeleton pendant la génération, puis résumé minimal local ("Séance complétée — X séries, Y exercices") si rien n'est persisté. Hiérarchie visuelle : score ring → résumé IA (badge rating grande police, texte, highlights ★ verts, concerns ⚠ ambre, note prochaine séance) → par exercice → recommandations → bouton "Terminer" → retour `/(app)/(tabs)`. Route `app/(app)/session/summary.tsx` ajoutée (thin re-export de `EndSessionScreen`, deep-link).

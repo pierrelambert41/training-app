@@ -1,14 +1,20 @@
-import { View, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore, useAuth } from '@/features/auth';
+import {
+  AISummaryCard,
+  AIInsightBadge,
+  inferHighlightSentiment,
+  useLatestSessionSummary,
+  useAIHighlights,
+} from '@/features/ai';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { useDB } from '@/hooks/use-db';
 import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveSession } from '@/hooks/use-active-session';
 import { useTodayWorkout } from '@/hooks/use-today-workout';
 import { useSessionStore } from '@/stores/session-store';
-import { resetUserData } from '../api/reset-user-data';
 import { AppText, Button } from '@/components/ui';
 import { useTodayRecommendations } from '../hooks/use-today-recommendations';
 import { WorkoutCard } from './workout-card';
@@ -19,6 +25,9 @@ import { MiniSummary } from './mini-summary';
 import { RestDayCard } from './rest-day-card';
 import { NoProgramCard } from './no-program-card';
 import { CompletedTodayCard } from './completed-today-card';
+import { DevToolsSection } from './dev-tools-section';
+
+const MAX_VISIBLE_HIGHLIGHTS = 4;
 
 export function TodayScreen() {
   const router = useRouter();
@@ -31,62 +40,13 @@ export function TodayScreen() {
   const { data: recommendations } = useTodayRecommendations();
   const activeProgram = useActiveProgramStore((s) => s.program);
   const session = useSessionStore((s) => s.session);
+  const { latest: latestAISummary } = useLatestSessionSummary(user?.id);
+  const { highlights } = useAIHighlights(user?.id);
 
   useActiveSession();
 
   async function handleLogout() {
     await logout();
-  }
-
-  async function handleSeedTestData() {
-    const { seedActiveBlock } = await import('@/dev/seed-active-block');
-    const userId = user?.id ?? 'dev-user';
-    const programId = await seedActiveBlock(db, userId);
-    router.push(`/(app)/programs/${programId}` as Parameters<typeof router.push>[0]);
-  }
-
-  async function handleResetDB() {
-    const userId = user?.id;
-    if (!userId) return;
-    const inactivePrograms = await db.getAllAsync<{ id: string }>(
-      'SELECT id FROM programs WHERE user_id = ? AND is_active = 0',
-      [userId]
-    );
-    for (const { id: programId } of inactivePrograms) {
-      const blocks = await db.getAllAsync<{ id: string }>('SELECT id FROM blocks WHERE program_id = ?', [programId]);
-      for (const { id: blockId } of blocks) {
-        const days = await db.getAllAsync<{ id: string }>('SELECT id FROM workout_days WHERE block_id = ?', [blockId]);
-        for (const { id: dayId } of days) {
-          await db.runAsync('DELETE FROM planned_exercises WHERE workout_day_id = ?', [dayId]);
-        }
-        await db.runAsync('DELETE FROM workout_days WHERE block_id = ?', [blockId]);
-      }
-      await db.runAsync('DELETE FROM blocks WHERE program_id = ?', [programId]);
-      await db.runAsync('DELETE FROM programs WHERE id = ?', [programId]);
-    }
-    Alert.alert('DB nettoyee', `${inactivePrograms.length} programmes inactifs supprimes.`);
-  }
-
-  async function handleFullReset() {
-    const userId = user?.id;
-    if (!userId) return;
-    Alert.alert(
-      'Reset total',
-      'Efface tous les programmes, séances et historique. Irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Effacer tout',
-          style: 'destructive',
-          onPress: async () => {
-            await resetUserData(db, userId);
-            useActiveProgramStore.getState().reset();
-            useSessionStore.getState().reset();
-            Alert.alert('Reset OK', 'App remise à zéro — relance le processus de génération.');
-          },
-        },
-      ]
-    );
   }
 
   function handleStartSession() {
@@ -153,6 +113,18 @@ export function TodayScreen() {
         ) : null}
       </View>
 
+      {highlights.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {highlights.slice(0, MAX_VISIBLE_HIGHLIGHTS).map((highlight, idx) => (
+            <AIInsightBadge
+              key={idx}
+              text={highlight}
+              sentiment={inferHighlightSentiment(highlight)}
+            />
+          ))}
+        </View>
+      ) : null}
+
       {deloadRec ? (
         <DeloadCard message={deloadRec.message} />
       ) : null}
@@ -207,6 +179,13 @@ export function TodayScreen() {
         <PlateauCard count={plateauCount} />
       ) : null}
 
+      {latestAISummary ? (
+        <View className="gap-3">
+          <AppText variant="caption" muted>DERNIÈRE SÉANCE</AppText>
+          <AISummaryCard type="session" summary={latestAISummary.summary} />
+        </View>
+      ) : null}
+
       {todayData && todayData.state !== 'no_program' ? (
         <View className="gap-3">
           <AppText variant="caption" muted>PROGRESSION</AppText>
@@ -214,27 +193,7 @@ export function TodayScreen() {
         </View>
       ) : null}
 
-      {__DEV__ ? (
-        <View className="gap-2">
-          <AppText variant="caption" muted>DEV</AppText>
-          <Button
-            label="Seed test"
-            onPress={handleSeedTestData}
-            variant="secondary"
-            testID="seed-test-button"
-          />
-          <Button
-            label="Nettoyer DB (suppr. programmes inactifs)"
-            onPress={handleResetDB}
-            variant="secondary"
-          />
-          <Button
-            label="Reset total (tout effacer)"
-            onPress={handleFullReset}
-            variant="secondary"
-          />
-        </View>
-      ) : null}
+      {__DEV__ ? <DevToolsSection db={db} userId={user?.id} /> : null}
 
       <View className="mt-4">
         <Button
