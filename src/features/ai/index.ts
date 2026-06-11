@@ -60,6 +60,25 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
 
+// TA-143 — Validateur déterministe post-IA (ADR-028)
+export type {
+  AIIntermediateOutput,
+  AIIntermediateDay,
+  AIIntermediateExercise,
+  UserConstraints,
+  ValidationContext,
+  ValidationError,
+  ValidationErrorCode,
+  ValidationResult,
+  AIProviderErrorCode,
+} from './types/ai-generation';
+export { AIProviderError, AIValidationExhaustedError } from './types/ai-generation';
+export {
+  validateAIGeneratedProgram,
+  validSplitsForFrequency,
+  ALLOWED_PROGRESSIONS,
+} from './domain/validate-ai-program';
+
 // TA-141 — Queue de retry des appels IA offline
 export { processPendingAICalls } from './api/ai-queue-service';
 export type { ProcessPendingResult } from './api/ai-queue-service';
