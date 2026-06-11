@@ -372,4 +372,11 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX IF NOT EXISTS idx_ai_retry_queue_session ON ai_retry_queue(session_id);
     `,
   },
+  // TA-141 — Compteur de tentatives pour le retry worker (max 3 puis 'failed').
+  {
+    version: 12,
+    sql: `
+      ALTER TABLE ai_retry_queue ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ];

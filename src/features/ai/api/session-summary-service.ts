@@ -163,7 +163,11 @@ async function upsertSummaryRecommendation(
   }
 
   const recs = await getRecommendationsBySession(db, sessionId);
-  const existing = recs.find((r) => r.type === 'summary' && r.source === 'ai');
+  // metadata.block_id exclut le résumé de *bloc* TA-138 (même type/source possible
+  // sur la session de clôture d'un bloc).
+  const existing = recs.find(
+    (r) => r.type === 'summary' && r.source === 'ai' && r.metadata.block_id === undefined
+  );
 
   if (existing) {
     const updated = await updateRecommendation(db, existing.id, {
@@ -233,27 +237,16 @@ async function callClaudeForSummary(
  *
  * Cf. docs/ai-strategy.md §2 (déclenchement post-complétion locale, ADR-026) et §4.1.
  */
-export async function generateAndStoreSessionSummary(
+async function buildSessionSummaryContext(
   db: SQLiteDatabase,
   sessionId: string,
-  userId: string,
-  supabase: SupabaseClient | null
-): Promise<void> {
+  userId: string
+): Promise<{ context: AIContext; profileMissing: boolean } | null> {
   const session = await getSessionById(db, sessionId);
-  if (!session) {
-    console.error(`[session-summary] session not found: ${sessionId}`);
-    return;
-  }
+  if (!session) return null;
 
   const profile = await getAIContextProfile(db, userId);
   const profileMissing = profile === null;
-
-  if (profileMissing) {
-    refreshAIContextProfile(db, userId).catch((e: unknown) => {
-      console.error('[session-summary] background profile refresh failed', e);
-    });
-  }
-
   const effectiveProfile = profile ?? buildDefaultProfile();
 
   const setLogs = await buildSetLogsForContext(db, sessionId);
@@ -279,6 +272,28 @@ export async function generateAndStoreSessionSummary(
     previousSession,
     rulesEngineRecommendations,
   };
+
+  return { context, profileMissing };
+}
+
+export async function generateAndStoreSessionSummary(
+  db: SQLiteDatabase,
+  sessionId: string,
+  userId: string,
+  supabase: SupabaseClient | null
+): Promise<void> {
+  const built = await buildSessionSummaryContext(db, sessionId, userId);
+  if (!built) {
+    console.error(`[session-summary] session not found: ${sessionId}`);
+    return;
+  }
+  const { context, profileMissing } = built;
+
+  if (profileMissing) {
+    refreshAIContextProfile(db, userId).catch((e: unknown) => {
+      console.error('[session-summary] background profile refresh failed', e);
+    });
+  }
 
   const skipClaude = supabase === null || profileMissing;
 
@@ -315,5 +330,36 @@ export async function generateAndStoreSessionSummary(
       type: 'session_summary',
       payload: { sessionId, userId },
     });
+  }
+}
+
+/**
+ * Re-tente la génération du résumé IA d'une séance (worker TA-141).
+ * Contrairement à generateAndStoreSessionSummary : pas de fallback, pas de
+ * ré-enfilage — le worker gère les compteurs de tentatives.
+ *
+ * En cas de succès, upsertSummaryRecommendation remplace le résumé fallback
+ * existant (metadata écrasé, fallback: false).
+ *
+ * @returns true si le résumé IA a été généré et persisté ; false sinon (à re-tenter).
+ */
+export async function retrySessionSummary(
+  db: SQLiteDatabase,
+  sessionId: string,
+  userId: string,
+  supabase: SupabaseClient | null
+): Promise<boolean> {
+  if (supabase === null) return false;
+
+  const built = await buildSessionSummaryContext(db, sessionId, userId);
+  // Séance disparue : rien à régénérer, l'entrée peut être close.
+  if (!built) return true;
+
+  try {
+    const summary = await callClaudeForSummary(supabase, built.context);
+    await upsertSummaryRecommendation(db, sessionId, summary, false);
+    return true;
+  } catch {
+    return false;
   }
 }

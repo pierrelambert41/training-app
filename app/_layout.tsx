@@ -5,6 +5,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/features/auth';
+import { AIQueueBridge } from '@/features/ai';
 import { SyncBridge } from '@/features/sync';
 import type { SupabasePushClient } from '@/features/sync';
 import { checkSupabaseHealth, supabase } from '@/services/supabase';
@@ -85,6 +86,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <DBProvider>
         <SyncBridge supabase={supabasePushClient} />
+        <AIQueueBridge supabase={supabase} />
         <SessionHydrator>
           <AuthGuard />
         </SessionHydrator>
