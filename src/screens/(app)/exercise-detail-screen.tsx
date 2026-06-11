@@ -1,6 +1,6 @@
 import { ScrollView, View, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Star } from 'lucide-react-native';
-import { useRouter, type Href } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { useExerciseDetail } from '@/hooks/use-exercise-detail';
 import { useFavorite } from '@/hooks/use-favorite';
 import { AppText, Card } from '@/components/ui';
@@ -128,6 +128,7 @@ export default function ExerciseDetailScreen({ exerciseId }: Props) {
       contentContainerClassName="p-4 pb-8"
       testID="exercise-detail-screen"
     >
+      <Stack.Screen options={{ title: displayName }} />
       <View className="flex-row items-start justify-between mb-4" testID="exercise-detail-header">
         <View className="flex-1 mr-3 gap-2">
           <AppText variant="heading" testID="exercise-detail-name">

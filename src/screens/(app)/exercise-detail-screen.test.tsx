@@ -8,6 +8,8 @@ const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
+  // Titre dynamique du header (NAV-01) — no-op en test.
+  Stack: { Screen: () => null },
 }));
 
 type ExerciseRowDb = {
