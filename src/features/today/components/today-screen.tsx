@@ -17,6 +17,8 @@ import { useTodayWorkout } from '@/hooks/use-today-workout';
 import { useSessionStore } from '@/stores/session-store';
 import { AppText, Button } from '@/components/ui';
 import { useTodayRecommendations } from '../hooks/use-today-recommendations';
+import { useDailyCheckin } from '../hooks/use-daily-checkin';
+import { DailyCheckinCard } from './daily-checkin-card';
 import { WorkoutCard } from './workout-card';
 import { FatigueCard } from './fatigue-card';
 import { PlateauCard } from './plateau-card';
@@ -42,6 +44,7 @@ export function TodayScreen() {
   const session = useSessionStore((s) => s.session);
   const { latest: latestAISummary } = useLatestSessionSummary(user?.id);
   const { highlights } = useAIHighlights(user?.id);
+  const dailyCheckin = useDailyCheckin();
 
   useActiveSession();
 
@@ -127,6 +130,14 @@ export function TodayScreen() {
 
       {deloadRec ? (
         <DeloadCard message={deloadRec.message} />
+      ) : null}
+
+      {!dailyCheckin.isLoading ? (
+        <DailyCheckinCard
+          todayLog={dailyCheckin.todayLog}
+          onSave={dailyCheckin.save}
+          isSaving={dailyCheckin.isSaving}
+        />
       ) : null}
 
       <View className="gap-3">

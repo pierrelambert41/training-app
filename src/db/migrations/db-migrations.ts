@@ -389,4 +389,38 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       ALTER TABLE blocks ADD COLUMN generation_source TEXT;
     `,
   },
+  // TA-148 — Check-in quotidien de récupération. Miroir local de la table
+  // Supabase recovery_logs (déployée — pitfall SYNC-05 levé côté remote).
+  // Les consommateurs existants lisent déjà cette table en try/catch :
+  // ai-context-service (sleep_hours, energy, soreness), plateau-analysis-service
+  // (sleep_quality, energy, soreness, notes). UNIQUE(user_id, date) : une seule
+  // entrée par jour, l'upsert du service réutilise l'id existant pour que la
+  // sync reste un update idempotent sur le même row remote.
+  // Pas d'updated_at : la table Supabase n'en a pas (created_at uniquement),
+  // et elle n'est pas dans CONFLICT_CHECKED_TABLES (saisie mono-device attendue).
+  {
+    version: 14,
+    sql: `
+      CREATE TABLE IF NOT EXISTS recovery_logs (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        sleep_hours REAL,
+        sleep_quality INTEGER,
+        energy INTEGER,
+        stress INTEGER,
+        motivation INTEGER,
+        soreness INTEGER,
+        joint_pain INTEGER,
+        resting_hr INTEGER,
+        hrv REAL,
+        weight_kg REAL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        UNIQUE (user_id, date)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_recovery_logs_user_date ON recovery_logs(user_id, date);
+    `,
+  },
 ];

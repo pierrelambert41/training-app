@@ -6,6 +6,28 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-148 — Check-in quotidien de récupération (saisie UI des recovery_logs) — ouverture Phase 8
+
+**Livré** : la table `recovery_logs` n'était lue qu'en dégradation gracieuse (vide depuis toujours). Désormais : migration SQLite v14 (miroir du schéma Supabase, `UNIQUE(user_id, date)`), service `src/services/recovery-logs.ts` (upsert idempotent par date — réutilise id/created_at existants → la sync pousse un update sur le même row), carte `DailyCheckinCard` sur l'écran Aujourd'hui (3 sliders 1-10 sommeil/énergie/courbatures + note ≤200 car., résumé compact éditable après saisie), et branchement des RecoveryLogs (fenêtre 7 jours) dans `runRulesEngine` → `computeFatigueScore` — le détecteur de surcharge n'est plus « borgne ».
+
+**Fichiers créés** : `src/types/recovery-log.ts`, `src/services/recovery-logs.ts` (+ test), `src/features/today/hooks/use-daily-checkin.ts`, `src/features/today/components/daily-checkin-card.tsx` (+ test).
+
+**Fichiers modifiés** :
+- `src/db/migrations/db-migrations.ts` — migration v14 `recovery_logs`
+- `src/features/sync/types/sync-queue.ts` — `recovery_logs` ajouté à `SyncTableName` (hors CONFLICT_CHECKED_TABLES : pas d'`updated_at` remote, saisie mono-device)
+- `src/features/progression/api/rules-engine-service.ts` — `fetchRecoverySnapshots` (try/catch défensif) passé à `computeFatigueScore`
+- `src/features/today/components/today-screen.tsx` — carte check-in entre deload et séance du jour
+- `src/theme/tokens.ts` — token `border` (couleur piste slider)
+- `package.json` — `@react-native-community/slider` 5.0.1 (inclus dans Expo Go SDK 54)
+
+**Vérifié** : table `recovery_logs` déployée côté Supabase (SYNC-05 sans objet ici). Le check-in pré-séance (readiness sur Session) coexiste — granularité jour vs séance. Invalidation `today-recommendations` après saisie.
+
+**S'appuie sur** : TA-105 (fatigue score), TA-137 (analyse plateau), TA-132 (readiness_trends) — les trois consommateurs lisent désormais des données réelles.
+
+**Ouvre** : historique/graphique de récupération (dashboard Phase 8), `sleep_hours` non capturé (sliders = qualité), notifications de rappel (hors scope), PROG-02 partiellement résolu (CardioSession reste).
+
+---
+
 ## Fix — Comptage agoniste des séries + budget temps impératif (échec retry constaté)
 
 **Constaté en test réel** : avec la règle volume-first, les 2 tentatives IA ont échoué en `session_too_long` → bascule fallback. Cause arithmétique : ≥10 séries directes × 8-10 muscles ≈ 80-100 séries/semaine vs budget temps ~80 séries (4×60 min) — infaisable si chaque muscle exige des séries *directes*. Or les méta-analyses comptent une série pour **chaque muscle agoniste** (un développé couché compte pecs + deltoïdes antérieurs + triceps).

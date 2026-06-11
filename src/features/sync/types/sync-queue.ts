@@ -10,6 +10,7 @@ export type SyncAction = 'insert' | 'update' | 'delete';
  * Phase 4 : sessions, set_logs (TA-72)
  * Phase 5 : recommendations (TA-103)
  * Phase 7 : ai_context_profiles (TA-132) — exclue de CONFLICT_CHECKED_TABLES (table dérivée recalculable)
+ * Phase 8 : recovery_logs (TA-148) — exclue de CONFLICT_CHECKED_TABLES (saisie mono-device, pas d'updated_at remote)
  */
 export type SyncTableName =
   | 'exercises'
@@ -21,7 +22,8 @@ export type SyncTableName =
   | 'sessions'
   | 'set_logs'
   | 'recommendations'
-  | 'ai_context_profiles';
+  | 'ai_context_profiles'
+  | 'recovery_logs';
 
 export type SyncQueueRecord = {
   id: number;
