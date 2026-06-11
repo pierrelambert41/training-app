@@ -11,7 +11,7 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { generateAndStoreSessionSummary } from './session-summary-service';
+import { generateAndStoreSessionSummary, retrySessionSummary } from './session-summary-service';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -354,5 +354,98 @@ describe('generateAndStoreSessionSummary', () => {
         (c.params as string[]).includes('session-6')
     );
     expect(insertNewCall).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TA-141 — retrySessionSummary (worker de la queue de retry)
+// ---------------------------------------------------------------------------
+
+describe('retrySessionSummary', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAIContextProfile.mockResolvedValue(minimalProfile);
+  });
+
+  it('succès Claude → upsert (remplace le fallback) et retourne true', async () => {
+    const existingRec = {
+      id: 'existing-summary-id',
+      session_id: 'session-7',
+      exercise_id: null,
+      source: 'ai',
+      type: 'summary',
+      message: 'Ancien résumé fallback',
+      next_load: null,
+      next_rep_target: null,
+      next_rir_target: null,
+      action: null,
+      confidence: 0.3,
+      metadata: '{"fallback":true}',
+      created_at: '2026-05-19T10:00:00Z',
+    };
+    const state: MockDbState = {
+      session: makeSession('session-7'),
+      setLogs: [],
+      recommendations: [existingRec],
+      runCalls: [],
+    };
+    const db = makeMockDb(state);
+    (db.getFirstAsync as jest.Mock).mockImplementation(async (sql: string) => {
+      if ((sql as string).includes('FROM sessions') && (sql as string).includes('WHERE id = ?') && !(sql as string).includes('workout_day_id')) {
+        return state.session;
+      }
+      if ((sql as string).includes('FROM recommendations') && (sql as string).includes('WHERE id')) {
+        return existingRec;
+      }
+      return null;
+    });
+
+    const result = await retrySessionSummary(db, 'session-7', 'user-1', makeSupabaseOk());
+
+    expect(result).toBe(true);
+    const updateCall = state.runCalls.find((c) => c.sql.includes('UPDATE recommendations'));
+    expect(updateCall).toBeDefined();
+    // pas de ré-enfilage par le retry lui-même
+    expect(mockEnqueueAIRetry).not.toHaveBeenCalled();
+  });
+
+  it('échec Claude → retourne false sans fallback ni enqueue', async () => {
+    const state: MockDbState = {
+      session: makeSession('session-8'),
+      setLogs: [],
+      recommendations: [],
+      runCalls: [],
+    };
+    const db = makeMockDb(state);
+
+    const result = await retrySessionSummary(db, 'session-8', 'user-1', makeSupabaseError());
+
+    expect(result).toBe(false);
+    expect(mockFallbackGenerateSummary).not.toHaveBeenCalled();
+    expect(mockEnqueueAIRetry).not.toHaveBeenCalled();
+  });
+
+  it('supabase null → false (toujours offline)', async () => {
+    const state: MockDbState = {
+      session: makeSession('session-9'),
+      setLogs: [],
+      recommendations: [],
+      runCalls: [],
+    };
+
+    expect(await retrySessionSummary(makeMockDb(state), 'session-9', 'user-1', null)).toBe(false);
+  });
+
+  it('session disparue → true (entrée close, rien à régénérer)', async () => {
+    const state: MockDbState = {
+      session: null,
+      setLogs: [],
+      recommendations: [],
+      runCalls: [],
+    };
+
+    expect(
+      await retrySessionSummary(makeMockDb(state), 'ghost', 'user-1', makeSupabaseOk())
+    ).toBe(true);
   });
 });

@@ -6,6 +6,37 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-141 — Queue de retry des appels IA offline
+
+**Livré** : worker de la queue `ai_retry_queue` (posée en stub TA-135) + déclenchement au retour réseau. `processPendingAICalls(db, userId, supabase)` : batch de 5 entrées 'pending' max par cycle, traitement **séquentiel** (rate limit Claude), max 3 tentatives puis 'failed' définitif, 'done' jamais re-traité (SELECT filtre status). Le résultat IA **remplace** le fallback persisté (upsert de la Recommendation existante). `AIQueueBridge` monté dans le root layout à côté de SyncBridge : listener NetInfo indépendant de la SyncQueue Supabase (même pattern que TA-121).
+
+**Fichiers créés** :
+- `src/features/ai/api/ai-queue-service.ts` — worker + dispatch par type. session_summary/block_summary → handlers de retry ; plateau/explain_adjustment ou payload invalide → 'failed' direct (à la demande, pas de retry silencieux). generateProgram/regenerateBlock **exclus par design** (retry = action utilisateur explicite, TA-146).
+- `src/features/ai/hooks/use-network-ai-retry.ts` — listener NetInfo avec mutex ref (pattern useNetworkSync), guard `!userId`.
+- `src/features/ai/components/ai-queue-bridge.tsx` — bridge sans UI, supabase injecté par le root layout (raison Jest, cf. SyncBridge).
+
+**Fichiers modifiés** :
+- `src/db/migrations/db-migrations.ts` — **migration v12** : `ALTER TABLE ai_retry_queue ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0`.
+- `session-summary-service.ts` — extraction `buildSessionSummaryContext` + nouveau `retrySessionSummary` (pas de fallback ni ré-enfilage, retourne boolean ; session disparue → true). **Fix** : l'upsert du résumé de séance exclut désormais `metadata.block_id` (ne peut plus écraser un résumé de bloc TA-138 sur la session de clôture).
+- `block-summary-service.ts` — persist passe en **upsert** (discriminant block_id), `generateBlockSummary` enfile désormais un retry quand il pose un fallback (revient sur la décision TA-138 "pas de retry" — TA-141 inclut block_summary dans la spec), nouveau `retryBlockSummary` (cache non-fallback → true sans appel).
+- `app/_layout.tsx` — montage `<AIQueueBridge supabase={supabase} />`.
+- `src/features/ai/index.ts` — exports `processPendingAICalls`, `AIQueueBridge`.
+
+**S'appuie sur** : TA-135 (table ai_retry_queue + enqueueAIRetry + upsertSummaryRecommendation), TA-138 (résumé de bloc + discriminant block_id), TA-121 (pattern useNetworkSync).
+
+**Décisions clés** :
+- Table existante `ai_retry_queue` réutilisée (le ticket parlait d'une table `ai_queue` — éviter une 2e table redondante) ; `entity_id`/`user_id` vivent dans le payload JSON, déjà en place depuis TA-135.
+- Bridge IA séparé de SyncBridge (pas de couplage sync→ai : ai importe déjà sync via safeEnqueue, l'inverse créerait un cycle).
+- Les handlers de retry ne ré-enfilent jamais : seuls les compteurs du worker gouvernent les tentatives (pas de boucle infinie).
+
+**Ouvre** : rien — la queue est complète pour les types background. TA-146 gèrera le retry UX de generateProgram/regenerateBlock.
+
+**Bugs découverts** : l'upsert TA-135 pouvait matcher (et écraser) un résumé de *bloc* sur la session de clôture — corrigé avec le discriminant `metadata.block_id`.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-140 — Composants d'affichage IA dans l'app (Aujourd'hui + bloc)
 
 **Livré** : composants réutilisables `AISummaryCard` (SessionSummary | BlockSummary, identité visuelle IA : liseré violet #8b5cf6 + ✦, collapse "Voir plus" si texte > ~3 lignes, highlights condensés à 2) et `AIInsightBadge` (pill compact, sentiments positive/warning/neutral). Intégrés : écran Aujourd'hui (badges recent_highlights sous le header + section "Dernière séance" avec le dernier résumé IA de séance) et écran bloc courant (section "Bilan du bloc" si résumé TA-138 persisté). Rien n'est rendu si pas de données (pas de placeholder).

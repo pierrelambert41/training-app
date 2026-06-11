@@ -60,6 +60,11 @@ export { usePlateauAnalysis } from './hooks/use-plateau-analysis';
 export { generateBlockSummary } from './api/block-summary-service';
 export { useBlockSummary } from './hooks/use-block-summary';
 
+// TA-141 — Queue de retry des appels IA offline
+export { processPendingAICalls } from './api/ai-queue-service';
+export type { ProcessPendingResult } from './api/ai-queue-service';
+export { AIQueueBridge } from './components/ai-queue-bridge';
+
 // TA-140 — Composants d'affichage IA (Aujourd'hui + bloc)
 export { AISummaryCard } from './components/ai-summary-card';
 export { AIInsightBadge } from './components/ai-insight-badge';

@@ -4,8 +4,13 @@ import { getAIContextProfile } from './ai-context-service';
 import { buildBlockSummaryPrompt } from '../domain/prompts/block-summary-prompt';
 import type { AIContext, AIContextProfile } from '../types/ai-context';
 import type { BlockSummary } from '../types/ai-responses';
+import { enqueueAIRetry } from './retry-queue';
 import { getBlockById } from '@/services/blocks';
-import { getRecommendationsBySession, saveRecommendation } from '@/services/recommendations';
+import {
+  getRecommendationsBySession,
+  saveRecommendation,
+  updateRecommendation,
+} from '@/services/recommendations';
 import type { Block, Recommendation } from '@/types';
 import { generateUUID } from '@/utils/uuid';
 import { computeE1rm } from '@/lib/epley';
@@ -247,6 +252,19 @@ function toBlockSummary(metadata: Record<string, unknown>): BlockSummary {
   };
 }
 
+function findBlockSummaryRecommendation(
+  recs: Recommendation[],
+  blockId: string
+): Recommendation | undefined {
+  return recs.find(
+    (r) => r.type === 'summary' && r.source === 'ai' && r.metadata.block_id === blockId
+  );
+}
+
+/**
+ * Upsert : si un résumé de bloc existe déjà (ex: fallback posé offline),
+ * le résultat IA remplace le metadata existant (TA-141) plutôt que de dupliquer.
+ */
 async function persistBlockSummaryRecommendation(
   db: SQLiteDatabase,
   blockId: string,
@@ -254,6 +272,29 @@ async function persistBlockSummaryRecommendation(
   summary: BlockSummary,
   isFallback: boolean
 ): Promise<Recommendation> {
+  const metadata = {
+    block_id: blockId,
+    title: summary.title,
+    duration_weeks: summary.duration_weeks,
+    overall_assessment: summary.overall_assessment,
+    top_progressions: summary.top_progressions,
+    stagnations: summary.stagnations,
+    compliance_note: summary.compliance_note,
+    next_block_recommendation: summary.next_block_recommendation,
+    fallback: isFallback,
+  };
+
+  const recs = await getRecommendationsBySession(db, closingSessionId);
+  const existing = findBlockSummaryRecommendation(recs, blockId);
+
+  if (existing) {
+    const updated = await updateRecommendation(db, existing.id, {
+      message: summary.overall_assessment,
+      metadata,
+    });
+    return updated ?? existing;
+  }
+
   return saveRecommendation(db, {
     id: generateUUID(),
     sessionId: closingSessionId,
@@ -263,17 +304,7 @@ async function persistBlockSummaryRecommendation(
     message: summary.overall_assessment,
     action: null,
     confidence: isFallback ? 0.3 : 0.85,
-    metadata: {
-      block_id: blockId,
-      title: summary.title,
-      duration_weeks: summary.duration_weeks,
-      overall_assessment: summary.overall_assessment,
-      top_progressions: summary.top_progressions,
-      stagnations: summary.stagnations,
-      compliance_note: summary.compliance_note,
-      next_block_recommendation: summary.next_block_recommendation,
-      fallback: isFallback,
-    },
+    metadata,
   });
 }
 
@@ -296,34 +327,13 @@ async function persistBlockSummaryRecommendation(
  * Fallback offline/erreur : résumé textuel depuis les métriques calculées
  * (compliance, séances complétées, progressions positives). Cf. docs/ai-strategy.md §2 et §4.
  */
-export async function generateBlockSummary(
+async function prepareBlockSummaryContext(
   db: SQLiteDatabase,
+  block: Block,
+  sessions: BlockSessionRow[],
   blockId: string,
-  userId: string,
-  supabase: SupabaseClient | null
-): Promise<BlockSummary> {
-  const block = await getBlockById(db, blockId);
-  if (!block) {
-    throw new Error(`[block-summary] block not found: ${blockId}`);
-  }
-
-  const sessions = await fetchBlockSessions(db, blockId, userId);
-
-  if (sessions.length === 0) {
-    // Aucune session complétée : fallback sans persistance (pas de session d'ancrage FK).
-    return buildFallbackSummary(block, 0, 0, []);
-  }
-
-  const closingSessionId = sessions[sessions.length - 1].id;
-
-  const existingRecs = await getRecommendationsBySession(db, closingSessionId);
-  const cached = existingRecs.find(
-    (r) => r.type === 'summary' && r.source === 'ai' && r.metadata.block_id === blockId
-  );
-  if (cached) {
-    return toBlockSummary(cached.metadata);
-  }
-
+  userId: string
+): Promise<{ context: AIContext; fallback: BlockSummary }> {
   const totalSessions = await countBlockSessions(db, blockId, userId);
   const complianceRate =
     totalSessions > 0 ? Math.round((sessions.length / totalSessions) * 100) / 100 : 1;
@@ -350,6 +360,43 @@ export async function generateBlockSummary(
 
   const fallback = buildFallbackSummary(block, sessions.length, complianceRate, history);
 
+  return { context, fallback };
+}
+
+export async function generateBlockSummary(
+  db: SQLiteDatabase,
+  blockId: string,
+  userId: string,
+  supabase: SupabaseClient | null
+): Promise<BlockSummary> {
+  const block = await getBlockById(db, blockId);
+  if (!block) {
+    throw new Error(`[block-summary] block not found: ${blockId}`);
+  }
+
+  const sessions = await fetchBlockSessions(db, blockId, userId);
+
+  if (sessions.length === 0) {
+    // Aucune session complétée : fallback sans persistance (pas de session d'ancrage FK).
+    return buildFallbackSummary(block, 0, 0, []);
+  }
+
+  const closingSessionId = sessions[sessions.length - 1].id;
+
+  const existingRecs = await getRecommendationsBySession(db, closingSessionId);
+  const cached = findBlockSummaryRecommendation(existingRecs, blockId);
+  if (cached) {
+    return toBlockSummary(cached.metadata);
+  }
+
+  const { context, fallback } = await prepareBlockSummaryContext(
+    db,
+    block,
+    sessions,
+    blockId,
+    userId
+  );
+
   let summary: BlockSummary;
   let usedFallback = false;
 
@@ -365,7 +412,60 @@ export async function generateBlockSummary(
     }
   }
 
-  await persistBlockSummaryRecommendation(db, blockId, closingSessionId, summary, usedFallback);
+  const saved = await persistBlockSummaryRecommendation(
+    db,
+    blockId,
+    closingSessionId,
+    summary,
+    usedFallback
+  );
+
+  if (usedFallback) {
+    // TA-141 : le vrai résumé IA sera régénéré au retour réseau et remplacera le fallback.
+    await enqueueAIRetry(db, {
+      sessionId: closingSessionId,
+      recommendationId: saved.id,
+      type: 'block_summary',
+      payload: { blockId, userId },
+    });
+  }
 
   return summary;
+}
+
+/**
+ * Re-tente la génération du résumé IA d'un bloc (worker TA-141).
+ * Pas de fallback ni de ré-enfilage : le worker gère les tentatives.
+ * Si un résumé non-fallback existe déjà, l'entrée est considérée comme traitée.
+ *
+ * @returns true si traité (résumé généré, déjà présent, ou plus rien à traiter) ; false à re-tenter.
+ */
+export async function retryBlockSummary(
+  db: SQLiteDatabase,
+  blockId: string,
+  userId: string,
+  supabase: SupabaseClient | null
+): Promise<boolean> {
+  if (supabase === null) return false;
+
+  const block = await getBlockById(db, blockId);
+  if (!block) return true;
+
+  const sessions = await fetchBlockSessions(db, blockId, userId);
+  if (sessions.length === 0) return true;
+
+  const closingSessionId = sessions[sessions.length - 1].id;
+  const recs = await getRecommendationsBySession(db, closingSessionId);
+  const existing = findBlockSummaryRecommendation(recs, blockId);
+  if (existing && existing.metadata.fallback !== true) return true;
+
+  const { context } = await prepareBlockSummaryContext(db, block, sessions, blockId, userId);
+
+  try {
+    const summary = await callClaudeForBlockSummary(supabase, context);
+    await persistBlockSummaryRecommendation(db, blockId, closingSessionId, summary, false);
+    return true;
+  } catch {
+    return false;
+  }
 }

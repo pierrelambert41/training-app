@@ -13,7 +13,7 @@
 
 import type { SQLiteDatabase } from 'expo-sqlite';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { generateBlockSummary } from './block-summary-service';
+import { generateBlockSummary, retryBlockSummary } from './block-summary-service';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -346,5 +346,132 @@ describe('generateBlockSummary', () => {
     // semaine 1 : (100+100)/2 = 100 ; semaine 2 : (105+105)/2 = 105
     expect(messageContent).toContain('"avgLoad":100');
     expect(messageContent).toContain('"avgLoad":105');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TA-141 — enqueue du fallback + retryBlockSummary
+// ---------------------------------------------------------------------------
+
+describe('generateBlockSummary — enqueue retry (TA-141)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAIContextProfile.mockResolvedValue(minimalProfile);
+  });
+
+  it('fallback offline → entrée ai_retry_queue type block_summary', async () => {
+    const state = makeState();
+    const db = makeMockDb(state);
+
+    await generateBlockSummary(db, 'block-1', 'user-1', null);
+
+    const enqueueCall = state.insertCalls.find((c) => c.sql.includes('INSERT INTO ai_retry_queue'));
+    expect(enqueueCall).toBeDefined();
+    expect(enqueueCall!.params).toContain('block_summary');
+    const payload = (enqueueCall!.params as string[]).find(
+      (p) => typeof p === 'string' && p.includes('blockId')
+    );
+    expect(JSON.parse(payload!)).toEqual({ blockId: 'block-1', userId: 'user-1' });
+  });
+
+  it('appel Claude nominal → pas d\'entrée retry', async () => {
+    const state = makeState();
+    const db = makeMockDb(state);
+
+    await generateBlockSummary(db, 'block-1', 'user-1', makeSupabaseOk(claudeSummary));
+
+    expect(
+      state.insertCalls.find((c) => c.sql.includes('INSERT INTO ai_retry_queue'))
+    ).toBeUndefined();
+  });
+});
+
+describe('retryBlockSummary', () => {
+  function makeFallbackRec(): RecommendationRow {
+    return {
+      id: 'rec-fallback',
+      session_id: 'session-4',
+      exercise_id: null,
+      source: 'ai',
+      type: 'summary',
+      message: 'Fallback',
+      next_load: null,
+      next_rep_target: null,
+      next_rir_target: null,
+      action: null,
+      confidence: 0.3,
+      metadata: JSON.stringify({ block_id: 'block-1', fallback: true }),
+      created_at: '2026-04-10T00:00:00Z',
+    };
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetAIContextProfile.mockResolvedValue(minimalProfile);
+  });
+
+  it('fallback existant + Claude OK → UPDATE de la Recommendation (remplace le fallback), retourne true', async () => {
+    const state = makeState();
+    const fallbackRec = makeFallbackRec();
+    state.recommendationRows.push(fallbackRec);
+    const db = makeMockDb(state);
+    (db.getFirstAsync as jest.Mock).mockImplementation(async (sql: string) => {
+      if (sql.includes('FROM blocks')) return state.blockRow;
+      if (sql.includes('COUNT(*)')) return { total: state.totalSessionCount };
+      if (sql.includes('FROM exercises')) return { name: state.exerciseName };
+      if (sql.includes('FROM recommendations') && sql.includes('WHERE id')) return fallbackRec;
+      return null;
+    });
+
+    const result = await retryBlockSummary(db, 'block-1', 'user-1', makeSupabaseOk(claudeSummary));
+
+    expect(result).toBe(true);
+    const updateCall = state.insertCalls.find((c) => c.sql.includes('UPDATE recommendations'));
+    expect(updateCall).toBeDefined();
+    const metadataParam = (updateCall!.params as string[]).find(
+      (p) => typeof p === 'string' && p.includes('block_id')
+    );
+    const metadata = JSON.parse(metadataParam!) as Record<string, unknown>;
+    expect(metadata.fallback).toBe(false);
+    expect(metadata.overall_assessment).toBe('Bon bloc avec progression régulière.');
+  });
+
+  it('résumé non-fallback déjà présent → true sans appel Claude', async () => {
+    const state = makeState();
+    state.recommendationRows.push({
+      ...makeFallbackRec(),
+      metadata: JSON.stringify({ block_id: 'block-1', fallback: false }),
+    });
+    const db = makeMockDb(state);
+    const supabaseMock = makeSupabaseOk(claudeSummary);
+
+    const result = await retryBlockSummary(db, 'block-1', 'user-1', supabaseMock);
+
+    expect(result).toBe(true);
+    expect(supabaseMock.functions.invoke as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  it('échec Claude → false, pas de fallback persisté', async () => {
+    const state = makeState();
+    state.recommendationRows.push(makeFallbackRec());
+    const db = makeMockDb(state);
+
+    const result = await retryBlockSummary(db, 'block-1', 'user-1', makeSupabaseError());
+
+    expect(result).toBe(false);
+    expect(
+      state.insertCalls.find((c) => c.sql.includes('UPDATE recommendations'))
+    ).toBeUndefined();
+  });
+
+  it('supabase null → false ; bloc disparu → true', async () => {
+    const state = makeState();
+    expect(await retryBlockSummary(makeMockDb(state), 'block-1', 'user-1', null)).toBe(false);
+
+    const stateNoBlock = makeState();
+    stateNoBlock.blockRow = null;
+    expect(
+      await retryBlockSummary(makeMockDb(stateNoBlock), 'block-ghost', 'user-1', makeSupabaseOk(claudeSummary))
+    ).toBe(true);
   });
 });
