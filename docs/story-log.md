@@ -6,6 +6,31 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-143 — Validateur déterministe post-IA (schéma, catalogue, contraintes)
+
+**Livré** : `validateAIGeneratedProgram(output, ctx)` — fonction pure (aucun I/O), arbitre final entre l'espace de solutions valides et la sortie IA (ADR-028). Opère sur le **schéma JSON intermédiaire** (split/weeks/days[].exercises[]), jamais sur le type Program. Types de génération posés : `AIIntermediateOutput`, `ValidationContext`, `ValidationResult`, `UserConstraints`, `AIValidationExhaustedError`, `AIProviderError` (codes typés timeout/network/rate_limited/http_error/invalid_response, pour TA-142).
+
+**Fichiers créés** :
+- `src/features/ai/types/ai-generation.ts` — types + classes d'erreur.
+- `src/features/ai/domain/validate-ai-program.ts` — validateur : schéma (weeks 3-12, sets 1-10, reps "8"/"6-8" bornées 1-30, rir 0-4, start_weight_kg ≥ 0 | null, progression présente), catalogue (exercise_id existant), `progression` ∈ 6 valeurs ADR-006 (`ALLOWED_PROGRESSIONS` exporté), contraintes utilisateur (équipement, muscles blessés via primaryMuscles, morphoTags interdits), structure (split ∈ table §5.1 par fréquence via `VALID_SPLITS_BY_FREQUENCY`, days.length === frequencyDays, durée estimée 8 + 5 min/set ≤ max + 10 de tolérance). `feedback` actionnable agrégeant les erreurs bloquantes (chemins `days[i].exercises[j].champ`), prêt à injecter dans le prompt de retry.
+- `src/features/ai/domain/validate-ai-program.test.ts` — 16 tests (cas valide, hallucination, progression invalide, split incohérent, day count, matériel, blessure, morphoTag, durée, bornes de schéma, feedback agrégé).
+
+**S'appuie sur** : ADR-006 (6 progressionType), docs/program-generation.md §5.1 (table splits), moteur Phase 3 (heuristique durée alignée : 8 min warm-up + min/set).
+
+**Décisions clés** :
+- Le validateur accepte **tout split valide pour la fréquence** (pas uniquement celui que `pickSplit` choisirait pour le niveau) : latitude pour l'IA, règles dures préservées.
+- Table des splits dupliquée dans le domain (pas d'import du moteur services/ depuis une fonction pure) — exposée aux prompts TA-147 via `validSplitsForFrequency`.
+- Le logging des erreurs de validation se fera au point d'intégration (ClaudeProvider TA-142) — le validateur reste pur.
+- Le cycle retry (1 retry avec feedback → AIValidationExhaustedError → FallbackProvider) sera implémenté dans ClaudeProvider (TA-142) — la classe d'erreur est posée ici.
+
+**Ouvre** : TA-142 (ClaudeProvider.generateProgram consomme le validateur + cycle retry), TA-147 (prompts injectent ALLOWED_PROGRESSIONS et validSplitsForFrequency), TA-144/145.
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun.
+
+---
+
 ## TA-141 — Queue de retry des appels IA offline
 
 **Livré** : worker de la queue `ai_retry_queue` (posée en stub TA-135) + déclenchement au retour réseau. `processPendingAICalls(db, userId, supabase)` : batch de 5 entrées 'pending' max par cycle, traitement **séquentiel** (rate limit Claude), max 3 tentatives puis 'failed' définitif, 'done' jamais re-traité (SELECT filtre status). Le résultat IA **remplace** le fallback persisté (upsert de la Recommendation existante). `AIQueueBridge` monté dans le root layout à côté de SyncBridge : listener NetInfo indépendant de la SyncQueue Supabase (même pattern que TA-121).
