@@ -147,8 +147,8 @@ describe('buildGenerateProgramPrompt', () => {
     expect(text).toContain('Baz-Valle et al. 2022');
     expect(text).toContain('Muscles prioritaires');
     expect(text).toContain('Pectoraux');
-    expect(text).toContain('plafond IMPÉRATIF');
-    expect(text).toContain('maximum 17 séries par séance'); // (60-8)/3
+    expect(text).toContain('tolérance acceptée jusqu\'à 70 min');
+    expect(text).toContain('maximum 20 séries par séance'); // (60+10-8)/3
     expect(text).toContain('Baz-Valle et al. 2022, le volume du triceps'); // comptage tel que publié
     expect(text).toContain('Gentil et al. 2015');
     expect(text).not.toMatch(/8-12|10-16|14-20/); // pas de coupures par niveau inventées

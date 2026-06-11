@@ -39,9 +39,13 @@ const MAX_RIR = 4;
 // Heuristique durée : 8 min warm-up + ~3 min par série effective (repos inclus).
 // 5 min/set (version initiale) forçait des séances de 3 exercices pour 60 min —
 // trop pessimiste vs réalité (15-18 séries tiennent dans 60 min).
-const WARMUP_MIN = 8;
-const MIN_PER_SET = 3;
-const DURATION_TOLERANCE_MIN = 10;
+export const SESSION_WARMUP_MIN = 8;
+export const SESSION_MIN_PER_SET = 3;
+/** Tolérance de dépassement de la durée cible — partagée avec le prompt (source unique). */
+export const SESSION_DURATION_TOLERANCE_MIN = 10;
+const WARMUP_MIN = SESSION_WARMUP_MIN;
+const MIN_PER_SET = SESSION_MIN_PER_SET;
+const DURATION_TOLERANCE_MIN = SESSION_DURATION_TOLERANCE_MIN;
 // Plancher de densité (docs §5.2 : min 1 main + 1 secondary + 2 accessoires).
 const MIN_EXERCISES_PER_DAY = 3;
 
