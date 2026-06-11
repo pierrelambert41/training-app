@@ -6,6 +6,25 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-155 — Vue bloc : progression de la semaine courante
+
+**Livré** : états par jour sur le calendrier du bloc actif (✓ fait / aujourd'hui / à venir / ✗ manqué) et compteur « Séances cette semaine » désormais exact à la semaine. **Bug corrigé au passage** : l'ancien compteur du header (`sessionCountsByDayId`) comptait les séances de *tout le bloc* — un jour réalisé en semaine 1 restait « fait » en semaine 4.
+
+**Implémentation** (pattern `use-today-workout` : pas de feature dédiée, évite un cycle d'import program-tab-screen → active-block-screen → features/program) :
+- `src/lib/week-progress.ts` — domaine pur : `mondayOf`, `weekStartFor` (semaine n du bloc, fallback semaine courante sans startDate — convention WeekCalendar), `computeWeekProgress` (matching session↔workout_day par `workout_day_id` + date dans la semaine : une séance décalée dans la semaine compte « fait » ; séances libres `workout_day_id NULL` ignorées ; day_order 0-indexé décalé comme `buildWeekCells`)
+- `src/services/sessions.ts` — `getCompletedSessionsForWeek(blockId, start, end)`
+- `src/hooks/use-week-progress.ts` — instancié deux fois dans `active-block-screen` : semaine réelle (compteur header) + semaine affichée (badges du calendrier navigable)
+- `WeekCalendar` — prop optionnelle `dayStates` (rétro-compatible) + `StateBadge` ✓/✗
+- `use-complete-session` — invalide `['block-week-progress']` après complétion
+
+**Tests** : domaine (états, séance décalée, hors semaine, séance libre, 0-indexé, lundi/dimanche), WeekCalendar (badges, rétro-compat).
+
+**S'appuie sur** : WeekCalendar (TA-94), sessions service.
+
+**Ouvre** : rien — dernier ticket d'implémentation de la Phase 8. Replanification des séances manquées = post-MVP.
+
+---
+
 ## TA-154 — Dashboard : score de fatigue dans le temps + compliance au plan
 
 **Livré** : les deux dernières cartes analytics de l'écran Progrès — le dashboard Phase 8 est complet (5/5 cartes).

@@ -5,6 +5,7 @@ import { useActiveProgram } from '@/hooks/use-active-program';
 import { useActiveProgramStore } from '@/stores/active-program-store';
 import { AISummaryCard, FallbackUpgradeBanner, useStoredBlockSummary } from '@/features/ai';
 import { useAuthStore } from '@/features/auth';
+import { useWeekProgress } from '@/hooks/use-week-progress';
 import { Button, AppText, EmptyState, WeekCalendar } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { WorkoutDay } from '@/types/workout-day';
@@ -184,6 +185,20 @@ export default function ActiveBlockScreen() {
   const { summary: blockSummary } = useStoredBlockSummary(activeBlock?.id);
   const userId = useAuthStore((s) => s.user?.id);
 
+  // TA-155 — progression de semaine : la semaine réelle du bloc pour le
+  // compteur du header, la semaine affichée pour les états du calendrier.
+  const displayWeek = calendarWeek ?? activeBlock?.weekNumber ?? 1;
+  const currentWeekProgress = useWeekProgress(
+    activeBlock,
+    workoutDays,
+    activeBlock?.weekNumber ?? 1
+  );
+  const displayedWeekProgress = useWeekProgress(
+    activeBlock,
+    workoutDays,
+    displayWeek
+  );
+
   if (isLoading) {
     return (
       <View className="flex-1 bg-background items-center justify-center">
@@ -224,9 +239,10 @@ export default function ActiveBlockScreen() {
     );
   }
 
-  const daysDone = workoutDays.filter(
-    (d) => (sessionCountsByDayId[d.id] ?? 0) > 0
-  ).length;
+  // Compteur "Séances cette semaine" basé sur la semaine réelle (TA-155) —
+  // remplace l'ancien comptage bloc-entier (sessionCountsByDayId) qui
+  // affichait "fait" pour un jour réalisé n'importe quand dans le bloc.
+  const daysDone = currentWeekProgress?.doneCount ?? 0;
   const isDeload =
     activeBlock.deloadStrategy === 'scheduled' ||
     activeBlock.goal === 'deload';
@@ -234,8 +250,6 @@ export default function ActiveBlockScreen() {
   const todayDay = workoutDays.find(
     (d) => (sessionCountsByDayId[d.id] ?? 0) === 0
   );
-
-  const displayWeek = calendarWeek ?? activeBlock.weekNumber;
 
   function handleDayPress(day: WorkoutDay) {
     if (!program) return;
@@ -290,6 +304,7 @@ export default function ActiveBlockScreen() {
           weekNumber={displayWeek}
           durationWeeks={activeBlock.durationWeeks}
           workoutDays={workoutDays}
+          dayStates={displayedWeekProgress?.stateByDayId}
           onDayPress={handleDayPress}
           onPrevWeek={handlePrevWeek}
           onNextWeek={handleNextWeek}

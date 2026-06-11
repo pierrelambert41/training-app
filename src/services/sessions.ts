@@ -336,6 +336,32 @@ type SessionCountRow = {
   count: number;
 };
 
+type WeekSessionRow = {
+  workout_day_id: string | null;
+  date: string;
+};
+
+/**
+ * Séances complétées d'un bloc sur [start, end] inclus — matching
+ * session ↔ workout_day de la vue semaine (TA-155).
+ */
+export async function getCompletedSessionsForWeek(
+  db: SQLiteDatabase,
+  blockId: string,
+  start: string,
+  end: string
+): Promise<Array<{ workoutDayId: string | null; date: string }>> {
+  const rows = await db.getAllAsync<WeekSessionRow>(
+    `SELECT workout_day_id, date
+     FROM sessions
+     WHERE block_id = ?
+       AND status = 'completed'
+       AND date >= ? AND date <= ?`,
+    [blockId, start, end]
+  );
+  return rows.map((r) => ({ workoutDayId: r.workout_day_id, date: r.date }));
+}
+
 export async function getSessionCountsByBlockId(
   db: SQLiteDatabase,
   blockId: string
