@@ -338,6 +338,20 @@ TA-146 / 2026-06-10 — `programs.generation_source` et `blocks.generation_sourc
 
 ---
 
+### NPM-01 — `npm install` échoue en ERESOLVE (react-dom 19.2.x vs react 19.1.0)
+**Symptôme** : tout `npm install <pkg>` (y compris via `expo install`) échoue avec `ERESOLVE could not resolve` : npm résout `react-dom@19.2.x` (peerOptional flottant de la toolchain Expo) qui exige `react@19.2.x`, en conflit avec `react@19.1.0` épinglé par le SDK 54.
+**Fix** : installer avec `--legacy-peer-deps` (ex: `npm install react-native-svg@15.12.1 --legacy-peer-deps`). Ne PAS bumper react : 19.1.0 est la version attendue par Expo SDK 54 / Expo Go.
+**Détecté** : TA-150 / 2026-06-11 — installation de react-native-svg.
+
+---
+
+### TOOL-01 — `jira issue create -b"<multiligne>"` pend indéfiniment en environnement non-interactif
+**Symptôme** : `jira issue create` avec un body multi-ligne passé en `-b"..."` reste suspendu (aucune erreur) quand il n'y a pas de TTY. `jira issue edit -b"<multiligne>"` fonctionne, et `create` avec body monoligne aussi.
+**Fix** : écrire le body dans un fichier et utiliser `--template /tmp/body.md` avec `--no-input`.
+**Détecté** : TA-149..155 / 2026-06-11 — création du batch de tickets Phase 8.
+
+---
+
 ## Stubs ouverts
 
 Points d'entrée existants dans l'UI non encore branchés sur leur cible. À consommer dans la story concernée.
