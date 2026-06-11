@@ -6,6 +6,22 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-154 — Dashboard : score de fatigue dans le temps + compliance au plan
+
+**Livré** : les deux dernières cartes analytics de l'écran Progrès — le dashboard Phase 8 est complet (5/5 cartes).
+- **Fatigue** : courbe des `sessions.fatigue_score` (persistés par le moteur TA-105) sur 60 jours + dernier score et palier (`fatigueLevelDisplay` — mêmes seuils que business-rules §3.2 : ≤3 fraîcheur, 4-6 vigilance, 7-8 fatigue élevée, 9-10 deload).
+- **Compliance** : `computeCompliance` (domain pur) = séances complétées du bloc actif / séances planifiées écoulées au **prorata du jour courant** (jours écoulés / 7 × workout_days), plafonné à 100 % (séances extra ignorées), borné à la durée du bloc. Null (état dédié) si bloc fraîchement démarré (< 1 séance planifiée écoulée) ou sans bloc actif. Couleur : seuil 75 % = seuil d'assiduité documenté (business-rules §3.1), pas de palier inventé.
+
+**Fichiers créés** : `domain/compliance.ts`, `domain/fatigue-trend.ts`, `api/fatigue-compliance-service.ts`, `hooks/use-fatigue-compliance.ts` (bloc actif via `useActiveProgramStore`), `components/fatigue-trend-card.tsx`, `components/compliance-card.tsx` (+ 5 fichiers de tests).
+
+**Fichiers modifiés** : `progress-screen.tsx` (placeholders fatigue/compliance remplacés, `PlaceholderCard` supprimé — plus aucun placeholder), test écran.
+
+**S'appuie sur** : TA-150 (LineChart), TA-105 (fatigue_score persisté), TA-148 (le score intègre désormais la récupération déclarée).
+
+**Ouvre** : TA-155 (vue semaine du bloc) — dernier ticket d'implémentation de la Phase 8.
+
+---
+
 ## TA-153 — Dashboard : progression du poids du corps (saisie + courbe)
 
 **Livré** : carte « Poids du corps » sur Progrès — saisie rapide de la pesée du jour (input décimal FR/EN « 82,5 »/« 82.5 », validation 30-300 kg) + dernière valeur + courbe 90 jours. Migration SQLite v15 `body_metrics` (sous-ensemble MVP du schéma Supabase : id, user_id, date, weight_kg, notes, created_at, `UNIQUE(user_id, date)`), table ajoutée à `SyncTableName` (hors conflict-check, même raison que recovery_logs).
