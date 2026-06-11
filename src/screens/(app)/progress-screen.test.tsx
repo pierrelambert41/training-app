@@ -32,18 +32,27 @@ jest.mock('@/features/dashboard/hooks/use-body-weight', () => ({
   })),
 }));
 
+jest.mock('@/features/dashboard/hooks/use-fatigue-compliance', () => ({
+  useFatigueCompliance: jest.fn(() => ({
+    fatiguePoints: [],
+    compliance: null,
+    hasActiveBlock: false,
+    isLoading: false,
+  })),
+}));
+
 describe('ProgressScreen', () => {
   it('affiche le titre Progrès', () => {
     render(<ProgressRoute />);
     expect(screen.getByText('Progrès')).toBeTruthy();
   });
 
-  it('affiche les cartes e1RM, volume et poids, et les placeholders restants', () => {
+  it('affiche les 5 cartes analytics du dashboard', () => {
     render(<ProgressRoute />);
     expect(screen.getByTestId('e1rm-card')).toBeTruthy();
     expect(screen.getByTestId('volume-card')).toBeTruthy();
     expect(screen.getByTestId('body-weight-card')).toBeTruthy();
-    expect(screen.getByTestId('placeholder-fatigue')).toBeTruthy();
-    expect(screen.getByTestId('placeholder-compliance')).toBeTruthy();
+    expect(screen.getByTestId('fatigue-trend-card')).toBeTruthy();
+    expect(screen.getByTestId('compliance-card')).toBeTruthy();
   });
 });

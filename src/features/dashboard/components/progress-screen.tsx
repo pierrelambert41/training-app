@@ -1,40 +1,25 @@
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppText, Card } from '@/components/ui';
+import { AppText } from '@/components/ui';
 import { useE1rmHistory } from '../hooks/use-e1rm-history';
 import { useWeeklyVolume } from '../hooks/use-weekly-volume';
 import { useBodyWeight } from '../hooks/use-body-weight';
+import { useFatigueCompliance } from '../hooks/use-fatigue-compliance';
 import { E1rmCard } from './e1rm-card';
 import { VolumeCard } from './volume-card';
 import { BodyWeightCard } from './body-weight-card';
-
-type PlaceholderProps = {
-  title: string;
-  description: string;
-  testID: string;
-};
-
-function PlaceholderCard({ title, description, testID }: PlaceholderProps) {
-  return (
-    <Card elevation="default" className="gap-1" testID={testID}>
-      <AppText variant="body" className="font-semibold">
-        {title}
-      </AppText>
-      <AppText variant="caption" muted>
-        {description}
-      </AppText>
-    </Card>
-  );
-}
+import { FatigueTrendCard } from './fatigue-trend-card';
+import { ComplianceCard } from './compliance-card';
 
 /**
- * Écran Progrès (Phase 8). Squelette : chaque section placeholder est
- * remplacée par sa carte analytics au fil des stories du dashboard.
+ * Écran Progrès (Phase 8) : les 5 cartes analytics du dashboard
+ * (e1RM, volume/muscle, poids du corps, fatigue, compliance).
  */
 export function ProgressScreen() {
   const e1rm = useE1rmHistory();
   const volume = useWeeklyVolume();
   const bodyWeight = useBodyWeight();
+  const fatigueCompliance = useFatigueCompliance();
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -68,15 +53,10 @@ export function ProgressScreen() {
           onSaveWeight={bodyWeight.saveWeight}
           isSaving={bodyWeight.isSaving}
         />
-        <PlaceholderCard
-          title="Fatigue"
-          description="Score de fatigue dans le temps — bientôt disponible"
-          testID="placeholder-fatigue"
-        />
-        <PlaceholderCard
-          title="Compliance au plan"
-          description="Séances réalisées vs planifiées — bientôt disponible"
-          testID="placeholder-compliance"
+        <FatigueTrendCard points={fatigueCompliance.fatiguePoints} />
+        <ComplianceCard
+          compliance={fatigueCompliance.compliance}
+          hasActiveBlock={fatigueCompliance.hasActiveBlock}
         />
       </ScrollView>
     </SafeAreaView>
