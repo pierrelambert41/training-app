@@ -6,6 +6,29 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-160/TA-161 — Plate calculator + tonnage de séance
+
+**Livré** : calculateur de chargement de barre façon Hevy et tonnage comme métrique de suivi.
+
+**Plate calculator (TA-160)** :
+- `src/features/session/domain/plate-math.ts` (pur, 10 tests) : `PLATE_SETS` standards kg/lb, `totalFromPlates` (barre + 2×côté), `suggestPlatesPerSide` (glouton, approximation par en-dessous, null si cible < barre), `groupPlates`.
+- `PlateCalculatorSheet` : bottom sheet — visualisation des plaques d'un côté (hauteur ∝ poids, tap pour retirer), pastilles d'ajout, ouvert avec la valeur du champ → suggestion pré-remplie, « Utiliser X kg/lb » réinjecte le total dans le champ.
+- Entrée : icône Disc3 à côté du champ charge (weight_reps uniquement), affichée si `barWeightKg` défini OU equipment contient `barbell` (défaut 20 kg). Chaîne de props ExercisePage → SetRowList → SetRow → SetRowInlineForm, tout en unité d'affichage.
+
+**Tonnage (TA-161)** :
+- `src/lib/session-tonnage.ts` (pur, 10 tests — dans lib/ car partagé session + dashboard, R2 interdit l'import horizontal) : `setTonnageKg` et `computeSessionTonnage`. weight_reps = load×reps ; bodyweight_reps = (BW × `bodyweight_factor` (NULL=1.0) + lest)×reps, lest négatif = assisté ; sans pesée → lest seul + flag `missingBodyweight` ; durée/distance exclus. **Métrique de suivi uniquement** — le moteur reste séries/muscle (doctrine volume-first), décision discutée avec Pierre : le tonnage est un mauvais signal de prescription (3×10@100 ≡ 3×20@50) mais un bon signal d'évolution à séance identique.
+- `getLatestBodyMetric` (body-metrics) : dernière pesée ≤ date de séance.
+- **Fin de séance** : StatPill « Tonnage » (unité préférée) + avertissement si sous-estimé (exo BW sans pesée).
+- **Progrès** : `TonnageCard` — chips des workout days ayant ≥2 séances complétées sur 90 j (`getTonnageWorkoutDays`), courbe LineChart du tonnage par séance (`getTonnageHistory`, calcul en JS via `setTonnageKg` avec pesée par date). Types dans `dashboard/domain/tonnage-history.ts` (boundaries : components ne peut pas importer api).
+
+**Bugs évités/rencontrés** : SYNC-01 (use-tonnage-history → @/features/auth → supabase casse le parse Jest) → mock du hook dans progress-screen.test, comme les 4 autres hooks (TEST-01).
+
+**S'appuie sur** : TA-158/159 (unités, bar_weight_kg, bodyweight_factor en v16), body_metrics (TA-153), LineChart (TA-150).
+
+**Ouvre** : inventaire de plaques configurable par salle (jeu standard pour l'instant) ; `bodyweight_factor` ≠ 1.0 à renseigner uniquement avec des valeurs sourcées (doctrine evidence-only) ; tonnage non affiché dans CompletedTodayCard (possible suite).
+
+---
+
 ## TA-158/TA-159 — Unités kg/lb : fondation + override par exercice
 
 **Livré** : gestion des unités mixtes (cas salle canadienne : machines en lb, barres en kg).

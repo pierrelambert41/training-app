@@ -1,10 +1,12 @@
 import { useState, useRef } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Disc3 } from 'lucide-react-native';
 import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { LogType, SetLogSide } from '@/types';
 import type { WeightUnit } from '@/lib/units';
+import { PlateCalculatorSheet } from './plate-calculator-sheet';
 
 /** Valeurs dans l'unité d'AFFICHAGE de l'exercice — converties en kg par l'appelant (ExercisePage). */
 export type InlineLogValues = {
@@ -19,6 +21,8 @@ export type InlineLogValues = {
 type SetRowInlineFormProps = {
   logType: LogType;
   unit: WeightUnit;
+  /** Poids de barre (unité d'affichage) — null = pas de calculateur de plaques. */
+  barWeight?: number | null;
   side: SetLogSide | null;
   prefillLoad: string;
   prefillReps: string;
@@ -51,6 +55,7 @@ const rirInputStyle = {
 export function SetRowInlineForm({
   logType,
   unit,
+  barWeight = null,
   side,
   prefillLoad,
   prefillReps,
@@ -63,6 +68,7 @@ export function SetRowInlineForm({
   const showRir = logType === 'weight_reps' || logType === 'bodyweight_reps';
 
   const [load, setLoad] = useState(prefillLoad);
+  const [plateSheetVisible, setPlateSheetVisible] = useState(false);
   const [reps, setReps] = useState(prefillReps);
   const [duration, setDuration] = useState(prefillDuration);
   const [distance, setDistance] = useState(prefillDistance);
@@ -115,6 +121,18 @@ export function SetRowInlineForm({
             testID="inline-load-input"
           />
           <AppText className="text-caption text-content-muted">{unit}</AppText>
+          {barWeight !== null && (
+            <Pressable
+              onPress={() => setPlateSheetVisible(true)}
+              style={{ minHeight: 44, minWidth: 36, alignItems: 'center', justifyContent: 'center' }}
+              accessibilityLabel="Ouvrir le calculateur de plaques"
+              accessibilityRole="button"
+              testID="plate-calculator-button"
+              hitSlop={4}
+            >
+              <Disc3 size={20} color={colors.accent} />
+            </Pressable>
+          )}
           <TextInput
             ref={field2Ref}
             value={reps}
@@ -242,6 +260,20 @@ export function SetRowInlineForm({
       >
         <AppText style={{ fontSize: 20, color: colors.contentOnAccent, fontWeight: '700' }}>✓</AppText>
       </Pressable>
+
+      {barWeight !== null && (
+        <PlateCalculatorSheet
+          visible={plateSheetVisible}
+          unit={unit}
+          barWeight={barWeight}
+          initialTarget={load.length > 0 && !isNaN(parseFloat(load)) ? parseFloat(load) : null}
+          onClose={() => setPlateSheetVisible(false)}
+          onApply={(total) => {
+            setLoad(String(total));
+            setPlateSheetVisible(false);
+          }}
+        />
+      )}
     </View>
   );
 }

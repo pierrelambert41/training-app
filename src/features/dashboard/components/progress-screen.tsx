@@ -5,7 +5,9 @@ import { useE1rmHistory } from '../hooks/use-e1rm-history';
 import { useWeeklyVolume } from '../hooks/use-weekly-volume';
 import { useBodyWeight } from '../hooks/use-body-weight';
 import { useFatigueCompliance } from '../hooks/use-fatigue-compliance';
+import { useTonnageHistory } from '../hooks/use-tonnage-history';
 import { E1rmCard } from './e1rm-card';
+import { TonnageCard } from './tonnage-card';
 import { VolumeCard } from './volume-card';
 import { BodyWeightCard } from './body-weight-card';
 import { FatigueTrendCard } from './fatigue-trend-card';
@@ -20,6 +22,7 @@ export function ProgressScreen() {
   const volume = useWeeklyVolume();
   const bodyWeight = useBodyWeight();
   const fatigueCompliance = useFatigueCompliance();
+  const tonnage = useTonnageHistory();
 
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
@@ -40,6 +43,12 @@ export function ProgressScreen() {
           selectedExerciseId={e1rm.selectedExerciseId}
           onSelectExercise={e1rm.selectExercise}
           points={e1rm.points}
+        />
+        <TonnageCard
+          workoutDays={tonnage.workoutDays}
+          selectedDayId={tonnage.selectedDayId}
+          onSelectDay={tonnage.selectDay}
+          points={tonnage.points}
         />
         <VolumeCard
           volumes={volume.volumes}
