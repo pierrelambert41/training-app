@@ -35,6 +35,16 @@ jest.mock('@/features/auth', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: 'test-user' } }),
 }));
 
+// SYNC-01 : @/features/ai importe supabase transitivement (via use-explain-adjustment)
+jest.mock('@/features/ai', () => ({
+  useExplainAdjustment: () => ({
+    explanation: null,
+    isLoading: false,
+    error: null,
+    explain: jest.fn(),
+  }),
+}));
+
 jest.mock('@/hooks/use-ai-context-refresh', () => ({
   useAIContextRefresh: () => ({ triggerAIContextRefresh: jest.fn() }),
 }));

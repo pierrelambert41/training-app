@@ -6,6 +6,38 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-139 — Écran fin de séance avec résumé IA
+
+**Livré** : intégration du SessionSummary IA (TA-135) dans l'écran de fin de séance + bouton "Pourquoi ?" (TA-136) sous chaque recommandation load_change. Le résumé arrive de façon différée : polling 3s pendant 30s max (`useAISessionSummary`), skeleton pendant la génération, puis résumé minimal local ("Séance complétée — X séries, Y exercices") si rien n'est persisté. Hiérarchie visuelle : score ring → résumé IA (badge rating grande police, texte, highlights ★ verts, concerns ⚠ ambre, note prochaine séance) → par exercice → recommandations → bouton "Terminer" → retour `/(app)/(tabs)`. Route `app/(app)/session/summary.tsx` ajoutée (thin re-export de `EndSessionScreen`, deep-link).
+
+**Fichiers créés** :
+- `src/features/session/hooks/use-ai-session-summary.ts` — lit la Recommendation `type='summary' source='ai'` de la séance en **excluant `metadata.block_id`** (résumé de bloc TA-138, même type/source). `refetchInterval` 3s, arrêt à 30s (ref timestamp) ou dès que le résumé arrive. Exporte `toSessionSummaryFromRecommendation` et `findSessionSummaryRecommendation` (purs, testés).
+- `src/features/session/components/session-ai-summary.tsx` — section résumé : skeleton / résumé complet / fallback minimal. Badge rating 4 niveaux (excellent/good/average/poor → Excellente/Bonne/Correcte/Difficile).
+- `src/features/session/components/recommendation-why.tsx` — `RecommendationWhy` : bouton "Pourquoi ?" (44pt) → `useExplainAdjustment` (via `@/features/ai` index, R3) → explication expandable, cache TanStack Query.
+- `src/features/session/components/session-recommendation-cards.tsx` — StatusBadge/PlateauCard/DeloadSection extraits de session-recommendations (R6).
+- `src/features/session/components/end-session-sections.tsx` — PerExerciseList + PostNotesInput extraits de end-session-screen (R6).
+- `app/(app)/session/summary.tsx` + entrée `session/summary` dans `app/(app)/_layout.tsx`.
+
+**Fichiers modifiés** :
+- `end-session-screen.tsx` — branche `useAISessionSummary(session.id, isCompleted)` + `SessionAISummary` au-dessus des recommandations ; passe `userId` à `SessionRecommendations` (active les "Pourquoi ?") ; bouton final renommé "Terminer".
+- `session-recommendations.tsx` — prop optionnelle `userId` ; rend `RecommendationWhy` sous chaque LoadChangeRow quand fournie.
+- `src/screens/(app)/session/session-live-screen.test.tsx` + `set-row-log-type-unilateral.test.tsx` — ajout du mock `@/features/ai` (SYNC-01 : `recommendation-why` importe l'index ai → supabase transitif).
+
+**S'appuie sur** : TA-135 (Recommendation summary persistée), TA-136 (`useExplainAdjustment`), TA-138 (discriminant `metadata.block_id`), TA-112 (écran end existant, scores).
+
+**Décisions clés** :
+- Pas de nouvel écran : `end.tsx` (TA-112) morphe déjà en écran de fin post-complétion ; la route `summary.tsx` du ticket est un alias thin du même composant.
+- Le polling démarre à `isCompleted` (pas au mount) : le timestamp de départ est posé au premier render activé.
+- "Pourquoi ?" uniquement quand `isCompleted` (les recommandations fraîches du rulesResult n'ont d'id stable qu'une fois persistées… elles le sont par runRulesEngine, mais l'explication TA-136 relit la Recommendation en DB).
+
+**Ouvre** : review visuelle sur simulateur à faire au prochain passage UI (demandée par le ticket, non réalisable en flow autonome sans device).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : aucun nouveau.
+
+---
+
 ## TA-138 — Résumé de bloc (IA)
 
 **Livré** : `generateBlockSummary(db, blockId, userId, supabase)` — synthèse IA d'un bloc terminé, à la demande. Récupère les sessions complétées du bloc, agrège les SetLogs par (exercice, semaine) pour limiter les tokens (5000-8000 sinon), construit l'AIContext (profil + `current_block` recalculé depuis le bloc réel + historique hebdomadaire), appelle Claude via `ai-proxy` et persiste la `BlockSummary` comme `Recommendation{type='summary', source='ai', exercise_id=null}` ancrée sur la session de clôture (dernière séance complétée du bloc). Cache : une seule analyse IA par bloc, discriminée par `metadata.block_id`. Fallback : résumé textuel depuis les métriques calculées (compliance, séances complétées, progressions positives e1RM première→dernière semaine).

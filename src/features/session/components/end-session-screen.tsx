@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,17 +21,13 @@ import { AppText } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import type { Recommendation } from '@/types';
 import { useCompleteSession } from '../hooks/use-complete-session';
-import {
-  AchievementDot,
-  formatDuration,
-  ScoreRing,
-  StatPill,
-} from './session-score-ring';
+import { useAISessionSummary } from '../hooks/use-ai-session-summary';
+import { formatDuration, ScoreRing, StatPill } from './session-score-ring';
 import { SessionRecommendations } from './session-recommendations';
+import { SessionAISummary } from './session-ai-summary';
+import { PerExerciseList, PostNotesInput } from './end-session-sections';
 
 type CompletionState = 'idle' | 'completing' | 'completed';
-
-const NOTE_MAX_LENGTH = 500;
 
 export function EndSessionScreen() {
   const router = useRouter();
@@ -48,6 +42,8 @@ export function EndSessionScreen() {
 
   const [postNotes, setPostNotes] = useState(session?.postSessionNotes ?? '');
   const recommendations: Recommendation[] | null = rulesResult?.recommendations ?? (isCompleted ? [] : null);
+
+  const aiSummary = useAISessionSummary(session?.id ?? null, isCompleted);
 
   const { data: exerciseData } = useSessionExercises(
     plannedExercises,
@@ -144,6 +140,8 @@ export function EndSessionScreen() {
             ? '#f97316'
             : '#ef4444';
 
+  const fallbackSummaryText = `Séance complétée — ${completedSets} série${completedSets > 1 ? 's' : ''}, ${plannedExercises.length} exercice${plannedExercises.length > 1 ? 's' : ''}.`;
+
   return (
     <SafeAreaView edges={['top']} className="flex-1 bg-background">
     <KeyboardAvoidingView
@@ -181,83 +179,29 @@ export function EndSessionScreen() {
           <StatPill label="Durée" value={finalDuration} />
         </View>
 
-        {plannedExercises.length > 0 && (
-          <View className="rounded-card overflow-hidden" style={{ backgroundColor: '#111827' }}>
-            <View className="px-4 pt-4 pb-2">
-              <AppText className="text-label font-semibold text-content-secondary tracking-wide">
-                PAR EXERCICE
-              </AppText>
-            </View>
-            {plannedExercises.map((pe, idx) => {
-              const exercise = exercisesById.get(pe.exerciseId);
-              const name = exercise?.nameFr ?? exercise?.name ?? pe.exerciseId;
-              const achievement = achievements.find((a) => a.plannedExerciseId === pe.id);
-              const logsCount = setLogs.filter(
-                (sl) => sl.plannedExerciseId === pe.id && sl.completed
-              ).length;
-              return (
-                <View
-                  key={pe.id}
-                  className="flex-row items-center px-4 py-3 gap-3"
-                  style={
-                    idx < plannedExercises.length - 1
-                      ? { borderBottomWidth: 1, borderBottomColor: '#1e2a45' }
-                      : undefined
-                  }
-                >
-                  <AchievementDot achievement={achievement?.target_achievement ?? 0} />
-                  <AppText className="flex-1 text-body text-content-primary" numberOfLines={1}>
-                    {name}
-                  </AppText>
-                  <AppText className="text-label text-content-muted">
-                    {logsCount}/{pe.sets}
-                  </AppText>
-                </View>
-              );
-            })}
-          </View>
+        {(isCompleting || isCompleted) && (
+          <SessionAISummary
+            summary={aiSummary.summary}
+            isPolling={isCompleting || aiSummary.isPolling}
+            fallbackText={fallbackSummaryText}
+          />
         )}
 
-        {!isCompleted && (
-          <View className="gap-2">
-            <AppText className="text-label font-semibold text-content-secondary tracking-wide">
-              NOTES DE FIN DE SÉANCE
-            </AppText>
-            <TextInput
-              value={postNotes}
-              onChangeText={(v) => setPostNotes(v.slice(0, NOTE_MAX_LENGTH))}
-              multiline
-              numberOfLines={3}
-              returnKeyType="default"
-              style={{
-                minHeight: 80,
-                fontSize: 15,
-                color: colors.contentPrimary,
-                backgroundColor: '#111827',
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#1e2a45',
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                textAlignVertical: 'top',
-              }}
-              placeholderTextColor={colors.contentMuted}
-              placeholder="Comment s'est passée la séance ?"
-              accessibilityLabel="Notes de fin de séance"
-              testID="post-session-notes-input"
-              onBlur={() => Keyboard.dismiss()}
-            />
-            <AppText className="text-caption text-content-muted text-right">
-              {postNotes.length}/{NOTE_MAX_LENGTH}
-            </AppText>
-          </View>
-        )}
+        <PerExerciseList
+          plannedExercises={plannedExercises}
+          exercisesById={exercisesById}
+          achievements={achievements}
+          setLogs={setLogs}
+        />
+
+        {!isCompleted && <PostNotesInput value={postNotes} onChange={setPostNotes} />}
 
         {(isCompleting || isCompleted) && (
           <SessionRecommendations
             recommendations={recommendations ?? []}
             exercisesById={exercisesById}
             isLoading={isCompleting}
+            userId={isCompleted ? userId : undefined}
           />
         )}
       </ScrollView>
@@ -268,11 +212,11 @@ export function EndSessionScreen() {
             onPress={handleGoHome}
             style={{ minHeight: 56, justifyContent: 'center', alignItems: 'center', borderRadius: 14 }}
             className="bg-accent"
-            accessibilityLabel="Retour à l'accueil"
+            accessibilityLabel="Terminer"
             testID="go-home-button"
           >
             <AppText style={{ fontSize: 17, fontWeight: '700', color: '#ffffff' }}>
-              Retour à l&apos;accueil
+              Terminer
             </AppText>
           </Pressable>
         ) : (
