@@ -6,6 +6,39 @@ Mis à jour par le dev à la fin de chaque story. Lu par le dev au début de cha
 
 ---
 
+## TA-138 — Résumé de bloc (IA)
+
+**Livré** : `generateBlockSummary(db, blockId, userId, supabase)` — synthèse IA d'un bloc terminé, à la demande. Récupère les sessions complétées du bloc, agrège les SetLogs par (exercice, semaine) pour limiter les tokens (5000-8000 sinon), construit l'AIContext (profil + `current_block` recalculé depuis le bloc réel + historique hebdomadaire), appelle Claude via `ai-proxy` et persiste la `BlockSummary` comme `Recommendation{type='summary', source='ai', exercise_id=null}` ancrée sur la session de clôture (dernière séance complétée du bloc). Cache : une seule analyse IA par bloc, discriminée par `metadata.block_id`. Fallback : résumé textuel depuis les métriques calculées (compliance, séances complétées, progressions positives e1RM première→dernière semaine).
+
+**Fichiers créés** :
+- `src/features/ai/api/block-summary-service.ts` — service principal. `buildWeeklyExerciseHistory` agrège par semaine (index = `floor((date_session - date_début_bloc)/7j)`). Guard `sessions.length === 0` → fallback sans INSERT (FK). Bloc inexistant → throw.
+- `src/features/ai/api/block-summary-service.test.ts` — 9 tests : nominal, metadata.block_id, cache (appel répété → 1 INSERT, 1 invoke), non-confusion avec résumé de séance TA-135, fallback offline avec métriques, fallback erreur Claude, guard FK, bloc inexistant, agrégation hebdomadaire (4 sessions → 2 entrées).
+- `src/features/ai/hooks/use-block-summary.ts` — hook TanStack Query `enabled: false`. Expose `{ summary, isLoading, error, generate }`.
+
+**Fichiers modifiés** :
+- `src/features/ai/index.ts` — exports `generateBlockSummary`, `useBlockSummary`.
+
+**S'appuie sur** :
+- TA-133 : `buildBlockSummaryPrompt(ctx)` — déjà existant, consomme `ctx.profile.current_block` + `ctx.exerciseHistory`.
+- TA-135 : même type/source de Recommendation (`summary`/`ai`) sur une session — d'où le discriminant `metadata.block_id`.
+- TA-137 : même pattern service à la demande (appel direct Edge Function, fallback, guard FK, hook `enabled: false`).
+
+**Décisions clés** :
+- **Discriminant `metadata.block_id`** : la session de clôture porte déjà potentiellement un résumé de *séance* TA-135 avec le même `type='summary'`/`source='ai'`/`exercise_id=null`. Le cache du résumé de bloc filtre sur `metadata.block_id === blockId`.
+- `profile.current_block` est écrasé par les métadonnées du bloc analysé (le profil persisté peut pointer un autre bloc actif) : `week = total_weeks` (bloc fini), `compliance_rate` recalculée = sessions complétées / total sessions du bloc.
+- Pas de queue de retry : synthèse basse priorité, regénérable à la demande.
+- Déclenchement auto à `block.status → completed` : aucun mécanisme de complétion de bloc n'existe encore dans le codebase (seul `deloaded` est posé par le rules engine). Le service est idempotent (cache) : le futur trigger pourra l'appeler tel quel.
+
+**Ouvre** :
+- UI d'affichage du résumé de bloc (TA-140) : consomme `useBlockSummary`.
+- Brancher le trigger auto quand la transition `block → completed` sera implémentée (fin de bloc, Phase 8+).
+
+**Bugs découverts** : aucun.
+
+**Stubs laissés ouverts** : trigger auto fin de bloc (voir Décisions clés).
+
+---
+
 ## TA-137 — Analyse de plateau à la demande (IA)
 
 **Livré** : `analyzePlateau(db, exerciseId, userId, supabase)` — analyse IA d'un plateau de progression sur un exercice, à la demande uniquement. Récupère les 8 dernières séances complétées contenant l'exercice, construit l'historique (avgLoad, totalVolume, e1RM par séance) + recovery logs sur la même période, appelle Claude via `ai-proxy`, et persiste le résultat comme `Recommendation{type='plateau', source='ai'}`. Fallback : suggestions standards business-rules §6 si offline, Claude indisponible, ou JSON tronqué. Guard explicite si aucune session historique : retourne fallback sans INSERT (sécurité FK).

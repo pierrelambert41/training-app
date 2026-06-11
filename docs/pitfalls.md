@@ -344,6 +344,8 @@ Points d'entrée existants dans l'UI non encore branchés sur leur cible. À con
 | Queue de retry IA | `src/features/ai/api/retry-queue.ts` | `enqueueAIRetry` (INSERT seul) | TA-141 : orchestration retry, UPDATE Recommendation existante, status→done/failed |
 | UI "Pourquoi ?" | _(ticket UI dédié)_ | `useExplainAdjustment` depuis `src/features/ai/hooks/use-explain-adjustment.ts` | Écran fin de séance / écran Aujourd'hui |
 | UI "Analyser le plateau" | _(ticket UI dédié)_ | `usePlateauAnalysis` depuis `src/features/ai/hooks/use-plateau-analysis.ts` | Écran exercice / progression — **Note** : dans les tests du composant consommateur, mocker `@/features/ai` (l'index de la feature), pas directement `use-plateau-analysis`. Le hook importe `supabase` via `@/services/supabase` (pattern conforme TA-136) — le composant doit ne pas importer `supabase` directement (cf. SYNC-01). |
+| UI résumé de bloc | _(ticket TA-140)_ | `useBlockSummary` depuis `src/features/ai/hooks/use-block-summary.ts` | TA-140 — mêmes notes de test que "UI Analyser le plateau" (mocker `@/features/ai`). |
+| Trigger auto résumé de bloc | `src/features/ai/api/block-summary-service.ts` | appeler `generateBlockSummary` quand `block.status → completed` (transition non implémentée, seul `deloaded` existe) | Écran/flow fin de bloc (Phase 8+) — le service est idempotent (cache `metadata.block_id`), appel direct possible. |
 
 ---
 
