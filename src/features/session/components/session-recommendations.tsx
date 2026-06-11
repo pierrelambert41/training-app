@@ -2,54 +2,13 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import type { Recommendation } from '@/types';
 import { AppText } from '@/components/ui';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type SessionStatus = 'progression' | 'maintien' | 'allegee' | 'deload' | string;
-
-// ---------------------------------------------------------------------------
-// Status badge
-// ---------------------------------------------------------------------------
-
-function statusBadgeStyle(status: SessionStatus): {
-  bg: string;
-  text: string;
-  label: string;
-} {
-  switch (status) {
-    case 'progression':
-      return { bg: '#14532d', text: '#4ade80', label: 'Progression' };
-    case 'maintien':
-      return { bg: '#1e3a5f', text: '#60a5fa', label: 'Maintien' };
-    case 'allegee':
-      return { bg: '#431407', text: '#fb923c', label: 'Allégée' };
-    case 'deload':
-      return { bg: '#450a0a', text: '#f87171', label: 'Deload' };
-    default:
-      return { bg: '#1f2937', text: '#9ca3af', label: status };
-  }
-}
-
-function StatusBadge({ status }: { status: SessionStatus }) {
-  const style = statusBadgeStyle(status);
-  return (
-    <View
-      style={{
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 20,
-        backgroundColor: style.bg,
-        alignSelf: 'flex-start',
-      }}
-    >
-      <AppText style={{ fontSize: 13, fontWeight: '600', color: style.text }}>
-        {style.label}
-      </AppText>
-    </View>
-  );
-}
+import {
+  DeloadSection,
+  PlateauCard,
+  StatusBadge,
+  type SessionStatus,
+} from './session-recommendation-cards';
+import { RecommendationWhy } from './recommendation-why';
 
 // ---------------------------------------------------------------------------
 // Load change row
@@ -113,63 +72,6 @@ function LoadChangeRow({ recommendation, exerciseName }: LoadChangeRowProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Plateau card
-// ---------------------------------------------------------------------------
-
-function PlateauCard({ recommendation }: { recommendation: Recommendation }) {
-  const firstAction =
-    Array.isArray(recommendation.metadata?.recommendations) &&
-    recommendation.metadata.recommendations.length > 0
-      ? (recommendation.metadata.recommendations[0] as { message?: string })
-          .message
-      : recommendation.message;
-
-  return (
-    <View
-      style={{
-        backgroundColor: '#451a03',
-        borderRadius: 10,
-        padding: 12,
-        borderLeftWidth: 3,
-        borderLeftColor: '#f59e0b',
-      }}
-    >
-      <AppText style={{ fontSize: 13, fontWeight: '700', color: '#fbbf24', marginBottom: 4 }}>
-        Plateau détecté
-      </AppText>
-      <AppText style={{ fontSize: 13, color: '#fde68a' }} numberOfLines={2}>
-        {firstAction}
-      </AppText>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Deload section
-// ---------------------------------------------------------------------------
-
-function DeloadSection({ recommendation }: { recommendation: Recommendation }) {
-  return (
-    <View
-      style={{
-        backgroundColor: '#450a0a',
-        borderRadius: 10,
-        padding: 12,
-        borderLeftWidth: 3,
-        borderLeftColor: '#ef4444',
-      }}
-    >
-      <AppText style={{ fontSize: 13, fontWeight: '700', color: '#f87171', marginBottom: 4 }}>
-        Deload recommandé
-      </AppText>
-      <AppText style={{ fontSize: 13, color: '#fca5a5' }} numberOfLines={3}>
-        {recommendation.message}
-      </AppText>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -179,12 +81,15 @@ type SessionRecommendationsProps = {
   recommendations: Recommendation[];
   exercisesById: Map<string, { name: string; nameFr?: string | null }>;
   isLoading: boolean;
+  /** Si fourni, affiche le bouton "Pourquoi ?" (explication IA TA-136) sous chaque recommandation */
+  userId?: string;
 };
 
 export function SessionRecommendations({
   recommendations,
   exercisesById,
   isLoading,
+  userId,
 }: SessionRecommendationsProps) {
   const [showAll, setShowAll] = useState(false);
 
@@ -260,6 +165,9 @@ export function SessionRecommendations({
                 }
               >
                 <LoadChangeRow recommendation={rec} exerciseName={exerciseName} />
+                {userId !== undefined && (
+                  <RecommendationWhy recommendationId={rec.id} userId={userId} />
+                )}
               </View>
             );
           })}
